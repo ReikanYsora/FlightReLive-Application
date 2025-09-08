@@ -2,7 +2,6 @@
 using FlightReLive.Core.Cache;
 using FlightReLive.Core.Platform;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Workspace;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -63,11 +62,6 @@ namespace FlightReLive.UI.Layout
             }, "P");
 
             MacOsMainMenuManager.AddSeparator("Settings");
-
-            MacOsMainMenuManager.AddMenuEntry("Settings", "Clear workspace cache", () =>
-            {
-                WorkspaceManager.Instance.ClearWorkspaceCache();
-            });
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Clear local cache", () =>
             {
@@ -141,11 +135,7 @@ namespace FlightReLive.UI.Layout
             {
                 SettingsManager.ShowPreferencesModal();
             }, flightReLiveSettings);
-            Fugui.RegisterMainMenuSeparator(flightReLiveTitle);
-            Fugui.RegisterMainMenuItem("Clear workspace cache", () =>
-            {
-                WorkspaceManager.Instance.ClearWorkspaceCache();
-            }, flightReLiveSettings);
+            Fugui.RegisterMainMenuSeparator(flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Clear local cache", () =>
             {
                 CacheManager.ClearCache();

@@ -1,5 +1,3 @@
-using FlightReLive.Core.FFmpeg;
-using FlightReLive.Core.Settings;
 using Fu;
 using Fu.Framework;
 using MessagePack;
@@ -16,7 +14,6 @@ namespace FlightReLive.Core.Cache
     {
         #region CONSTANTS
         private const string CACHE_FOLDER_NAME = "Cache";
-        private const string CACHE_WORKSPACE_FOLDER_NAME = ".FlightReLive";
         #endregion
 
         #region ATTRIBUTES
@@ -35,25 +32,6 @@ namespace FlightReLive.Core.Cache
             if (!Directory.Exists(_cacheFolder))
             {
                 Directory.CreateDirectory(_cacheFolder);
-            }
-        }
-
-        /// <summary>
-        /// Initialize workspace cache folder
-        /// </summary>
-        /// <param name="forceReload"></param>
-        internal static void InitializeWorkspace(bool forceReload)
-        {
-            _workspaceCacheFolder = Path.Combine(SettingsManager.CurrentSettings.WorkspacePath, CACHE_WORKSPACE_FOLDER_NAME);
-
-            if (forceReload && Directory.Exists(_workspaceCacheFolder))
-            {
-                Directory.Delete(_workspaceCacheFolder, true);
-            }
-
-            if (!Directory.Exists(_workspaceCacheFolder))
-            {
-                Directory.CreateDirectory(_workspaceCacheFolder);
             }
         }
 
@@ -80,20 +58,6 @@ namespace FlightReLive.Core.Cache
             catch (Exception ex)
             {
                 Fugui.Notify("Operation failed", $"Unable to clear local cache.\n{ex.GetBaseException().Message}.", StateType.Danger);
-            }
-        }
-
-        internal static void ClearWorkspaceCache()
-        {
-            if (string.IsNullOrEmpty(_workspaceCacheFolder))
-            {
-                return;
-            }
-
-            if (Directory.Exists(_workspaceCacheFolder))
-            {
-                Directory.Delete(_workspaceCacheFolder, true);
-                Directory.CreateDirectory(_workspaceCacheFolder);
             }
         }
 
@@ -169,7 +133,6 @@ namespace FlightReLive.Core.Cache
             return null;
         }
         #endregion
-
 
         #region HEIGHTMAP TILE METHODS (ASYNC)
         internal static Task<bool> HeightmapExistsAsync(int tileX, int tileY)
@@ -332,7 +295,7 @@ namespace FlightReLive.Core.Cache
 
             try
             {
-                byte[] serialized = MessagePack.MessagePackSerializer.Serialize(buildings);
+                byte[] serialized = MessagePackSerializer.Serialize(buildings);
                 await File.WriteAllBytesAsync(path, serialized);
             }
             catch (Exception ex)

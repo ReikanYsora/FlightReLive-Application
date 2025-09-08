@@ -1240,13 +1240,6 @@ namespace FlightReLive.Core.Settings
                             uiGrid.DisableNextElements();
                         }
 
-                        uiGrid.SetNextElementToolTipWithLabel("Force workspace to reload all video files (Only if data are broken or missing)\nVideo files will not be deleted.");
-
-                        if (uiGrid.Button("Clear workspace cache", FuButtonStyle.Danger))
-                        {
-                            WorkspaceManager.Instance.ClearWorkspaceCache();
-                        }
-
                         uiGrid.SetNextElementToolTipWithLabel("Delete all downloaded tiles stored on this computer.\nVideo files will not be deleted.");
 
                         if (uiGrid.Button("Clear local cache", FuButtonStyle.Danger))

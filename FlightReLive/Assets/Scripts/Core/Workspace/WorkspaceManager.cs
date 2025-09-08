@@ -53,9 +53,6 @@ namespace FlightReLive.Core.Workspace
 
         private void Start()
         {
-            //Initialize cache
-            CacheManager.InitializeWorkspace(false);
-
             SettingsManager.OnWorkspacePathChanged += OnWorkspacePathChanged;
             StartWatching(SettingsManager.CurrentSettings.WorkspacePath);
             LoadWorkSpace(SettingsManager.CurrentSettings.WorkspacePath);
@@ -234,14 +231,6 @@ namespace FlightReLive.Core.Workspace
             }
 
             OnFlightFileSelected?.Invoke(file);
-        }
-
-        internal void ClearWorkspaceCache()
-        {
-            CacheManager.InitializeWorkspace(true);
-            StartWatching(SettingsManager.CurrentSettings.WorkspacePath);
-            LoadWorkSpace(SettingsManager.CurrentSettings.WorkspacePath);
-            Fugui.Notify("Successful operation", "The workspace local cache has been cleared successfully.", StateType.Info);
         }
         #endregion
 

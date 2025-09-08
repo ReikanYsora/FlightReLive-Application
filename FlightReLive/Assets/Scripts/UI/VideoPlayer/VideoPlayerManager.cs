@@ -1,5 +1,4 @@
-﻿using FlightReLive.Core;
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Settings;
@@ -481,7 +480,6 @@ namespace FlightReLive.UI.VideoPlayer
                 }
             }
         }
-
 
         private void Draw(FuWindow window, FuGrid grid, FuLayout layout, string icon, string value, string tooltip, string actionText = null, Action actionButton = null, string actionTooltip = null)
         {

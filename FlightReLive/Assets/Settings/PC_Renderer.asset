@@ -1,0 +1,734 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8630920802430304413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 980a78cc4df543b29a2663be288cd2f5, type: 3}
+  m_Name: UniversalBlurFeature
+  m_EditorClassIdentifier: Unified.Universal.Blur::Unified.UniversalBlur.Runtime.UniversalBlurFeature
+  m_Active: 1
+  iterations: 7
+  downsample: 3.2
+  enableMipMaps: 1
+  scale: 1
+  offset: 1
+  scaleBlurWith: 1
+  scaleReferenceSize: 1080
+  blurType: 0
+  injectionPoint: 600
+  _intensity: 1
+  shader: {fileID: 4800000, guid: bb11bdc2e8aaf4c80b5315f3778d7ad4, type: 3}
+  _material: {fileID: 0}
+  _renderScale: 1
+--- !u!114 &-3639568318508740776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2a052916d162d3448e654173d8cc8e3, type: 3}
+  m_Name: MKEdgeDetectionRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  workMode: 1
+  precision:
+    _value: 0
+  largeKernel:
+    _value: 1
+  mediumKernel:
+    _value: 0
+  smallKernel:
+    _value: 0
+  inputData:
+    _value: 3
+  lineHardness:
+    _value: 0.5
+    _minValue: 0
+    _maxValue: 1
+  fade:
+    _value: 0
+  lineSizeMatchFactor:
+    _value: 0.5
+    _minValue: 0
+    _maxValue: 1
+  globalLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 3
+  depthLineSize:
+    _value: 1.66
+    _minValue: 0
+    _maxValue: 2
+  normalLineSize:
+    _value: 1.302
+    _minValue: 0
+    _maxValue: 2
+  depthFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  normalFadeLimits:
+    _minValue: 0
+    _maxValue: 0.52866244
+    _minLimit: 0
+    _maxLimit: 1
+  depthThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  lineColor:
+    _value: {r: 1, g: 0.48117012, b: 0, a: 1}
+    _useAlpha: 1
+    _useHDR: 0
+  overlayColor:
+    _value: {r: 1, g: 1, b: 1, a: 0}
+    _useAlpha: 1
+    _useHDR: 0
+  depthNearFade:
+    _value: 0
+  depthFarFade:
+    _value: 0
+  normalNearFade:
+    _value: 0
+  normalsFarFade:
+    _value: 0
+  normalThreshold:
+    _minValue: 0.031847134
+    _maxValue: 0.99999994
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  sceneColorNearFade:
+    _value: 0
+  sceneColorFarFade:
+    _value: 0
+  sceneColorFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  visualizeEdges:
+    _value: 0
+  enhanceDetails:
+    _value: 1
+  sketch:
+    _value: 0
+  sketchIntensity:
+    _value: 0.437
+    _minValue: 0
+    _maxValue: 1
+  sketchFrequency:
+    _value: 4
+  sketchAdditionalNoiseMap:
+    _value: {fileID: 0}
+  sketchFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sketchNearFade:
+    _value: 10
+  sketchFarFade:
+    _value: 30
+  workflow:
+    _value: 0
+  _propertiesInitialized: 1
+--- !u!114 &-2851899805148516104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2a052916d162d3448e654173d8cc8e3, type: 3}
+  m_Name: MKEdgeDetectionRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  workMode: 1
+  precision:
+    _value: 0
+  largeKernel:
+    _value: 0
+  mediumKernel:
+    _value: 0
+  smallKernel:
+    _value: 0
+  inputData:
+    _value: 3
+  lineHardness:
+    _value: 0.662
+    _minValue: 0
+    _maxValue: 1
+  fade:
+    _value: 0
+  lineSizeMatchFactor:
+    _value: 0.496
+    _minValue: 0
+    _maxValue: 1
+  globalLineSize:
+    _value: 0.3
+    _minValue: 0
+    _maxValue: 3
+  depthLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  normalLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  depthFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  normalFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  depthThreshold:
+    _minValue: 0.11339286
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  lineColor:
+    _value: {r: 0, g: 0, b: 0, a: 1}
+    _useAlpha: 1
+    _useHDR: 0
+  overlayColor:
+    _value: {r: 1, g: 1, b: 1, a: 0}
+    _useAlpha: 1
+    _useHDR: 0
+  depthNearFade:
+    _value: 10
+  depthFarFade:
+    _value: 30
+  normalNearFade:
+    _value: 5
+  normalsFarFade:
+    _value: 20
+  normalThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  sceneColorNearFade:
+    _value: 0
+  sceneColorFarFade:
+    _value: 10
+  sceneColorFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  visualizeEdges:
+    _value: 0
+  enhanceDetails:
+    _value: 1
+  sketch:
+    _value: 0
+  sketchIntensity:
+    _value: 0.025
+    _minValue: 0
+    _maxValue: 1
+  sketchFrequency:
+    _value: 4
+  sketchAdditionalNoiseMap:
+    _value: {fileID: 0}
+  sketchFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sketchNearFade:
+    _value: 10
+  sketchFarFade:
+    _value: 30
+  workflow:
+    _value: 0
+  _propertiesInitialized: 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de640fe3d0db1804a85f9fc8f5cadab6, type: 3}
+  m_Name: PC_Renderer
+  m_EditorClassIdentifier: 
+  debugShaders:
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7, type: 3}
+    hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
+    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959, type: 3}
+  probeVolumeResources:
+    probeVolumeDebugShader: {fileID: 4800000, guid: e5c6678ed2aaa91408dd3df699057aae, type: 3}
+    probeVolumeFragmentationDebugShader: {fileID: 4800000, guid: 03cfc4915c15d504a9ed85ecc404e607, type: 3}
+    probeVolumeOffsetDebugShader: {fileID: 4800000, guid: 53a11f4ebaebf4049b3638ef78dc9664, type: 3}
+    probeVolumeSamplingDebugShader: {fileID: 4800000, guid: 8f96cd657dc40064aa21efcc7e50a2e7, type: 3}
+    probeSamplingDebugMesh: {fileID: -3555484719484374845, guid: 57d7c4c16e2765b47a4d2069b311bffe, type: 3}
+    probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e, type: 3}
+    probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
+  m_RendererFeatures:
+  - {fileID: 3814573231002939812}
+  - {fileID: 5526718580049974960}
+  - {fileID: 7833122117494664109}
+  - {fileID: 6814014189605420050}
+  - {fileID: 6876706516333981636}
+  m_RendererFeatureMap: a4f1a4a32416f034b0166e4944d9b24cad6b866f10d7b46c12fce6a1cd3d905ec46fb36a24f86e5f
+  m_UseNativeRenderPass: 1
+  xrSystemData: {fileID: 0}
+  postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
+  m_AssetVersion: 3
+  m_PrepassLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_OpaqueLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_TransparentLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_DefaultStencilState:
+    overrideStencilState: 0
+    stencilReference: 1
+    stencilCompareFunction: 3
+    passOperation: 2
+    failOperation: 0
+    zFailOperation: 0
+  m_ShadowTransparentReceive: 1
+  m_RenderingMode: 2
+  m_DepthPrimingMode: 0
+  m_CopyDepthMode: 0
+  m_DepthAttachmentFormat: 0
+  m_DepthTextureFormat: 0
+  m_AccurateGbufferNormals: 0
+  m_IntermediateTextureMode: 0
+--- !u!114 &940132356325999213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b35d58cbe9f89684e94f398d2a0f5c1d, type: 3}
+  m_Name: UIAfterPostProcessFeature
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.RenderFeature.UIAfterPostProcessFeature
+  m_Active: 1
+  settings:
+    layerMask:
+      m_Bits: 32
+    passName: UI
+--- !u!114 &3814573231002939812
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: UI Overlay
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
+  m_Active: 1
+  settings:
+    passTag: UI Overlay
+    Event: 1000
+    filterSettings:
+      RenderQueueType: 1
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 32
+      PassNames: []
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 1
+    overrideDepthState: 0
+    depthCompareFunction: 8
+    enableWrite: 0
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
+--- !u!114 &5526718580049974960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ed5ed08b2b7b8040a5feac660f6c8d1, type: 3}
+  m_Name: FuguiRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  PassEvent: 1000
+  _shader: {fileID: 4800000, guid: 4672393d0e55548419ce9efb914275d9, type: 3}
+  _cameraLayer: 5
+--- !u!114 &6725073713372853059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2a052916d162d3448e654173d8cc8e3, type: 3}
+  m_Name: MKEdgeDetectionRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  workMode: 0
+  precision:
+    _value: 0
+  largeKernel:
+    _value: 2
+  mediumKernel:
+    _value: 0
+  smallKernel:
+    _value: 0
+  inputData:
+    _value: -1
+  lineHardness:
+    _value: 0.5
+    _minValue: 0
+    _maxValue: 1
+  fade:
+    _value: 1
+  lineSizeMatchFactor:
+    _value: 0.618
+    _minValue: 0
+    _maxValue: 1
+  globalLineSize:
+    _value: 2.5
+    _minValue: 0
+    _maxValue: 3
+  depthLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  normalLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  depthFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  normalFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  depthThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  lineColor:
+    _value: {r: 0, g: 0, b: 0, a: 1}
+    _useAlpha: 1
+    _useHDR: 0
+  overlayColor:
+    _value: {r: 1, g: 1, b: 1, a: 0}
+    _useAlpha: 1
+    _useHDR: 0
+  depthNearFade:
+    _value: 10
+  depthFarFade:
+    _value: 30
+  normalNearFade:
+    _value: 5
+  normalsFarFade:
+    _value: 20
+  normalThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  sceneColorNearFade:
+    _value: 0
+  sceneColorFarFade:
+    _value: 10
+  sceneColorFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  visualizeEdges:
+    _value: 0
+  enhanceDetails:
+    _value: 1
+  sketch:
+    _value: 1
+  sketchIntensity:
+    _value: 0.462
+    _minValue: 0
+    _maxValue: 1
+  sketchFrequency:
+    _value: 4
+  sketchAdditionalNoiseMap:
+    _value: {fileID: 0}
+  sketchFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sketchNearFade:
+    _value: 10
+  sketchFarFade:
+    _value: 30
+  workflow:
+    _value: 0
+  _propertiesInitialized: 1
+--- !u!114 &6814014189605420050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2a052916d162d3448e654173d8cc8e3, type: 3}
+  m_Name: MKEdgeDetectionRendererFeature
+  m_EditorClassIdentifier: MKEdgeDetectionUniversalRendererFeature::MK.EdgeDetection.UniversalRendererFeatures.MKEdgeDetectionRendererFeature
+  m_Active: 1
+  workMode: 1
+  precision:
+    _value: 0
+  largeKernel:
+    _value: 2
+  mediumKernel:
+    _value: 0
+  smallKernel:
+    _value: 0
+  inputData:
+    _value: 3
+  lineHardness:
+    _value: 0.427
+    _minValue: 0
+    _maxValue: 1
+  fade:
+    _value: 1
+  lineSizeMatchFactor:
+    _value: 0.5
+    _minValue: 0
+    _maxValue: 1
+  globalLineSize:
+    _value: 0.06
+    _minValue: 0
+    _maxValue: 3
+  depthLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  normalLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  depthFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  normalFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  depthThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  lineColor:
+    _value: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 1}
+    _useAlpha: 1
+    _useHDR: 0
+  overlayColor:
+    _value: {r: 1, g: 1, b: 1, a: 0}
+    _useAlpha: 1
+    _useHDR: 0
+  depthNearFade:
+    _value: 100
+  depthFarFade:
+    _value: 1000
+  normalNearFade:
+    _value: 100
+  normalsFarFade:
+    _value: 1000
+  normalThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorThreshold:
+    _minValue: 0.1
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sceneColorLineSize:
+    _value: 1
+    _minValue: 0
+    _maxValue: 2
+  sceneColorNearFade:
+    _value: 0
+  sceneColorFarFade:
+    _value: 10
+  sceneColorFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  visualizeEdges:
+    _value: 0
+  enhanceDetails:
+    _value: 1
+  sketch:
+    _value: 0
+  sketchIntensity:
+    _value: 0.333
+    _minValue: 0
+    _maxValue: 1
+  sketchFrequency:
+    _value: 4
+  sketchAdditionalNoiseMap:
+    _value: {fileID: 0}
+  sketchFadeLimits:
+    _minValue: 0
+    _maxValue: 1
+    _minLimit: 0
+    _maxLimit: 1
+  sketchNearFade:
+    _value: 10
+  sketchFarFade:
+    _value: 30
+  workflow:
+    _value: 0
+  _propertiesInitialized: 1
+--- !u!114 &6876706516333981636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b3d386ba5cd94485973aee1479b272e, type: 3}
+  m_Name: UI Overlay Lines
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.RenderObjects
+  m_Active: 1
+  settings:
+    passTag: RenderObjects
+    Event: 300
+    filterSettings:
+      RenderQueueType: 0
+      LayerMask:
+        serializedVersion: 2
+        m_Bits: 0
+      PassNames: []
+    overrideMaterial: {fileID: 0}
+    overrideMaterialPassIndex: 0
+    overrideShader: {fileID: 0}
+    overrideShaderPassIndex: 0
+    overrideMode: 1
+    overrideDepthState: 0
+    depthCompareFunction: 4
+    enableWrite: 1
+    stencilSettings:
+      overrideStencilState: 0
+      stencilReference: 0
+      stencilCompareFunction: 8
+      passOperation: 0
+      failOperation: 0
+      zFailOperation: 0
+    cameraSettings:
+      overrideCamera: 0
+      restoreCamera: 1
+      offset: {x: 0, y: 0, z: 0, w: 0}
+      cameraFieldOfView: 60
+--- !u!114 &7833122117494664109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f62c9c65cf3354c93be831c8bc075510, type: 3}
+  m_Name: ScreenSpaceAmbientOcclusion
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  m_Settings:
+    AOMethod: 0
+    Downsample: 0
+    AfterOpaque: 0
+    Source: 1
+    NormalSamples: 1
+    Intensity: 0.4
+    DirectLightingStrength: 0.25
+    Radius: 0.3
+    Samples: 1
+    BlurQuality: 0
+    Falloff: 100
+    SampleCount: -1

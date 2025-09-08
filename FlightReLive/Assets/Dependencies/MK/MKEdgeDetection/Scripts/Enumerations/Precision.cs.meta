@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: cd9985f6bff6bf743a2f246b80f1c04f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 284760
+  packageName: MK Edge Detection - Screen Space Lines Shader
+  packageVersion: 1.3.0C
+  assetPath: Assets/MK/MKEdgeDetection/Scripts/Enumerations/Precision.cs
+  uploadId: 760505

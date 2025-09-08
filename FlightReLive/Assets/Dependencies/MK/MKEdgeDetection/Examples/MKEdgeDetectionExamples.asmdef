@@ -1,0 +1,36 @@
+{
+    "name": "MKEdgeDetectionExamples",
+    "rootNamespace": "",
+    "references": [
+        "GUID:24969c29395f07d4a8a27da24c46851e",
+        "GUID:d60799ab2a985554ea1a39cd38695018",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:457756d89b35d2941b3e7b37b4ece6f1",
+        "GUID:0fa6bad82dd58d64c8420dc2afd1c952"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "0",
+            "define": "MK_HDRP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "0",
+            "define": "MK_URP"
+        },
+        {
+            "name": "com.unity.postprocessing",
+            "expression": "0",
+            "define": "MK_POST_PROCESSING_STACK_V2"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,20 @@
+{
+    "name": "MKEdgeDetection",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.modules.vr",
+            "expression": "0",
+            "define": "MK_VR_ENABLED"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,251 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5089ec6fba00e46409ac050869a21be5, type: 3}
+  m_Name: FlightReLiveFontConfig
+  m_EditorClassIdentifier: 
+  DefaultSize: 14
+  Fonts:
+  - Size: 14
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  - Size: 10
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  - Size: 12
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  - Size: 16
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  - Size: 18
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  - Size: 20
+    SubFonts_Regular:
+    - FileName: SF-Pro-Display-Light.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Bold:
+    - FileName: SF-Pro-Display-Bold.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+    - FileName: Flight_ReLive_Icons.ttf
+      FilePath: 
+      StartGlyph: 57445
+      EndGlyph: 60542
+      CustomGlyphRanges: 
+      SizeOffset: -4
+      GlyphOffset: {x: 0, y: -1}
+    SubFonts_Italic:
+    - FileName: SF-Pro-Display-LightItalic.otf
+      FilePath: 
+      StartGlyph: 0
+      EndGlyph: 0
+      CustomGlyphRanges: 
+      SizeOffset: 0
+      GlyphOffset: {x: 0, y: 0}
+  FontsFolder: Fugui/Fonts/

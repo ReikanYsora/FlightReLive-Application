@@ -22,24 +22,18 @@ namespace FlightReLive.Core.FlightDefinition
         public double Latitude { get; set; }
 
         [Key(5)]
-        public double Satellites { get; set; }
-
-        [Key(6)]
         public double Distance { get; set; }
 
-        [Key(7)]
+        [Key(6)]
         public double RelativeAltitude { get; set; }
 
-        [Key(8)]
+        [Key(7)]
         public double AbsoluteAltitude { get; set; }
 
-        [Key(9)]
+        [Key(8)]
         public double HorizontalSpeed { get; set; }
 
-        [Key(10)]
+        [Key(9)]
         public double VerticalSpeed { get; set; }
-
-        [Key(11)]
-        public int FrameCounter { get; set; }
     }
 }

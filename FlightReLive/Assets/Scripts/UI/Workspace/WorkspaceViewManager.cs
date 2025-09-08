@@ -316,7 +316,7 @@ namespace FlightReLive.UI.Workspace
 
                 Fugui.Push(ImGuiStyleVar.ItemSpacing, Vector2.zero);
 
-                Vector2 itemBaseSize = new Vector2(160, 120);
+                Vector2 itemBaseSize = new Vector2(160, 95);
                 Vector2 itemSize = itemBaseSize * scale * thumbnailScale;
 
                 float paddingX = 16f * scale * thumbnailScale;
@@ -377,8 +377,8 @@ namespace FlightReLive.UI.Workspace
 
                         if (isHovered)
                         {
-                            string tooltipText = $"{SettingsManager.FormatDateTime(file.Date)}\n\n";
-
+                            string tooltipText = $"{file.Name}\n\n";
+                            tooltipText += $"{SettingsManager.FormatDateTime(file.CreationDate)}\n\n";
                             if (!file.IsValid)
                             {
                                 tooltipText += $"One or more GPS points in this file are missing or corrupted.\nThis file cannot be opened (possibly due to part of the flight being indoors).";
@@ -459,10 +459,10 @@ namespace FlightReLive.UI.Workspace
                             drawListItem.AddRectFilled(thumbPosition + new Vector2(thumbSize.x - borderThickness, 0f), thumbPosition + new Vector2(thumbSize.x, thumbSize.y), bgColor);
                         }
 
-                        if (file.Length != null)
+                        if (file.Duration != null)
                         {
                             Fugui.PushFont(12, FontType.Regular);
-                            string duration = file.Length.ToString(@"hh\:mm\:ss");
+                            string duration = file.Duration.ToString(@"hh\:mm\:ss");
                             Vector2 textSize = ImGui.CalcTextSize(duration);
                             Vector2 padding = new Vector2(4f, 2f) * scale * thumbnailScale;
                             Vector2 bgSize = textSize + padding * 2;
@@ -496,22 +496,6 @@ namespace FlightReLive.UI.Workspace
                             layout.Text(FlightReLiveIcons.Warning, FuTextStyle.Danger);
                         }
 
-                        Fugui.PopFont();
-
-                        // Flight name
-                        Fugui.PushFont(14, FontType.Regular);
-                        string name = file.Name;
-                        Vector2 nameSize = ImGui.CalcTextSize(name);
-
-                        float nameZoneTop = thumbPosition.y + thumbSize.y;
-                        float nameZoneBottom = itemPos.y + itemSize.y;
-                        float nameZoneHeight = nameZoneBottom - nameZoneTop;
-
-                        float nameVerticalOffset = (nameZoneHeight - nameSize.y) / 2f;
-                        Vector2 namePos = new Vector2(itemPos.x + (itemSize.x - nameSize.x) / 2f, nameZoneTop + nameVerticalOffset);
-
-                        ImGui.SetCursorScreenPos(namePos);
-                        layout.Text(name);
                         Fugui.PopFont();
 
                         x += itemSize.x + paddingX;

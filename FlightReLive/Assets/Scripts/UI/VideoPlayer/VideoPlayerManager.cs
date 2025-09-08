@@ -421,9 +421,6 @@ namespace FlightReLive.UI.VideoPlayer
                                 double speed = CalculateSpeed((float)point.HorizontalSpeed, (float)point.VerticalSpeed);
                                 string formattedSpeed = SettingsManager.FormatSpeed(speed);
 
-                                //Satellite
-                                string formattedSatellite = $"{point.Satellites} satellite(s)";
-
                                 Draw(window, grid, layout, FlightReLiveIcons.Speed, formattedSpeed, "Current speed#2", FlightReLiveIcons.Charts, () =>
                                 {
                                     FlightChartsManager.Instance.DisplayedChart = FlightChartType.Speed;
@@ -438,8 +435,6 @@ namespace FlightReLive.UI.VideoPlayer
                                 {
                                     FlightChartsManager.Instance.DisplayedChart = FlightChartType.AbsoluteAltitude;
                                 }, "Display absolute altitude chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.Satellite, formattedSatellite, "Number of satellites connection");
                             }
 
                             Fugui.PopFont();

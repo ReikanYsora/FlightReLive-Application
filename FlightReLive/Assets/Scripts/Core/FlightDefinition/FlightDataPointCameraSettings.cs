@@ -5,6 +5,7 @@ namespace FlightReLive.Core.FlightDefinition
     [MessagePackObject]
     public class FlightDataPointCameraSettings
     {
+        #region PROPERTIES
         [Key(0)]
         public float Aperture { get; set; }
 
@@ -25,5 +26,6 @@ namespace FlightReLive.Core.FlightDefinition
 
         [Key(6)]
         public string ColorMode { get; internal set; }
+        #endregion
     }
 }

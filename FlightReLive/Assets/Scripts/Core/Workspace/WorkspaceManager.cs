@@ -206,20 +206,20 @@ namespace FlightReLive.Core.Workspace
                 VideoPath = container.VideoPath,
                 Name = container.Name,
                 DataPoints = container.DataPoints,
-                Date = container.Date,
+                CreationDate = container.CreationDate,
                 EstimateTakeOffPosition = container.EstimateTakeOffPosition,
                 FlightGPSCoordinates = container.FlightGPSCoordinates,
                 HasExtractionError = container.HasExtractionError,
                 HasTakeOffPosition = container.TakeOffPositionAvailable,
                 ErrorMessages = container.ErrorMessages,
-                Length = container.Lenght,
+                Duration = container.Duration,
                 IsValid = container.IsValid
             };
 
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 Texture2D texture = new Texture2D(2, 2);
-                texture.LoadImage(container.ThumbnailImage);
+                texture.LoadImage(container.Thumbnail);
                 tempFile.Thumbnail = texture;
 
                 LoadedFlights.Add(tempFile);

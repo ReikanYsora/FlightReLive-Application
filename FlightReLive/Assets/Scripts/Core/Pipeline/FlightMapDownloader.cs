@@ -38,8 +38,8 @@ namespace FlightReLive.Core.Pipeline
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
-                Date = file.Date,
-                Length = file.Length,
+                Date = file.CreationDate,
+                Length = file.Duration,
                 Points = file.DataPoints,
                 IsValid = file.IsValid,
                 HasExtractionError = file.HasExtractionError,

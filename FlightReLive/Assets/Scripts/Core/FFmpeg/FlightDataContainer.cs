@@ -19,7 +19,7 @@ namespace FlightReLive.Core.FFmpeg
         public string VideoPath { get; set; }
 
         [Key(3)]
-        public DateTime Date { get; set; }
+        public DateTime CreationDate { get; set; }
 
         [Key(4)]
         public FlightGPSData EstimateTakeOffPosition { get; set; }
@@ -31,10 +31,10 @@ namespace FlightReLive.Core.FFmpeg
         public SerializableVector2 FlightGPSCoordinates { get; set; }
 
         [Key(7)]
-        public byte[] ThumbnailImage { get; set; }
+        public byte[] Thumbnail { get; set; }
 
         [Key(8)]
-        public TimeSpan Lenght { get; set; }
+        public TimeSpan Duration { get; set; }
 
         [Key(9)]
         public bool HasExtractionError { get; set; }
@@ -48,10 +48,14 @@ namespace FlightReLive.Core.FFmpeg
         [Key(12)]
         public bool TakeOffPositionAvailable { get; set; }
 
+        #region CONSTRUCTOR
         public FlightDataContainer()
         {
             DataPoints = new List<FlightDataPoint>();
         }
+        #endregion
+
+        #region METHODS
 
         public SerializableVector2 GetFlightGPSCenter()
         {
@@ -93,5 +97,6 @@ namespace FlightReLive.Core.FFmpeg
 
             return new SerializableVector2(new Vector2((float)centerLat, (float)centerLon));
         }
+        #endregion
     }
 }

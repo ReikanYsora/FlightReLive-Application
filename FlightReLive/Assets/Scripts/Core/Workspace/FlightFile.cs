@@ -26,6 +26,8 @@ namespace FlightReLive.Core.Workspace
 
         public bool HasExtractionError { get; set; }
 
+        public bool HasTakeOffPosition { get; set; }
+
         public bool IsValid { get; set; }
 
         public List<string> ErrorMessages { get; set; }

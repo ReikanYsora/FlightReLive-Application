@@ -1,14 +1,11 @@
-﻿using FlightReLive.Core.Cache;
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core.FFmpeg
@@ -20,36 +17,10 @@ namespace FlightReLive.Core.FFmpeg
 
     public static class FFmpegHelper
     {
-        #region ATTRIBUTES
-        /// <summary>
-        /// Regex to detect the creation timestamp from ffmpeg metadata.
-        /// </summary>
-        private static Regex creationTimeRegex = new Regex(@"creation_time\s*:\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regex to detect GPS coordinates from ffmpeg metadata.
-        /// </summary>
-        private static Regex gpsLocationRegex = new Regex(@"location\s*:\s*\+?([0-9]*\.?[0-9]+)\+?([0-9]*\.?[0-9]+)", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regex to detect video length
-        /// </summary>
-        private static Regex durationRegex = new Regex(@"Duration:\s(?<h>\d{2}):(?<m>\d{2}):(?<s>\d{2})\.(?<ms>\d{2})", RegexOptions.Compiled);
-        #endregion
-
         #region METHODS
-        public static async Task<FlightDataContainer> ExtractOrLoadFlightDataAsync(string videoPath)
+        public static FlightDataContainer ExtractOrLoadFlightData(string videoPath)
         {
-            if (await CacheManager.VideoBinaryDataExistsAsync(videoPath))
-            {
-                return await CacheManager.LoadVideoBinaryDataAsync(videoPath);
-            }
-
-            FlightDataContainer extracted = ExtractFlightData(videoPath);
-
-            await CacheManager.SaveVideoBinaryDataAsync(videoPath, extracted);
-
-            return extracted;
+            return ExtractFlightData(videoPath);
         }
 
         /// <summary>
@@ -94,13 +65,7 @@ namespace FlightReLive.Core.FFmpeg
             if (container == null ||
                 container.DataPoints == null ||
                 container.DataPoints.Count == 0 ||
-                container.DataPoints.Where(x => x.Latitude == 0 || x.Longitude == 0).Any() ||
-                container.FlightGPSCoordinates == null ||
-                container.FlightGPSCoordinates.x == 0 ||
-                container.FlightGPSCoordinates.y == 0 ||
-                container.EstimateTakeOffPosition.Latitude == 0 ||
-                container.EstimateTakeOffPosition.Longitude == 0 ||
-                container.EstimateTakeOffPosition == null)
+                container.DataPoints.Where(x => x.Latitude == 0 || x.Longitude == 0).Any())
             {
                 UnityEngine.Debug.LogWarning($"{container.Name} : Flight data invalid: Missing or zero GPS coordinates.");
                 return false;
@@ -124,6 +89,162 @@ namespace FlightReLive.Core.FFmpeg
         }
 
         /// <summary>
+        /// Indicate if data for take off triangulation are present in the caonteinr
+        /// </summary>
+        /// <param name="container"></param>
+        /// <returns></returns>
+        private static bool TakeOffPositionAvailable(FlightDataContainer container)
+        {
+            if (container.FlightGPSCoordinates == null ||
+                container.FlightGPSCoordinates.x == 0 ||
+                container.FlightGPSCoordinates.y == 0 || 
+                container.EstimateTakeOffPosition.Latitude == 0 ||
+                container.EstimateTakeOffPosition.Longitude == 0 ||
+                container.EstimateTakeOffPosition == null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Check if a video file has integrated subtitiles
+        /// </summary>
+        /// <param name="ffmpegPath">ffmpeg path</param>
+        /// <param name="videoPath">video path</param>
+        /// <returns></returns>
+        private static bool HasSubtitles(string ffmpegPath, string videoPath)
+        {
+            if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
+            {
+                Console.WriteLine("FFmpeg path is not valid.");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
+            {
+                Console.WriteLine("Video file not found.");
+                return false;
+            }
+
+            string arguments = $"-i \"{videoPath}\"";
+
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = arguments,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = false
+            };
+
+            try
+            {
+                using (Process process = Process.Start(psi))
+                {
+                    string errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    var subtitleRegex = new Regex(@"Stream #\d+:\d+.*(?:Subtitle|mov_text|text)", RegexOptions.IgnoreCase);
+
+                    //Check if one flux contains subtitles
+                    return subtitleRegex.IsMatch(errorOutput);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred while checking subtitles: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Extract date and lengh from the original video file
+        /// </summary>
+        /// <param name="ffmpegPath">ffmpeg path</param>
+        /// <param name="videoPath">video path</param>
+        /// <returns></returns>
+        private static (DateTime? creationDate, TimeSpan? videoDuration) ExtractVideoMetadata(string ffmpegPath, string videoPath)
+        {
+            // Vérification de la validité des chemins
+            if (string.IsNullOrEmpty(ffmpegPath) || !System.IO.File.Exists(ffmpegPath))
+            {
+                Console.WriteLine("FFmpeg path is not valid.");
+                return (null, null);
+            }
+
+            if (string.IsNullOrEmpty(videoPath) || !System.IO.File.Exists(videoPath))
+            {
+                Console.WriteLine("Video file not found.");
+                return (null, null);
+            }
+
+            // Commande FFmpeg pour obtenir les métadonnées du fichier vidéo
+            string arguments = $"-i \"{videoPath}\"";  // On n'a besoin que des métadonnées de base
+
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = arguments,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true, // Les erreurs contiennent les informations des flux
+                RedirectStandardOutput = false
+            };
+
+            try
+            {
+                using (Process process = Process.Start(psi))
+                {
+                    string errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    //Extract date
+                    string creationTimePattern = @"creation_time\s*[:=]\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z)";
+                    var creationMatch = Regex.Match(errorOutput, creationTimePattern);
+                    DateTime? creationDate = null;
+
+                    if (creationMatch.Success)
+                    {
+                        string creationTimeStr = creationMatch.Groups[1].Value;
+
+                        if (DateTime.TryParseExact(creationTimeStr, "yyyy-MM-ddTHH:mm:ss.ffffffZ", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime parsedDate))
+                        {
+                            creationDate = parsedDate.ToLocalTime();
+                        }
+                        else
+                        {
+                            UnityEngine.Debug.Log($"Failed to parse creation time: {creationTimeStr}");
+                        }
+                    }
+
+                    //Extract length
+                    string durationPattern = @"Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})";
+                    var durationMatch = Regex.Match(errorOutput, durationPattern);
+                    TimeSpan? videoDuration = null;
+                    if (durationMatch.Success)
+                    {
+                        int hours = int.Parse(durationMatch.Groups[1].Value);
+                        int minutes = int.Parse(durationMatch.Groups[2].Value);
+                        int seconds = int.Parse(durationMatch.Groups[3].Value);
+                        int milliseconds = int.Parse(durationMatch.Groups[4].Value) * 10;
+
+                        videoDuration = new TimeSpan(hours, minutes, seconds, 0, milliseconds);
+                    }
+
+                    return (creationDate, videoDuration);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error occurred while extracting video metadata: {ex.Message}");
+                return (null, null);
+            }
+        }
+
+        /// <summary>
         /// Runs FFmpeg as a child process to extract subtitles and capture metadata from stderr.
         /// </summary>
         private static FlightDataContainer ExtractSubtitles(string ffmpegPath, string videoPath)
@@ -142,128 +263,87 @@ namespace FlightReLive.Core.FFmpeg
 
             string srtPath = Path.ChangeExtension(videoPath, ".srt");
 
-            //if (File.Exists(srtPath))
-            //{
-            //    try
-            //    {
-            //        List<string> srtLines = File.ReadAllLines(srtPath).ToList();
-            //        if (srtLines.Count > 0)
-            //        {
-            //            dataContainer.DataPoints = ParseSRTMini4Pro(srtLines, dataContainer);
-            //            dataContainer.IsValid = IsFlightDataValid(dataContainer);
-            //            dataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS(dataContainer);
-            //            dataContainer.ThumbnailImage = ExtractThumbnail(ffmpegPath, videoPath);
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        dataContainer.HasExtractionError = true;
-            //        dataContainer.ErrorMessages.Add($"Error reading SRT file: {ex.Message}");
-            //    }
-
-            //    return dataContainer;
-            //}
-
-            //if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
-            //{
-            //    UnityEngine.Debug.LogError("FFmpeg path is not set or executable not found.");
-            //    return null;
-            //}
-
-            string arguments = $"-i \"{videoPath}\" -map 0:s:0 -f srt -";
-
-            ProcessStartInfo psi = new ProcessStartInfo
+            if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
             {
-                FileName = ffmpegPath,
-                Arguments = arguments,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
+                UnityEngine.Debug.LogError("FFmpeg path is not set or executable not found.");
+                return null;
+            }
 
-            try
+            var t = FFmpegMetadataExtractor.ExtractAllStreams(ffmpegPath, videoPath);
+
+
+            (DateTime? date, TimeSpan? length) metadata = ExtractVideoMetadata(ffmpegPath, videoPath);
+            dataContainer.Lenght = metadata.length.HasValue ? metadata.length.Value : new TimeSpan(0);
+            dataContainer.Date = metadata.date.HasValue ? metadata.date.Value : DateTime.MinValue;
+            dataContainer.ThumbnailImage = ExtractThumbnail(ffmpegPath, videoPath);
+
+            if (HasSubtitles(ffmpegPath, videoPath))
             {
-                using (Process process = Process.Start(psi))
+                string arguments = $"-i \"{videoPath}\" -map 0:s:0 -f srt -";
+
+                ProcessStartInfo psi = new ProcessStartInfo
                 {
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-                    process.WaitForExit();
+                    FileName = ffmpegPath,
+                    Arguments = arguments,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
 
-                    List<string> srtLines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                    List<string> errorBuffer = error.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-                    if (errorBuffer.Any(IsCriticalFFmpegError))
+                try
+                {
+                    using (Process process = Process.Start(psi))
                     {
-                        dataContainer.HasExtractionError = true;
-                        dataContainer.ErrorMessages = errorBuffer.Where(IsCriticalFFmpegError).ToList();
-                        UnityEngine.Debug.LogWarning("FFmpeg reported critical errors. Continuing with partial data.");
-                        return dataContainer;
+                        string output = process.StandardOutput.ReadToEnd();
+                        string error = process.StandardError.ReadToEnd();
+                        process.WaitForExit();
+
+                        List<string> srtLines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                        dataContainer.DataPoints = ParseSRTVideo(srtLines, dataContainer);
+                        dataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS(dataContainer);
+                        dataContainer.IsValid = IsFlightDataValid(dataContainer);
+                        dataContainer.TakeOffPositionAvailable = TakeOffPositionAvailable(dataContainer);
                     }
 
-                    if (srtLines.Count > 0)
-                    {
-                        // ✅ Enregistrement du fichier SRT dans le même dossier que la vidéo
-                        File.WriteAllText(srtPath, output);
-                        UnityEngine.Debug.Log($"SRT file extracted and saved to: {srtPath}");
-
-                        dataContainer.DataPoints = ParseSRT(srtLines, dataContainer);
-                    }
-
-
-                    foreach (string line in errorBuffer)
-                    {
-                        Match matchTime = creationTimeRegex.Match(line);
-                        if (matchTime.Success && DateTime.TryParse(matchTime.Groups[1].Value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime parsedTime))
-                        {
-                            dataContainer.Date = parsedTime.ToLocalTime();
-                        }
-
-                        Match matchGPS = gpsLocationRegex.Match(line);
-                        if (matchGPS.Success)
-                        {
-                            float lat = float.Parse(matchGPS.Groups[1].Value, CultureInfo.InvariantCulture);
-                            float lon = float.Parse(matchGPS.Groups[2].Value, CultureInfo.InvariantCulture);
-                            dataContainer.FlightGPSCoordinates = new SerializableVector2(new Vector2(lat, lon));
-                        }
-
-                        Match matchDuration = durationRegex.Match(line);
-                        if (matchDuration.Success)
-                        {
-                            int h = int.Parse(matchDuration.Groups["h"].Value);
-                            int m = int.Parse(matchDuration.Groups["m"].Value);
-                            int s = int.Parse(matchDuration.Groups["s"].Value);
-                            int ms = int.Parse(matchDuration.Groups["ms"].Value) * 10;
-                            dataContainer.Lenght = new TimeSpan(0, h, m, s, ms);
-                        }
-                    }
-
-                    dataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS(dataContainer);
-                    dataContainer.ThumbnailImage = ExtractThumbnail(ffmpegPath, videoPath);
-                    dataContainer.IsValid = IsFlightDataValid(dataContainer);
+                    return dataContainer;
+                }
+                catch (Exception ex)
+                {
+                    dataContainer.HasExtractionError = true;
+                    dataContainer.ErrorMessages.Add(ex.Message);
                 }
             }
-            catch (Exception ex)
+            else if (File.Exists(srtPath))
             {
-                dataContainer.HasExtractionError = true;
-                dataContainer.ErrorMessages.Add(ex.Message);
+                try
+                {
+                    List<string> srtLines = File.ReadAllLines(srtPath).ToList();
+                    if (srtLines.Count > 0)
+                    {
+                        dataContainer.DataPoints = ParseSRTFile(srtLines, dataContainer);
+                        dataContainer.IsValid = IsFlightDataValid(dataContainer);
+                        dataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS(dataContainer);
+                        dataContainer.ThumbnailImage = ExtractThumbnail(ffmpegPath, videoPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    dataContainer.HasExtractionError = true;
+                    dataContainer.ErrorMessages.Add($"Error reading SRT file: {ex.Message}");
+                }
+
+                return dataContainer;
             }
 
+            //No SRT founded
+            dataContainer.HasExtractionError = true;
+            dataContainer.ErrorMessages.Add($"No SRT file founded");
+            dataContainer.IsValid = false;
+            dataContainer.ThumbnailImage = ExtractThumbnail(ffmpegPath, videoPath);
+
             return dataContainer;
-        }
-
-        //Check if stderr contains reel fatar extraction errors
-        private static bool IsCriticalFFmpegError(string line)
-        {
-            string lower = line.ToLowerInvariant();
-
-            return lower.Contains("error") ||
-                   lower.Contains("invalid data found") ||
-                   lower.Contains("stream specifier") ||
-                   lower.Contains("could not find") ||
-                   lower.Contains("not supported") ||
-                   lower.Contains("no subtitle") ||
-                   lower.Contains("failed");
         }
 
         /// <summary>
@@ -314,7 +394,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <summary>
         /// Parses the .srt file to extract individual flight data points.
         /// </summary>
-        private static List<FlightDataPoint> ParseSRT(List<string> srtBuffer, FlightDataContainer dataContainer)
+        private static List<FlightDataPoint> ParseSRTVideo(List<string> srtBuffer, FlightDataContainer dataContainer)
         {
             List<FlightDataPoint> dataPoints = new List<FlightDataPoint>();
 
@@ -360,7 +440,7 @@ namespace FlightReLive.Core.FFmpeg
                     {
                         point.Longitude = double.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture);
                         point.Latitude = double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture);
-                        point.GPSAltitude = double.Parse(gps.Groups[3].Value, CultureInfo.InvariantCulture);
+                        point.Satellites = double.Parse(gps.Groups[3].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match camera = cameraRegex.Match(dataLine);
@@ -385,7 +465,7 @@ namespace FlightReLive.Core.FFmpeg
                     Match hMatch = hRegex.Match(dataLine);
                     if (hMatch.Success && hMatch.Groups.Count >= 2)
                     {
-                        point.Height = double.Parse(hMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.RelativeAltitude = double.Parse(hMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match hsMatch = hsRegex.Match(dataLine);
@@ -411,7 +491,7 @@ namespace FlightReLive.Core.FFmpeg
             return dataPoints;
         }
 
-        private static List<FlightDataPoint> ParseSRTMini4Pro(List<string> srtBuffer, FlightDataContainer dataContainer)
+        private static List<FlightDataPoint> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
         {
             var dataPoints = new List<FlightDataPoint>();
 
@@ -421,43 +501,42 @@ namespace FlightReLive.Core.FFmpeg
                 string metadataLine = srtBuffer[i + 4].Trim();
 
                 if (!DateTime.TryParse(timestampLine, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime absoluteTime))
+                {
                     continue;
+                }
 
-                var point = new FlightDataPoint
+                FlightDataPoint point = new FlightDataPoint
                 {
                     Time = absoluteTime.ToLocalTime(),
                     TimeSpan = absoluteTime.ToLocalTime() - dataContainer.Date,
                     CameraSettings = new FlightDataPointCameraSettings()
                 };
 
-                // ✅ Altitude parsing séparé
                 try
                 {
-                    string relAltStr = ExtractValue(metadataLine, "rel_alt");
-                    string absAltStr = ExtractValue(metadataLine, "abs_alt");
-
-                    if (!string.IsNullOrEmpty(relAltStr))
-                        point.Height = double.Parse(relAltStr, CultureInfo.InvariantCulture);
-
-                    if (!string.IsNullOrEmpty(absAltStr))
-                        point.GPSAltitude = double.Parse(absAltStr, CultureInfo.InvariantCulture);
+                    (double relative, double absolute) altitudes = ExtractAltitudes(metadataLine);
+                    point.RelativeAltitude = altitudes.relative;
+                    point.AbsoluteAltitude = altitudes.absolute;
                 }
                 catch (Exception ex)
                 {
                     UnityEngine.Debug.LogWarning($"Altitude parsing failed: {ex.Message}");
                 }
 
-                // ✅ Parsing des autres clés
                 string[] tokens = metadataLine.Split(new[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
 
                 foreach (string token in tokens)
                 {
-                    // On ignore le bloc combiné rel_alt + abs_alt déjà traité
                     if (token.Contains("rel_alt:") && token.Contains("abs_alt:"))
+                    {
                         continue;
+                    }
 
                     string[] parts = token.Split(new[] { ':' }, 2);
-                    if (parts.Length != 2) continue;
+                    if (parts.Length != 2)
+                    {
+                        continue;
+                    }
 
                     string key = parts[0].Trim().ToLower();
                     string value = parts[1].Trim();
@@ -501,29 +580,42 @@ namespace FlightReLive.Core.FFmpeg
                     }
                 }
 
-                dataPoints.Add(point);
-                i += 4; // on saute au bloc suivant
+                if (point.Time != default && point.Latitude != 0 && point.Longitude != 0)
+                {
+                    dataPoints.Add(point);
+                }
+
+                i += 4;
             }
+
+            //Calculate Horizontal speed and Vertical speed for each points
+            SpeedCalculator.CalculateSpeeds(dataPoints);
 
             return dataPoints;
         }
 
-        private static string ExtractValue(string line, string key)
+        private static (double relAlt, double absAlt) ExtractAltitudes(string input)
         {
-            int start = line.IndexOf(key + ":");
-            if (start == -1) return null;
+            Regex regex = new Regex(@"\[rel_alt:\s*([\d\.]+)\s+abs_alt:\s*([\d\.]+)\]");
+            Match match = regex.Match(input);
 
-            start += key.Length + 1;
-            int end = line.IndexOfAny(new[] { ' ', ']' }, start);
-            if (end == -1) end = line.Length;
+            if (match.Success &&
+                double.TryParse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double relAlt) &&
+                double.TryParse(match.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double absAlt))
+            {
+                return (relAlt, absAlt);
+            }
 
-            return line.Substring(start, end - start).Trim();
+            return (0, 0);
         }
+
+
         private static float ParseShutterSpeed(string shutter)
         {
             if (shutter.Contains("/"))
             {
                 string[] parts = shutter.Split('/');
+
                 if (parts.Length == 2 &&
                     float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float num) &&
                     float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float denom))
@@ -538,9 +630,9 @@ namespace FlightReLive.Core.FFmpeg
         {
             List<FlightDataPoint> points = container.DataPoints.Where(p => p.Latitude != 0 && p.Longitude != 0 && p.Distance > 0).ToList();
 
-            if (points.Count < 3)
+            if (container.DataPoints.Count > 0 && points.Count < 3)
             {
-                return new FlightGPSData(0.0f, 0.0f);
+                return new FlightGPSData(container.DataPoints[0].Latitude, container.DataPoints[0].Longitude);
             }
 
             double originLat = points[0].Latitude;

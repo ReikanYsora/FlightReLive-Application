@@ -184,8 +184,8 @@ namespace FlightReLive.UI.FlightCharts
 
             // Pré-conversion des données
             List<float> convertedSpeeds = points.Select(p => SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))).ToList();
-            List<float> convertedRelAlts = points.Select(p => SettingsManager.ConvertAltitude((float)p.Height)).ToList();
-            List<float> convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.Height + flight.TakeOffAltitude))).ToList();
+            List<float> convertedRelAlts = points.Select(p => SettingsManager.ConvertAltitude((float)p.RelativeAltitude)).ToList();
+            List<float> convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
             List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
             List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();
             List<int> isos = points.Select(p => p.CameraSettings.ISO).ToList();
@@ -209,8 +209,8 @@ namespace FlightReLive.UI.FlightCharts
                 string label = p.Time.ToString("HH:mm:ss");
 
                 float speed = SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed));
-                float relAlt = SettingsManager.ConvertAltitude((float)p.Height);
-                float absAlt = SettingsManager.ConvertAltitude((float)(p.Height + flight.TakeOffAltitude));
+                float relAlt = SettingsManager.ConvertAltitude((float)p.RelativeAltitude);
+                float absAlt = SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude));
                 float aperture = p.CameraSettings.Aperture;
                 float shutterSpeed = p.CameraSettings.ShutterSpeed;
                 float iso = p.CameraSettings.ISO;
@@ -338,10 +338,10 @@ namespace FlightReLive.UI.FlightCharts
                 SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))
             ).ToList();
             List<float> convertedRelAlts = points.Select(p =>
-                SettingsManager.ConvertAltitude((float)p.Height)
+                SettingsManager.ConvertAltitude((float)p.RelativeAltitude)
             ).ToList();
             List<float> convertedAbsAlts = points.Select(p =>
-                SettingsManager.ConvertAltitude((float)(p.Height + flight.TakeOffAltitude))
+                SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))
             ).ToList();
             List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
             List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();

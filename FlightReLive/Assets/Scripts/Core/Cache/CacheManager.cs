@@ -97,52 +97,6 @@ namespace FlightReLive.Core.Cache
             }
         }
 
-        #region VIDEO SRT FILE METHOD
-        internal static Task<bool> VideoBinaryDataExistsAsync(string videoPath)
-        {
-            return Task.FromResult(File.Exists(GetVideoBinaryDataPath(videoPath)));
-        }
-
-        internal static string GetVideoBinaryDataPath(string videoPath)
-        {
-            string videoName = Path.GetFileNameWithoutExtension(videoPath);
-            return Path.Combine(_workspaceCacheFolder, $"{videoName}.frl");
-        }
-
-        internal static async Task SaveVideoBinaryDataAsync(string videoPath, FlightDataContainer container)
-        {
-            string filePath = GetVideoBinaryDataPath(videoPath);
-
-            try
-            {
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-
-                byte[] serialized = MessagePackSerializer.Serialize(container);
-                await File.WriteAllBytesAsync(filePath, serialized);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Failed to save video binary data {videoPath} : {ex.Message}");
-            }
-        }
-
-        internal static async Task<FlightDataContainer> LoadVideoBinaryDataAsync(string videoPath)
-        {
-            if (!await VideoBinaryDataExistsAsync(videoPath))
-            {
-                return null;
-            }
-
-            string filePath = GetVideoBinaryDataPath(videoPath);
-            byte[] bytes = File.ReadAllBytes(filePath);
-
-            return MessagePackSerializer.Deserialize<FlightDataContainer>(bytes);
-        }
-        #endregion
-
         #region SATELLITE TILE METHODS (ASYNC)
         internal static Task<bool> SatelliteTileExistsAsync(int zoom, int tileX, int tileY)
         {

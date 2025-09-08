@@ -137,11 +137,11 @@ namespace FlightReLive.Core.Workspace
             {
                 await semaphore.WaitAsync();
 
-                var task = Task.Run(async () =>
+                Task task = Task.Run(() =>
                 {
                     try
                     {
-                        await LoadVideoFileAsync(videoPath);
+                        LoadVideoFile(videoPath);
                     }
                     catch (Exception ex)
                     {
@@ -180,7 +180,7 @@ namespace FlightReLive.Core.Workspace
             });
         }
 
-        private async Task LoadVideoFileAsync(string videoPath)
+        private void LoadVideoFile(string videoPath)
         {
             if (SettingsManager.CurrentSettings == null || string.IsNullOrEmpty(SettingsManager.CurrentSettings.WorkspacePath) || !Directory.Exists(SettingsManager.CurrentSettings.WorkspacePath))
             {
@@ -194,7 +194,7 @@ namespace FlightReLive.Core.Workspace
                 return;
             }
 
-            FlightDataContainer container = await FFmpegHelper.ExtractOrLoadFlightDataAsync(fullVideoPath);
+            FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
 
             if (container == null)
             {
@@ -210,6 +210,7 @@ namespace FlightReLive.Core.Workspace
                 EstimateTakeOffPosition = container.EstimateTakeOffPosition,
                 FlightGPSCoordinates = container.FlightGPSCoordinates,
                 HasExtractionError = container.HasExtractionError,
+                HasTakeOffPosition = container.TakeOffPositionAvailable,
                 ErrorMessages = container.ErrorMessages,
                 Length = container.Lenght,
                 IsValid = container.IsValid

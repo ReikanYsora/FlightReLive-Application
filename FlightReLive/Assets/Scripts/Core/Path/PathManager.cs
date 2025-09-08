@@ -199,16 +199,19 @@ namespace FlightReLive.Core.Paths
                 return;
             }
 
-            // Altitude estimée au point de décollage
+            //Estimate altitude at takeoff point
             Vector3 positionGPS = new Vector3((float)flightData.EstimateTakeOffPosition.Latitude, flightData.TakeOffAltitude, (float)flightData.EstimateTakeOffPosition.Longitude);
 
-            // Crée le point d’origine
-            WorldUIManager.Instance.SetHomePOI(TerrainManager.Instance.ConvertGPSPositionToWorld(flightData, positionGPS));
+            //Create take off position
+            if (flightData.HasTakeOffPosition)
+            {
+                WorldUIManager.Instance.SetHomePOI(TerrainManager.Instance.ConvertGPSPositionToWorld(flightData, positionGPS));
+            }
 
-            // Crée le chemin Bezier
+            //Create bezier path
             List<Vector3> bezierPath = TerrainManager.CreateBezierFlightPath(flightData, flightData.Points, tiles, positionGPS.y, samplesPerSegment: 10, controlOffsetFactor: 0.5f);
 
-            // Applique le chemin
+            //Apply path
             SetFlightPaths(flightData, bezierPath, samplesPerSegment: 20, controlOffsetFactor: 0.3f, minUVStep: 0.0005f, smoothUVs: false);
 
             if (_progressionPathCollider != null)

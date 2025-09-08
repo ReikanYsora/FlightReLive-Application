@@ -43,14 +43,34 @@ namespace FlightReLive.Core.Pipeline
                 Points = file.DataPoints,
                 IsValid = file.IsValid,
                 HasExtractionError = file.HasExtractionError,
+                HasTakeOffPosition = file.HasTakeOffPosition,
                 VideoPath = file.VideoPath
             };
 
-            flightData.GPSOrigin = new FlightGPSData(file.FlightGPSCoordinates.x, file.FlightGPSCoordinates.y);
+            if (file.HasTakeOffPosition)
+            {
+                flightData.GPSOrigin = new FlightGPSData(file.FlightGPSCoordinates.x, file.FlightGPSCoordinates.y);
+            }
+            else
+            {
+                FlightDataPoint firstPoint = file.DataPoints.First();
+                flightData.GPSOrigin = new FlightGPSData(firstPoint.Latitude, firstPoint.Longitude);
+            }
+
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
+
             int padding = 1;
 
-            var allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude)).Append((file.EstimateTakeOffPosition.Latitude, file.EstimateTakeOffPosition.Longitude));
+            IEnumerable<(double Latitude, double Longitude)> allPoints;
+
+            if (file.HasTakeOffPosition)
+            {
+                allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude)).Append((file.EstimateTakeOffPosition.Latitude, file.EstimateTakeOffPosition.Longitude));
+            }
+            else
+            {
+                allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude));
+            }
 
             double minLat = allPoints.Min(p => p.Latitude);
             double maxLat = allPoints.Max(p => p.Latitude);

@@ -414,15 +414,15 @@ namespace FlightReLive.UI.VideoPlayer
                                 }, "Display on Google Map");
 
                                 //Altitudes
-                                string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + point.Height);
-                                string formattedRelativeAltitude = SettingsManager.FormatAltitude(point.Height);
+                                string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + point.RelativeAltitude);
+                                string formattedRelativeAltitude = SettingsManager.FormatAltitude(point.RelativeAltitude);
 
                                 //Speed
                                 double speed = CalculateSpeed((float)point.HorizontalSpeed, (float)point.VerticalSpeed);
                                 string formattedSpeed = SettingsManager.FormatSpeed(speed);
 
                                 //Satellite
-                                string formattedSatellite = $"{point.GPSAltitude} satellite(s)";
+                                string formattedSatellite = $"{point.Satellites} satellite(s)";
 
                                 Draw(window, grid, layout, FlightReLiveIcons.Speed, formattedSpeed, "Current speed#2", FlightReLiveIcons.Charts, () =>
                                 {

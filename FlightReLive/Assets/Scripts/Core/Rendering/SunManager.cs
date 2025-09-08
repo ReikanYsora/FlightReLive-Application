@@ -66,7 +66,7 @@ namespace FlightReLive.Core.Rendering
             spa.DeltaT = 69;
             spa.Longitude = flightData.GPSOrigin.Longitude;
             spa.Latitude = flightData.GPSOrigin.Latitude;
-            spa.Elevation = flightData.Points.Min(x => x.GPSAltitude);
+            spa.Elevation = flightData.Points.Min(x => x.Satellites);
             spa.Function = CalculationMode.SPA_ALL;
 
             int result = SPACalculate(ref spa);

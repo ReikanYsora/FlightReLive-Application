@@ -447,7 +447,7 @@ namespace FlightReLive.Core.Terrain
                 .OrderBy(x => x.TimeSpan)
                 .Select(p =>
                 {
-                    Vector3 gps = new Vector3((float)p.Latitude, referenceAltitude + (float)p.Height, (float)p.Longitude);
+                    Vector3 gps = new Vector3((float)p.Latitude, referenceAltitude + (float)p.RelativeAltitude, (float)p.Longitude);
                     return Instance.ConvertGPSPositionToWorld(flightData, gps);
                 })
                 .ToList();

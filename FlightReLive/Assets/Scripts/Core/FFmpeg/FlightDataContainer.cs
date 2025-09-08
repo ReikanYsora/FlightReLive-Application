@@ -45,6 +45,9 @@ namespace FlightReLive.Core.FFmpeg
         [Key(11)]
         public List<string> ErrorMessages { get; set; } = new List<string>();
 
+        [Key(12)]
+        public bool TakeOffPositionAvailable { get; set; }
+
         public FlightDataContainer()
         {
             DataPoints = new List<FlightDataPoint>();
@@ -64,10 +67,25 @@ namespace FlightReLive.Core.FFmpeg
 
             foreach (var point in DataPoints)
             {
-                if (point.Latitude < minLat) minLat = point.Latitude;
-                if (point.Latitude > maxLat) maxLat = point.Latitude;
-                if (point.Longitude < minLon) minLon = point.Longitude;
-                if (point.Longitude > maxLon) maxLon = point.Longitude;
+                if (point.Latitude < minLat)
+                {
+                    minLat = point.Latitude;
+                }
+
+                if (point.Latitude > maxLat)
+                {
+                    maxLat = point.Latitude;
+                }
+
+                if (point.Longitude < minLon)
+                {
+                    minLon = point.Longitude;
+                }
+
+                if (point.Longitude > maxLon)
+                {
+                    maxLon = point.Longitude;
+                }
             }
 
             double centerLat = (minLat + maxLat) / 2.0;

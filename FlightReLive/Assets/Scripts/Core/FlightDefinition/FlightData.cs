@@ -26,9 +26,9 @@ namespace FlightReLive.Core.FlightDefinition
         internal Texture2D Thumbnail { set; get; }
 
         internal Vector2 SceneCenterGPS { get; set; }
-        #endregion
 
-        #region PROPERTIES
+        internal bool HasTakeOffPosition { get; set; }
+
         internal bool HasExtractionError { get; set; }
 
         internal bool IsValid { get; set; }

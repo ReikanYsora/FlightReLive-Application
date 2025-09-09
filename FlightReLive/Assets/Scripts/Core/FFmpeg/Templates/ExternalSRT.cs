@@ -1,4 +1,4 @@
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -52,24 +52,52 @@ namespace FlightReLive.Core.FFmpeg
             return DataContainer;
         }
 
-        private static List<FlightDataPoint> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
+        private List<FlightDataPoint> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
         {
-            var dataPoints = new List<FlightDataPoint>();
+            List<FlightDataPoint> dataPoints = new List<FlightDataPoint>();
 
             for (int i = 0; i < srtBuffer.Count - 4; i++)
             {
+                string indexLine = srtBuffer[i].Trim();
+                string timeLine = srtBuffer[i + 1].Trim();
+                string frameLine = srtBuffer[i + 2].Trim();
                 string timestampLine = srtBuffer[i + 3].Trim();
                 string metadataLine = srtBuffer[i + 4].Trim();
 
-                if (!DateTime.TryParse(timestampLine, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime absoluteTime))
+                if (!int.TryParse(indexLine, out _) || !timeLine.Contains("-->"))
                 {
                     continue;
                 }
 
+                // Parse relative timecode
+                DateTime absoluteTime;
+                TimeSpan offset;
+
+                try
+                {
+                    string startTime = timeLine.Split(new[] { " --> " }, StringSplitOptions.None)[0];
+                    offset = ParseTimecode(startTime);
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.Debug.LogWarning($"Invalid timecode at line {i}: {timeLine} ({ex.Message})");
+                    continue;
+                }
+
+                // Parse absolute timestamp
+                if (!DateTime.TryParse(timestampLine, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime parsedAbsolute))
+                {
+                    absoluteTime = dataContainer.CreationDate.Add(offset);
+                }
+                else
+                {
+                    absoluteTime = parsedAbsolute.ToLocalTime();
+                }
+
                 FlightDataPoint point = new FlightDataPoint
                 {
-                    Time = absoluteTime.ToLocalTime(),
-                    TimeSpan = absoluteTime.ToLocalTime() - dataContainer.CreationDate,
+                    Time = absoluteTime,
+                    TimeSpan = offset,
                     CameraSettings = new FlightDataPointCameraSettings()
                 };
 
@@ -146,16 +174,13 @@ namespace FlightReLive.Core.FFmpeg
                 i += 4;
             }
 
-            //Reduce to one data point per second (coherence with other format)
             dataPoints = ReduceToOnePointPerSecond(dataPoints);
-
-            //Calculate Horizontal speed and Vertical speed for each points
             CalculateSpeeds(dataPoints);
 
             return dataPoints;
         }
 
-        private static float ParseShutterSpeed(string shutter)
+        private float ParseShutterSpeed(string shutter)
         {
             if (shutter.Contains("/"))
             {
@@ -172,7 +197,7 @@ namespace FlightReLive.Core.FFmpeg
             return float.Parse(shutter, CultureInfo.InvariantCulture);
         }
 
-        private static (double relAlt, double absAlt) ExtractAltitudes(string input)
+        private (double relAlt, double absAlt) ExtractAltitudes(string input)
         {
             Regex regex = new Regex(@"\[rel_alt:\s*([\d\.]+)\s+abs_alt:\s*([\d\.]+)\]");
             Match match = regex.Match(input);
@@ -187,7 +212,7 @@ namespace FlightReLive.Core.FFmpeg
             return (0, 0);
         }
 
-        private static List<FlightDataPoint> ReduceToOnePointPerSecond(List<FlightDataPoint> rawPoints)
+        private List<FlightDataPoint> ReduceToOnePointPerSecond(List<FlightDataPoint> rawPoints)
         {
             List<FlightDataPoint> reducedPoints = new List<FlightDataPoint>();
             HashSet<long> seenSeconds = new HashSet<long>();
@@ -220,7 +245,7 @@ namespace FlightReLive.Core.FFmpeg
             return reducedPoints;
         }
 
-        private static double CalculateHorizontalDistance(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateHorizontalDistance(FlightDataPoint point1, FlightDataPoint point2)
         {
             double lat1 = ToRadians(point1.Latitude);
             double lon1 = ToRadians(point1.Longitude);
@@ -234,7 +259,7 @@ namespace FlightReLive.Core.FFmpeg
             return EARTH_RADIUS * c;
         }
 
-        private static double CalculateHorizontalSpeed(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateHorizontalSpeed(FlightDataPoint point1, FlightDataPoint point2)
         {
             double distance = CalculateHorizontalDistance(point1, point2);
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
@@ -243,7 +268,7 @@ namespace FlightReLive.Core.FFmpeg
         }
 
 
-        private static double CalculateVerticalSpeed(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateVerticalSpeed(FlightDataPoint point1, FlightDataPoint point2)
         {
             double deltaAltitude = point2.AbsoluteAltitude - point1.AbsoluteAltitude;
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
@@ -251,12 +276,12 @@ namespace FlightReLive.Core.FFmpeg
             return timeDifference > 0 ? deltaAltitude / timeDifference : 0;
         }
 
-        private static double ToRadians(double degrees)
+        private double ToRadians(double degrees)
         {
             return degrees * Math.PI / 180.0;
         }
 
-        internal static void CalculateSpeeds(List<FlightDataPoint> points)
+        internal void CalculateSpeeds(List<FlightDataPoint> points)
         {
             for (int i = 1; i < points.Count; i++)
             {

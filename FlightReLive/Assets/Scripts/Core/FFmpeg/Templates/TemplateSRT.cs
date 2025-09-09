@@ -1,6 +1,7 @@
 using FlightReLive.Core.FlightDefinition;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -122,7 +123,21 @@ namespace FlightReLive.Core.FFmpeg
 
             return true;
         }
-                
+
+        /// <summary>
+        /// Parses an SRT timestamp ("hh:mm:ss,ms") into a TimeSpan object.
+        /// </summary>
+        protected TimeSpan ParseTimecode(string timecode)
+        {
+            string[] parts = timecode.Split(':', ',', '.');
+            int h = int.Parse(parts[0], CultureInfo.InvariantCulture);
+            int m = int.Parse(parts[1], CultureInfo.InvariantCulture);
+            int s = int.Parse(parts[2], CultureInfo.InvariantCulture);
+            int ms = int.Parse(parts[3], CultureInfo.InvariantCulture);
+
+            return new TimeSpan(0, h, m, s, ms);
+        }
+
         protected FlightGPSData EstimateFlightStartFromGPS()
         {
             List<FlightDataPoint> points = DataContainer.DataPoints.Where(p => p.Latitude != 0 && p.Longitude != 0 && p.Distance > 0).ToList();

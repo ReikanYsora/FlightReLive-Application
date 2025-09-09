@@ -287,15 +287,12 @@ namespace FlightReLive.UI.VideoPlayer
 
                 if (currentFlightData != null)
                 {
-                    // 🔠 Taille du texte
                     Fugui.PushFont(12, FontType.Bold);
                     Vector2 textSize = ImGui.CalcTextSize(currentFlightData.Name);
 
-                    // 📐 Calcul du centrage vertical
                     float verticalOffset = (size.y - textSize.y) / 2f;
                     Fugui.MoveY(verticalOffset);
 
-                    // 🖋️ Affichage centré
                     layout.CenterNextItem(currentFlightData.Name);
                     layout.Text(currentFlightData.Name);
                     Fugui.PopFont();
@@ -309,6 +306,11 @@ namespace FlightReLive.UI.VideoPlayer
 
         public override void OnUI(FuWindow window, FuLayout windowLayout)
         {
+            if (LoadingManager.Instance.CurrentFlightData == null || _videoPlayer == null || _videoPlayer.Player == null || !_videoPlayer.Player.isPrepared)
+            {
+                return;
+            }
+
             FlightData currentFlightData = LoadingManager.Instance.CurrentFlightData;
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
 
@@ -316,172 +318,174 @@ namespace FlightReLive.UI.VideoPlayer
             {
                 if (ImGui.GetCursorScreenPos().y <= Fugui.MainContainer.Size.y)
                 {
-                    if (currentFlightData != null && _videoPlayer != null && _videoPlayer.Player != null && _videoPlayer.Player.isPrepared)
+                    FlightDataPoint point = GetSafePoint(_lastPointIndex);
+
+                    if (point == null)
                     {
-                        FlightDataPoint point = GetSafePoint(_lastPointIndex);
-
-                        if (point == null)
-                        {
-                            return;
-                        }
-
-                        Vector2 availableSize = ImGui.GetContentRegionAvail();
-                        float scale = Fugui.CurrentContext.Scale;
-                        float outerMargin = 12f * scale;
-                        float innerMargin = 6f * scale;
-                        float timelineHeight = 12f;
-                        float spacingBetweenBlocks = 10f * scale;
-
-                        float videoRatio = (float)_videoPlayer.Player.width / _videoPlayer.Player.height;
-                        float targetWidth = availableSize.x - 2f * (outerMargin + innerMargin);
-                        float targetHeight = targetWidth / videoRatio;
-
-                        float gridRowHeight = 22f * scale;
-                        int gridRowCount = 9;
-                        float gridHeight = gridRowHeight * gridRowCount;
-                        float totalContentHeight = spacingBetweenBlocks + targetHeight + timelineHeight + gridHeight + spacingBetweenBlocks + 4f * innerMargin;
-
-                        if (totalContentHeight > availableSize.y - 2f * outerMargin)
-                        {
-                            targetHeight = availableSize.y - 2f * outerMargin - 4f * innerMargin - spacingBetweenBlocks * 2f - timelineHeight - gridHeight;
-                            targetWidth = targetHeight * videoRatio;
-                        }
-
-                        Vector2 cursorPos = ImGui.GetCursorScreenPos();
-                        float totalWidth = targetWidth + 2f * innerMargin;
-                        float blockPosX = cursorPos.x + MathF.Max((availableSize.x - totalWidth) / 2f, outerMargin);
-
-                        float blockPosY = cursorPos.y + outerMargin;
-                        Vector2 blockPos = new Vector2(blockPosX, blockPosY);
-                        Vector2 blockSize = new Vector2(targetWidth, targetHeight + timelineHeight);
-                        Vector2 blockMax = blockPos + blockSize;
-
-                        Vector2 backgroundMin = blockPos - new Vector2(innerMargin, innerMargin);
-                        Vector2 backgroundMax = blockMax + new Vector2(innerMargin, innerMargin);
-
-                        drawList.AddRectFilled(backgroundMin, backgroundMax, ImGui.GetColorU32(Fugui.Themes.GetColor(FuColors.TitleBgCollapsed)), 4f);
-
-                        ImGui.SetCursorScreenPos(blockPos);
-                        _videoPlayer.DrawImage(targetWidth, targetHeight);
-
-                        ImGui.SetCursorScreenPos(new Vector2(blockPos.x, blockPos.y + targetHeight));
-                        _videoPlayer.DrawTimeLine(timelineHeight, targetWidth);
-
-                        layout.Spacing();
-
-                        float scrollPanelHeight = ImGui.GetContentRegionAvail().y - 20f * Fugui.CurrentContext.Scale;
-                        Vector2 scrollPanelSize = new Vector2(ImGui.GetContentRegionAvail().x, scrollPanelHeight);
-
-
-                        ImGui.BeginChild("DataScrollbalePanel", scrollPanelSize, ImGuiChildFlags.AutoResizeY);
-
-                        layout.Collapsable(FlightReLiveIcons.VideoFile + "  Video##collapsable", () =>
-                        {
-                            Fugui.PushFont(14, FontType.Regular);
-
-                            using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
-                            {
-                                string formattedResolution = $"{_videoPlayer.Player.texture.width}x{_videoPlayer.Player.texture.height}";
-
-                                double durationSeconds = _videoPlayer.Player.length;
-                                ulong frameCount = _videoPlayer.Player.frameCount;
-                                double frameRate = frameCount / durationSeconds;
-                                string formattedFramerate = $"{frameRate:F2} FPS";
-
-                                TimeSpan duration = TimeSpan.FromSeconds(durationSeconds);
-                                string formattedDuration = duration.ToString(@"hh\:mm\:ss");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.Resolution, formattedResolution, "Native resolution");
-                                Draw(window, grid, layout, FlightReLiveIcons.Framerate, formattedFramerate, "Framerate");
-                                Draw(window, grid, layout, FlightReLiveIcons.Duration, formattedDuration, "Duration");
-                            }
-
-                            Fugui.PopFont();
-                        }, FuButtonStyle.Collapsable, defaultOpen: true);
-
-                        layout.Collapsable(FlightReLiveIcons.Drone + "  Drone##collapsable", () =>
-                        {
-                            Fugui.PushFont(14, FontType.Regular);
-
-                            using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
-                            {
-                                //GPS Position
-                                string formattedPosition = $"{point.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {point.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
-                                Draw(window, grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position#1", FlightReLiveIcons.GoogleMaps, () =>
-                                {
-                                    GoogleAPIHelper.OpenGoogleMapsBrowser(new Vector2((float)point.Latitude, (float)point.Longitude));
-                                }, "Display on Google Map");
-
-                                //Altitudes
-                                string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + point.RelativeAltitude);
-                                string formattedRelativeAltitude = SettingsManager.FormatAltitude(point.RelativeAltitude);
-
-                                //Speed
-                                double speed = CalculateSpeed((float)point.HorizontalSpeed, (float)point.VerticalSpeed);
-                                string formattedSpeed = SettingsManager.FormatSpeed(speed);
-
-                                Draw(window, grid, layout, FlightReLiveIcons.Speed, formattedSpeed, "Current speed#2", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.Speed;
-                                }, "Display speed chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.AltitudeRelative, formattedRelativeAltitude, "Relative altitude to take-off position#7", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.RelativeAltitude;
-                                }, "Display relative altitude chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.AltitudeAbsolute, formattedAbsoluteAltitude, "Absolute altitude#8", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.AbsoluteAltitude;
-                                }, "Display absolute altitude chart");
-                            }
-
-                            Fugui.PopFont();
-                        }, FuButtonStyle.Collapsable, defaultOpen: true);
-
-                        layout.Collapsable(FlightReLiveIcons.Camera + "  Camera##collapsable", () =>
-                        {
-                            Fugui.PushFont(14, FontType.Regular);
-
-                            using (FuGrid grid = new FuGrid("cameraDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
-                            {
-                                Draw(window, grid, layout, FlightReLiveIcons.Aperture, point.CameraSettings.Aperture.ToString(), "Aperture#3", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.Aperture;
-                                }, "Display Aperture chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.ShutterSpeed, point.CameraSettings.ShutterSpeed.ToString(), "Shutter Speed#3", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.ShutterSpeed;
-                                }, "Display Shutter speed chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.ISO, point.CameraSettings.ISO.ToString(), "ISO#4", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.ISO;
-                                }, "Display ISO chart");
-
-                                Draw(window, grid, layout, FlightReLiveIcons.Exposure, point.CameraSettings.Exposure.ToString(), "Exposure#5", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.Exposure;
-                                }, "Display exposure chart");
-
-                                string formattedZoom = $"X{point.CameraSettings.DigitalZoom:F1}";
-                                Draw(window, grid, layout, FlightReLiveIcons.DigitalZoom, formattedZoom, "Digital Zoom#6", FlightReLiveIcons.Charts, () =>
-                                {
-                                    FlightChartsManager.Instance.DisplayedChart = FlightChartType.DigitalZoom;
-                                }, "Display digital zoom");
-                            }
-
-                            Fugui.PopFont();
-                        }, FuButtonStyle.Collapsable, defaultOpen: true);
-
-                        ImGui.EndChild();
+                        return;
                     }
+
+                    Vector2 availableSize = ImGui.GetContentRegionAvail();
+                    float scale = Fugui.CurrentContext.Scale;
+                    float outerMargin = 12f * scale;
+                    float innerMargin = 6f * scale;
+                    float timelineHeight = 12f;
+                    float spacingBetweenBlocks = 10f * scale;
+
+                    float videoRatio = (float)_videoPlayer.Player.width / _videoPlayer.Player.height;
+                    float targetWidth = availableSize.x - 2f * (outerMargin + innerMargin);
+                    float targetHeight = targetWidth / videoRatio;
+
+                    float gridRowHeight = 22f * scale;
+                    int gridRowCount = 9;
+                    float gridHeight = gridRowHeight * gridRowCount;
+                    float totalContentHeight = spacingBetweenBlocks + targetHeight + timelineHeight + gridHeight + spacingBetweenBlocks + 4f * innerMargin;
+
+                    if (totalContentHeight > availableSize.y - 2f * outerMargin)
+                    {
+                        targetHeight = availableSize.y - 2f * outerMargin - 4f * innerMargin - spacingBetweenBlocks * 2f - timelineHeight - gridHeight;
+                        targetWidth = targetHeight * videoRatio;
+                    }
+
+                    Vector2 cursorPos = ImGui.GetCursorScreenPos();
+                    float totalWidth = targetWidth + 2f * innerMargin;
+                    float blockPosX = cursorPos.x + MathF.Max((availableSize.x - totalWidth) / 2f, outerMargin);
+
+                    float blockPosY = cursorPos.y + outerMargin;
+                    Vector2 blockPos = new Vector2(blockPosX, blockPosY);
+                    Vector2 blockSize = new Vector2(targetWidth, targetHeight + timelineHeight);
+                    Vector2 blockMax = blockPos + blockSize;
+
+                    Vector2 backgroundMin = blockPos - new Vector2(innerMargin, innerMargin);
+                    Vector2 backgroundMax = blockMax + new Vector2(innerMargin, innerMargin);
+
+                    drawList.AddRectFilled(backgroundMin, backgroundMax, ImGui.GetColorU32(Fugui.Themes.GetColor(FuColors.TitleBgCollapsed)), 4f);
+
+                    ImGui.SetCursorScreenPos(blockPos);
+                    _videoPlayer.DrawImage(targetWidth, targetHeight);
+
+                    ImGui.SetCursorScreenPos(new Vector2(blockPos.x, blockPos.y + targetHeight));
+                    _videoPlayer.DrawTimeLine(timelineHeight, targetWidth);
+
+                    layout.Spacing();
+
+                    float scrollPanelHeight = ImGui.GetContentRegionAvail().y - 20f * Fugui.CurrentContext.Scale;
+                    Vector2 scrollPanelSize = new Vector2(ImGui.GetContentRegionAvail().x, scrollPanelHeight);
+
+
+                    ImGui.BeginChild("DataScrollbalePanel", scrollPanelSize, ImGuiChildFlags.AutoResizeY);
+
+                    layout.Collapsable(FlightReLiveIcons.VideoFile + "  Video##collapsable", () =>
+                    {
+                        Fugui.PushFont(14, FontType.Regular);
+
+                        using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                        {
+                            string formattedResolution = $"{_videoPlayer.Player.texture.width}x{_videoPlayer.Player.texture.height}";
+
+                            double durationSeconds = _videoPlayer.Player.length;
+                            ulong frameCount = _videoPlayer.Player.frameCount;
+                            double frameRate = frameCount / durationSeconds;
+                            string formattedFramerate = $"{frameRate:F2} FPS";
+
+                            TimeSpan duration = TimeSpan.FromSeconds(durationSeconds);
+                            string formattedDuration = duration.ToString(@"hh\:mm\:ss");
+
+                            Draw(window, "11", grid, layout, FlightReLiveIcons.Resolution, formattedResolution, "Native resolution");
+                            Draw(window, "12", grid, layout, FlightReLiveIcons.Framerate, formattedFramerate, "Framerate");
+                            Draw(window, "13", grid, layout, FlightReLiveIcons.Duration, formattedDuration, "Duration");
+                        }
+
+                        Fugui.PopFont();
+                    }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                    layout.Collapsable(FlightReLiveIcons.Drone + "  Drone##collapsable", () =>
+                    {
+                        Fugui.PushFont(14, FontType.Regular);
+
+                        using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                        {
+                            //GPS Position
+                            string formattedPosition = $"{point.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {point.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
+                            Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.GoogleMaps, () =>
+                            {
+                                GoogleAPIHelper.OpenGoogleMapsBrowser(new Vector2((float)point.Latitude, (float)point.Longitude));
+                            }, "Display on Google Map");
+
+                            //Altitudes
+                            string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + point.RelativeAltitude);
+                            string formattedRelativeAltitude = SettingsManager.FormatAltitude(point.RelativeAltitude);
+
+                            //Speed
+                            double speed = CalculateSpeed((float)point.HorizontalSpeed, (float)point.VerticalSpeed);
+                            string formattedSpeed = SettingsManager.FormatSpeed(speed);
+
+                            Draw(window, "2", grid, layout, FlightReLiveIcons.Speed, formattedSpeed, "Current speed", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.Speed;
+                            }, "Display speed chart");
+
+                            Draw(window, "3", grid, layout, FlightReLiveIcons.AltitudeRelative, formattedRelativeAltitude, "Relative altitude to take-off position", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.RelativeAltitude;
+                            }, "Display relative altitude chart");
+
+                            Draw(window, "4", grid, layout, FlightReLiveIcons.AltitudeAbsolute, formattedAbsoluteAltitude, "Absolute altitude", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.AbsoluteAltitude;
+                            }, "Display absolute altitude chart");
+                        }
+
+                        Fugui.PopFont();
+                    }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                    layout.Collapsable(FlightReLiveIcons.Camera + "  Camera##collapsable", () =>
+                    {
+                        Fugui.PushFont(14, FontType.Regular);
+
+                        using (FuGrid grid = new FuGrid("cameraDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                        {
+                            Draw(window, "5", grid, layout, FlightReLiveIcons.Aperture, point.CameraSettings.Aperture.ToString(), "Aperture", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.Aperture;
+                            }, "Display Aperture chart");
+
+                            Draw(window, "6", grid, layout, FlightReLiveIcons.ShutterSpeed, point.CameraSettings.ShutterSpeed.ToString(), "Shutter Speed", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.ShutterSpeed;
+                            }, "Display Shutter speed chart");
+
+                            Draw(window, "7", grid, layout, FlightReLiveIcons.PostProcess, point.CameraSettings.FocalLength.ToString(), "Focal Length", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.Focal;
+                            }, "Display Focal length chart");
+
+                            Draw(window, "8", grid, layout, FlightReLiveIcons.ISO, point.CameraSettings.ISO.ToString(), "ISO", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.ISO;
+                            }, "Display ISO chart");
+
+                            Draw(window, "9", grid, layout, FlightReLiveIcons.Exposure, point.CameraSettings.Exposure.ToString(), "Exposure", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.Exposure;
+                            }, "Display exposure chart");
+
+                            string formattedZoom = $"X{point.CameraSettings.DigitalZoom:F1}";
+                            Draw(window, "10", grid, layout, FlightReLiveIcons.DigitalZoom, formattedZoom, "Digital Zoom", FlightReLiveIcons.Charts, () =>
+                            {
+                                FlightChartsManager.Instance.DisplayedChart = FlightChartType.DigitalZoom;
+                            }, "Display digital zoom");
+                        }
+
+                        Fugui.PopFont();
+                    }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                    ImGui.EndChild();
                 }
             }
         }
 
-        private void Draw(FuWindow window, FuGrid grid, FuLayout layout, string icon, string value, string tooltip, string actionText = null, Action actionButton = null, string actionTooltip = null)
+        private void Draw(FuWindow window, string actionId, FuGrid grid, FuLayout layout, string icon, string value, string tooltip, string actionText = null, Action actionButton = null, string actionTooltip = null) 
         {
             grid.SetNextElementToolTipWithLabel(tooltip);
             Fugui.PushFont(12, FontType.Regular);
@@ -506,15 +510,18 @@ namespace FlightReLive.UI.VideoPlayer
                 }
 
                 Fugui.PushFont(12, FontType.Regular);
-                string uniqueButtonLabel = $"{actionText}##{tooltip}";
+
+                string uniqueButtonLabel = $"{actionText}##{actionId}";
 
                 if (layout.Button(uniqueButtonLabel, FuElementSize.AutoSize, new Vector2(10f, 4f), Vector2.zero, FuButtonStyle.Default))
                 {
                     actionButton?.Invoke();
                 }
+
                 Fugui.PopFont();
             }
         }
+
 
         private void DrawContextualMenu(FuWindow window, string value)
         {

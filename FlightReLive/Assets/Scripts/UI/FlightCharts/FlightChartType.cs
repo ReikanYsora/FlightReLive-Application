@@ -9,8 +9,9 @@ namespace FlightReLive.UI.FlightCharts
         AbsoluteAltitude = 2,
         Aperture = 3,
         ShutterSpeed = 4,
-        ISO = 5,
-        Exposure = 6,
-        DigitalZoom = 7
+        Focal = 5,
+        ISO = 6,
+        Exposure = 7,
+        DigitalZoom = 8
     }
 }

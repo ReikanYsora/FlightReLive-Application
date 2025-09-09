@@ -152,20 +152,6 @@ namespace FlightReLive.Core.FFmpeg
 
             return dataPoints;
         }
-
-        /// <summary>
-        /// Parses an SRT timestamp ("hh:mm:ss,ms") into a TimeSpan object.
-        /// </summary>
-        private static TimeSpan ParseTimecode(string timecode)
-        {
-            string[] parts = timecode.Split(':', ',', '.');
-            int h = int.Parse(parts[0], CultureInfo.InvariantCulture);
-            int m = int.Parse(parts[1], CultureInfo.InvariantCulture);
-            int s = int.Parse(parts[2], CultureInfo.InvariantCulture);
-            int ms = int.Parse(parts[3], CultureInfo.InvariantCulture);
-
-            return new TimeSpan(0, h, m, s, ms);
-        }
         #endregion
     }
 }

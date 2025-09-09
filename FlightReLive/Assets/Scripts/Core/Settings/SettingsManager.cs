@@ -56,6 +56,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnWorkspaceZoomChanged;
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<SatelliteTileQualityPreset> OnSatelliteTileQualityPresetChanged;
+        public static event Action<int> OnTilePaddingChanged;
         public static event Action<float> OnGlobalScaleChanged;
         //public static event Action<PointCloudMode> OnPointCloudModeChanged;
         //public static event Action<float> OnAbsoluteAltitudeMinChanged;
@@ -140,6 +141,9 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadSatelliteTileQualityPreset() =>
             CurrentSettings.SatelliteTileQualityPreset = (SatelliteTileQualityPreset)PlayerPrefs.GetInt(nameof(Settings.SatelliteTileQualityPreset), (int)SatelliteTileQualityPreset.High);
+
+        internal static void LoadTilePadding() =>
+            CurrentSettings.TilePadding = PlayerPrefs.GetInt(nameof(Settings.TilePadding), 1);
 
         internal static void LoadGlobalScale() =>
             CurrentSettings.GlobalScale = PlayerPrefs.GetFloat(nameof(Settings.GlobalScale), 1f);
@@ -397,6 +401,14 @@ namespace FlightReLive.Core.Settings
             OnSatelliteTileQualityPresetChanged?.Invoke(value);
         }
 
+        internal static void SaveTilePadding(int value)
+        {
+            CurrentSettings.TilePadding = value;
+            PlayerPrefs.SetInt(nameof(Settings.TilePadding), value);
+            PlayerPrefs.Save();
+            OnTilePaddingChanged?.Invoke(value);
+        }
+
         internal static void SaveGlobalScale(float value)
         {
             CurrentSettings.GlobalScale = value;
@@ -632,6 +644,7 @@ namespace FlightReLive.Core.Settings
             LoadWorkspaceZoom();
             LoadMapTilerApiKey();
             LoadSatelliteTileQualityPreset();
+            LoadTilePadding();
             //LoadPointCloudMode();
             //LoadAbsoluteAltitudeMin();
             //LoadAbsoluteAltitudeMax();
@@ -681,6 +694,7 @@ namespace FlightReLive.Core.Settings
             SaveWorkspaceZoom(1f);
             SaveMapTilerApiKey("");
             SaveSatelliteTileQualityPreset(SatelliteTileQualityPreset.High);
+            SaveTilePadding(1);
             //SavePointCloudMode(PointCloudMode.Disabled);
             //SaveAbsoluteAltitudeMin(0f);
             //SaveAbsoluteAltitudeMax(1000f);
@@ -1202,6 +1216,22 @@ namespace FlightReLive.Core.Settings
                                 }
                             }
                         });
+                    }
+
+                    using (FuGrid tilePaddingGrid = new FuGrid("tilePaddingGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        if (isLoading)
+                        {
+                            tilePaddingGrid.DisableNextElements();
+                        }
+
+                        int tilePadding = CurrentSettings.TilePadding;
+                        tilePaddingGrid.SetNextElementToolTipWithLabel("Defines the number of additional tile rows around the flight area.\nIncreases the realism of the scene but affects performance and the amount of resources downloaded.");
+                        if (tilePaddingGrid.Slider("Tile padding", ref tilePadding, 0, 2))
+                        {
+                            SaveTilePadding(tilePadding);
+                        }
+                        tilePaddingGrid.NextColumn();
                     }
 
                     Fugui.PopFont();

@@ -59,7 +59,7 @@ namespace FlightReLive.Core.Pipeline
 
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
 
-            int padding = 1;
+            int padding = SettingsManager.CurrentSettings.TilePadding;
 
             IEnumerable<(double Latitude, double Longitude)> allPoints;
 

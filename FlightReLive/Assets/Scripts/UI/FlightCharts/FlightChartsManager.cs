@@ -24,6 +24,7 @@ namespace FlightReLive.UI.FlightCharts
         private FlightChart _absoluteAltitudeChart;
         private FlightChart _apertureChart;
         private FlightChart _shutterSpeedChart;
+        private FlightChart _focalChart;
         private FlightChart _isoChart;
         private FlightChart _exposureChart;
         private FlightChart _digitalZoomChart;
@@ -138,6 +139,17 @@ namespace FlightReLive.UI.FlightCharts
                 _shutterSpeedChart.ClearSteps();
             }
 
+            if (_focalChart == null)
+            {
+                _focalChart = AddChart(FlightChartType.Focal);
+                _focalChart.IntervalDuration = 1;
+                _focalChart.ChartColor = Color.white;
+            }
+            else
+            {
+                _focalChart.ClearSteps();
+            }
+
             if (_isoChart == null)
             {
                 _isoChart = AddChart(FlightChartType.ISO);
@@ -176,18 +188,30 @@ namespace FlightReLive.UI.FlightCharts
             List<FlightChartStep> absoluteAltitudeChart = new();
             List<FlightChartStep> apertureChart = new();
             List<FlightChartStep> shutterSpeedChart = new();
+            List<FlightChartStep> focalChart = new();
             List<FlightChartStep> isoChart = new();
             List<FlightChartStep> exposureChart = new();
             List<FlightChartStep> digitalZoomChart = new();
 
             List<FlightDataPoint> points = flight.Points;
 
-            // Pré-conversion des données
+            // Data preconversion
             List<float> convertedSpeeds = points.Select(p => SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))).ToList();
             List<float> convertedRelAlts = points.Select(p => SettingsManager.ConvertAltitude((float)p.RelativeAltitude)).ToList();
-            List<float> convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
+            List<float> convertedAbsAlts;
+
+            if (points.Where(x => x.AbsoluteAltitude > 0).Any())
+            {
+                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float) p.AbsoluteAltitude)).ToList();
+            }
+            else
+            {
+               convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
+            }
+
             List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
             List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();
+            List<float> focals = points.Select(p => p.CameraSettings.FocalLength).ToList();
             List<int> isos = points.Select(p => p.CameraSettings.ISO).ToList();
             List<float> exposures = points.Select(p => p.CameraSettings.Exposure).ToList();
             List<float> digitalZooms = points.Select(p => p.CameraSettings.DigitalZoom).ToList();
@@ -198,11 +222,12 @@ namespace FlightReLive.UI.FlightCharts
             (var minAbsAlt, _, var rangeAbsAlt, var isFlatAbsAlt) = GetRange(convertedAbsAlts, 10f);
             (var minAperture, _, var rangeAperture, var isFlatAperture) = GetRange(apertures, 5f);
             (var minShutterSpeed, _, var rangeShutterSpeed, var isFlatShutterSpeed) = GetRange(shutterSpeeds, 10f);
+            (var minFocal, _, var rangeFocal, var isFlatFocal) = GetRange(focals, 100f);
             (var minIso, _, var rangeIso, var isFlatIso) = GetRange(isos, 100);
             (var minExposure, _, var rangeExposure, var isFlatExposure) = GetRange(exposures, 10f);
             (var minDigitalZoom, _, var rangeDigitalZoom, var isFlatDigitalZoom) = GetRange(digitalZooms, 5f);
 
-            // Génération des steps
+            // Steps generation
             for (int i = 0; i < points.Count; i++)
             {
                 var p = points[i];
@@ -213,6 +238,7 @@ namespace FlightReLive.UI.FlightCharts
                 float absAlt = SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude));
                 float aperture = p.CameraSettings.Aperture;
                 float shutterSpeed = p.CameraSettings.ShutterSpeed;
+                float focal = p.CameraSettings.FocalLength;
                 float iso = p.CameraSettings.ISO;
                 float exposure = p.CameraSettings.Exposure;
                 float digitalZoom = p.CameraSettings.DigitalZoom;
@@ -222,17 +248,19 @@ namespace FlightReLive.UI.FlightCharts
                 absoluteAltitudeChart.Add(CreateStep(i, label, p.Time, absAlt, Normalize(absAlt, minAbsAlt, rangeAbsAlt, isFlatAbsAlt), p));
                 apertureChart.Add(CreateStep(i, label, p.Time, aperture, Normalize(aperture, minAperture, rangeAperture, isFlatAperture), p));
                 shutterSpeedChart.Add(CreateStep(i, label, p.Time, shutterSpeed, Normalize(shutterSpeed, minShutterSpeed, rangeShutterSpeed, isFlatShutterSpeed), p));
+                focalChart.Add(CreateStep(i, label, p.Time, focal, Normalize(focal, minFocal, rangeFocal, isFlatFocal), p));
                 isoChart.Add(CreateStep(i, label, p.Time, iso, Normalize(iso, minIso, rangeIso, isFlatIso), p));
                 exposureChart.Add(CreateStep(i, label, p.Time, exposure, Normalize(exposure, minExposure, rangeExposure, isFlatExposure), p));
                 digitalZoomChart.Add(CreateStep(i, label, p.Time, digitalZoom, Normalize(digitalZoom, minDigitalZoom, rangeDigitalZoom, isFlatDigitalZoom), p));
             }
 
-            // Ajout aux charts
+            // Add charts
             _speedChart.AddStep(speedChartSteps);
             _relativeAltitudeChart.AddStep(relativeAltitudeChart);
             _absoluteAltitudeChart.AddStep(absoluteAltitudeChart);
             _apertureChart.AddStep(apertureChart);
             _shutterSpeedChart.AddStep(shutterSpeedChart);
+            _focalChart.AddStep(focalChart);
             _isoChart.AddStep(isoChart);
             _exposureChart.AddStep(exposureChart);
             _digitalZoomChart.AddStep(digitalZoomChart);
@@ -263,12 +291,15 @@ namespace FlightReLive.UI.FlightCharts
             float min = values.Min();
             float max = values.Max();
             bool isFlat = Mathf.Approximately(min, max);
+
             if (isFlat)
             {
                 min -= padding;
                 max += padding;
             }
+
             float range = Mathf.Max(max - min, 1f);
+
             return (min, max, range, isFlat);
         }
 
@@ -277,12 +308,15 @@ namespace FlightReLive.UI.FlightCharts
             int min = values.Min();
             int max = values.Max();
             bool isFlat = Mathf.Approximately(min, max);
+
             if (isFlat)
             {
                 min -= padding;
                 max += padding;
             }
+
             int range = Mathf.Max(max - min, 1);
+
             return (min, max, range, isFlat);
         }
 
@@ -299,6 +333,7 @@ namespace FlightReLive.UI.FlightCharts
             _absoluteAltitudeChart = null;
             _apertureChart = null;
             _shutterSpeedChart = null;
+            _focalChart = null;
             _isoChart = null;
             _exposureChart = null;
             _digitalZoomChart = null;
@@ -340,9 +375,17 @@ namespace FlightReLive.UI.FlightCharts
             List<float> convertedRelAlts = points.Select(p =>
                 SettingsManager.ConvertAltitude((float)p.RelativeAltitude)
             ).ToList();
-            List<float> convertedAbsAlts = points.Select(p =>
-                SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))
-            ).ToList();
+
+            List<float> convertedAbsAlts;
+            if (points.Where(x => x.AbsoluteAltitude > 0).Any())
+            {
+                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)p.AbsoluteAltitude)).ToList();
+            }
+            else
+            {
+                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
+            }
+
             List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
             List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();
             List<int> isos = points.Select(p => p.CameraSettings.ISO).ToList();

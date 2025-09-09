@@ -24,6 +24,7 @@ namespace FlightReLive.Core.Settings
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
         public SatelliteTileQualityPreset SatelliteTileQualityPreset;
+        public int TilePadding;
         public float GlobalScale;
         public PointCloudMode PointCloudMode;
         public float AbsoluteAltitudeMin;

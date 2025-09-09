@@ -79,8 +79,9 @@ namespace FlightReLive.Core.FFmpeg
                     return new ExternalSRT(ffmpegPath, videoPath).DataContainer;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                UnityEngine.Debug.LogException(ex);
                 return null;
             }
         }

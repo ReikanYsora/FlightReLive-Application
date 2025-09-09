@@ -675,7 +675,7 @@ namespace FlightReLive.Core.Settings
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
-            SaveMapQualityPreset(QualityPreset.Quality);
+            SaveMapQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);

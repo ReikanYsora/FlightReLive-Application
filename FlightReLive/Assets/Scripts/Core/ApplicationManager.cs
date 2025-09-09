@@ -379,13 +379,13 @@ namespace FlightReLive.Core
                 }
 
                 float depthOfFieldStart = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                if (grid.Slider("DoF Start", ref depthOfFieldStart, 10f, 200f, 0.1f))
+                if (grid.Slider("DoF Start", ref depthOfFieldStart, 10f, 300f, 0.1f))
                 {
                     SettingsManager.SaveDepthOfFieldStart(depthOfFieldStart);
                 }
 
                 float depthOfFieldEnd = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-                if (grid.Slider("DoF End", ref depthOfFieldEnd, 200f, 500f, 0.1f))
+                if (grid.Slider("DoF End", ref depthOfFieldEnd, 300f, 1000f, 0.1f))
                 {
                     SettingsManager.SaveDepthOfFieldEnd(depthOfFieldEnd);
                 }

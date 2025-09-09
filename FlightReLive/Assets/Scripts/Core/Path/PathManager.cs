@@ -202,12 +202,6 @@ namespace FlightReLive.Core.Paths
             //Estimate altitude at takeoff point
             Vector3 positionGPS = new Vector3((float)flightData.EstimateTakeOffPosition.Latitude, flightData.TakeOffAltitude, (float)flightData.EstimateTakeOffPosition.Longitude);
 
-            //Create take off position
-            if (flightData.HasTakeOffPosition)
-            {
-                WorldUIManager.Instance.SetHomePOI(TerrainManager.Instance.ConvertGPSPositionToWorld(flightData, positionGPS));
-            }
-
             //Create bezier path
             List<Vector3> bezierPath = TerrainManager.CreateBezierFlightPath(flightData, flightData.Points, tiles, positionGPS.y, samplesPerSegment: 10, controlOffsetFactor: 0.5f);
 

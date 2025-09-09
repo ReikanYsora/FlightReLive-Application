@@ -16,7 +16,6 @@ namespace FlightReLive.Core.WorldUI
         [SerializeField] private Camera _mainCamera;
 
         [Header("3D Icons prefabs")]
-        [SerializeField] private GameObject _homePrefab;
         [SerializeField] private GameObject _gpsPrefab;
         private List<POIEntity> _pois;
 
@@ -55,23 +54,6 @@ namespace FlightReLive.Core.WorldUI
         #endregion
 
         #region METHODS
-        internal void SetHomePOI(Vector3 position)
-        {
-            GameObject tempHomePOI = GameObject.Instantiate(_homePrefab, _mainCanvas.transform);
-            tempHomePOI.transform.position = position;
-            POIEntity poiEntityComponent = tempHomePOI.GetComponent<POIEntity>();
-
-            if (poiEntityComponent != null)
-            {
-                poiEntityComponent.Inialize(POIType.HomePoint, _mainCamera, position);
-                _pois.Add(poiEntityComponent);
-            }
-            else
-            {
-                Destroy(tempHomePOI);
-            }
-        }
-
         internal void UnloadFlightPOIs()
         {
             foreach (POIEntity poi in _pois)

@@ -268,10 +268,10 @@ namespace FlightReLive.Core.Settings
             CurrentSettings.DepthOfFieldEnabled = PlayerPrefs.GetInt(nameof(Settings.DepthOfFieldEnabled), 0) == 1;
 
         internal static void LoadDepthOfFieldStart() =>
-            CurrentSettings.DepthOfFieldStart = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldStart), 100f);
+            CurrentSettings.DepthOfFieldStart = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldStart), 200f);
 
         internal static void LoadDepthOfFieldEnd() =>
-            CurrentSettings.DepthOfFieldEnd = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldEnd), 300f);
+            CurrentSettings.DepthOfFieldEnd = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldEnd), 400f);
 
         internal static void SaveHardwareQualityPreset(QualityPreset value)
         {
@@ -717,8 +717,8 @@ namespace FlightReLive.Core.Settings
             SaveCaptureEncodedLogo(true);
             SaveVignettingIntensity(0.3f);
             SaveDepthOfFieldEnabled(true);
-            SaveDepthOfFieldStart(100f);
-            SaveDepthOfFieldEnd(300f);
+            SaveDepthOfFieldStart(200f);
+            SaveDepthOfFieldEnd(400f);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();

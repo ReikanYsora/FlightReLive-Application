@@ -1,6 +1,6 @@
-﻿using DG.Tweening;
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.Terrain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,6 @@ namespace FlightReLive.Core.Rendering
         [Header("Sun position and rotation effect")]
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _mainCamera;
-        [SerializeField] private float _sunSpeedEffect = 3f;
         [SerializeField] private List<SkyboxProfile> _skyboxProfiles;
         private SkyboxProfile _currentSkybox;
         private Material _skyboxMaterial;
@@ -57,24 +56,21 @@ namespace FlightReLive.Core.Rendering
             spa.Second = flightData.Date.Second;
 
             DateTime flightDate = flightData.Date;
-            TimeZoneInfo tz = SettingsManager.CurrentSettings.UserTimeZone;
-            bool isDst = tz.IsDaylightSavingTime(flightDate);
-            double timezoneOffset = tz.BaseUtcOffset.TotalHours + (isDst ? 1.0 : 0.0);
-            spa.Timezone = timezoneOffset;
+            TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
+
+            TimeSpan utcOffset = userTimeZone.GetUtcOffset(flightDate);
+            spa.Timezone = utcOffset.TotalHours;
 
             spa.DeltaUt1 = 0;
             spa.DeltaT = 69;
             spa.Longitude = flightData.GPSOrigin.Longitude;
             spa.Latitude = flightData.GPSOrigin.Latitude;
 
-            if (flightData.Points.Where(x => x.AbsoluteAltitude > 0.0).Any())
+            spa.Elevation = TerrainManager.Instance.GetAltitudeAtPosition(flightData, new FlightGPSData
             {
-                spa.Elevation = flightData.Points.Min(x => x.AbsoluteAltitude);
-            }
-            else
-            {
-                spa.Elevation = flightData.Points.Min(x => x.RelativeAltitude);
-            }
+                Latitude = flightData.GPSOrigin.Latitude,
+                Longitude = flightData.GPSOrigin.Longitude
+            });
 
             spa.Function = CalculationMode.SPA_ALL;
 
@@ -82,7 +78,7 @@ namespace FlightReLive.Core.Rendering
             Vector3 sunDirection = GetSunDirection((float)spa.Azimuth, (float)spa.E);
             _mainCamera.clearFlags = CameraClearFlags.Skybox;
             UpdateSkyboxForHour(flightData.Date.Hour);
-            AnimateSunScene(sunDirection, flightData.Date.Hour, spa.E, _sunSpeedEffect);
+            AnimateSunScene(sunDirection, flightData.Date.Hour, spa.E);
         }
 
         private void UpdateSkyboxForHour(int hour)
@@ -104,70 +100,56 @@ namespace FlightReLive.Core.Rendering
             }
         }
 
-        private void AnimateSunScene(Vector3 sunDir, int hour, double elevation, float duration)
+        private void AnimateSunScene(Vector3 sunDir, int hour, double elevation)
         {
-            Sequence sunSequence = DOTween.Sequence();
+            // Safety check for null references
+            if (_mainLight == null || _mainCamera == null || RenderSettings.skybox == null)
+            {
+                return;
+            }
 
-            sunSequence.Join(_mainLight.transform
-                .DORotateQuaternion(Quaternion.LookRotation(-sunDir), duration)
-                .SetEase(Ease.InOutSine)
-                .OnUpdate(() =>
-                {
-                    float currentYaw = _mainLight.transform.eulerAngles.y;
-                    RenderSettings.skybox.SetFloat("_Rotation", currentYaw);
-                }));
+            // Rotate the sun directly
+            if (_mainLight.transform != null)
+            {
+                _mainLight.transform.rotation = Quaternion.LookRotation(-sunDir);
 
+                // Update skybox rotation
+                float currentYaw = _mainLight.transform.eulerAngles.y;
+                RenderSettings.skybox.SetFloat("_Rotation", currentYaw);
+            }
+
+            //Set sun color
             Color targetColor = GetInterpolatedSunColor(hour);
-            sunSequence.Join(_mainLight
-                .DOColor(targetColor, duration)
-                .SetEase(Ease.InOutSine));
+            _mainLight.color = targetColor;
 
-            float targetIntensity = Mathf.Lerp(0.6f, 1.2f, Mathf.InverseLerp(0f, 90f, (float)elevation));
-            sunSequence.Join(DOTween.To(
-                () => _mainLight.intensity,
-                x => _mainLight.intensity = x,
-                targetIntensity,
-                duration
-            ).SetEase(Ease.InOutSine));
+            //Sun intensity
+            float targetIntensity = Mathf.Lerp(2.0f, 4.0f, Mathf.InverseLerp(0f, 90f, (float)elevation));
+            _mainLight.intensity = targetIntensity;
 
-            Color ambientBase = new Color(0.2f, 0.2f, 0.3f);
-            Color ambientScattering = new Color(0.4f, 0.2f, 0.5f);
-            Color ambientTarget;
+            //Ambient light
+            Color ambientBase = new Color(0.5f, 0.5f, 0.55f);          // Base daylight
+            Color ambientScattering = new Color(1f, 0.8f, 0.7f);       // Sunrise/sunset
+            Color ambientTarget = elevation < 10f
+                ? Color.Lerp(ambientScattering, ambientBase, Mathf.InverseLerp(0f, 10f, (float)elevation))
+                : Color.Lerp(ambientBase, targetColor, Mathf.InverseLerp(10f, 90f, (float)elevation));
+            RenderSettings.ambientLight = ambientTarget;
 
-            if (elevation < 10f)
-            {
-                float t = Mathf.InverseLerp(0f, 10f, (float)elevation);
-                ambientTarget = Color.Lerp(ambientScattering, ambientBase, t);
-            }
-            else
-            {
-                ambientTarget = Color.Lerp(ambientBase, targetColor, Mathf.InverseLerp(10f, 90f, (float)elevation));
-            }
+            // Apply ambient light
+            RenderSettings.ambientLight = ambientTarget;
 
-            sunSequence.Join(DOTween.To(
-                () => RenderSettings.ambientLight,
-                x => RenderSettings.ambientLight = x,
-                ambientTarget,
-                duration
-            ).SetEase(Ease.InOutSine));
+            // Apply skybox tint
+            RenderSettings.skybox.SetColor("_Tint", ambientTarget);
 
-            sunSequence.Join(DOTween.To(
-                () => RenderSettings.skybox.GetColor("_Tint"),
-                x => RenderSettings.skybox.SetColor("_Tint", x),
-                ambientTarget,
-                duration
-            ).SetEase(Ease.InOutSine));
-
+            // Apply fog settings
             RenderSettings.fogColor = ambientTarget;
-            RenderSettings.fogDensity = Mathf.Lerp(0.01f, 0.0005f, Mathf.InverseLerp(0f, 90f, (float)elevation));
+            RenderSettings.fogDensity = Mathf.Lerp(0.005f, 0.0001f, Mathf.InverseLerp(0f, 90f, (float)elevation));
 
+            // Apply lens flare if present
             LensFlareComponentSRP flare = _mainLight.GetComponent<LensFlareComponentSRP>();
             if (flare != null)
             {
                 flare.intensity = Mathf.Lerp(0.2f, 1.0f, Mathf.InverseLerp(10f, 90f, (float)elevation));
             }
-
-            sunSequence.Play();
         }
 
         private Vector3 GetSunDirection(float azimuthDeg, float altitudeDeg)

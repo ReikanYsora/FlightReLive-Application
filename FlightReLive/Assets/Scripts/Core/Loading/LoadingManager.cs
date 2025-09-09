@@ -87,9 +87,9 @@ namespace FlightReLive.Core.Loading
         private void UnloadFlightDataInModules()
         {
             //Unload FLightData in all modules
-            TerrainManager.Instance.UnloadFlightMap();
             FlightChartsManager.Instance.UnloadFlightCharts();
             VideoPlayerManager.Instance.UnloadFlightVideo();
+            TerrainManager.Instance.UnloadFlightMap();
             PathManager.Instance.UnloadFlightPath();
             SunManager.Instance.UnloadFlightRendering();
             WorldUIManager.Instance.UnloadFlightPOIs();

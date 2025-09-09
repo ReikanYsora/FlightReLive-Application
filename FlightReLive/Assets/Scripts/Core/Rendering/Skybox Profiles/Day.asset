@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Rendering.SkyboxProfile
   startHour: 9
   skyboxMaterial: {fileID: 2100000, guid: 3d38b03a3b42643f88764e21cfa8a5db, type: 2}
-  sunColor: {r: 0.998248, g: 1, b: 0.9386792, a: 1}
+  sunColor: {r: 1, g: 0.99195683, b: 0.8443396, a: 1}

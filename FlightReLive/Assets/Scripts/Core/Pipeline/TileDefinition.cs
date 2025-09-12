@@ -18,8 +18,6 @@ namespace FlightReLive.Core.Pipeline
 
         public Texture2D SatelliteTexture { set; get; }
 
-        public Texture2D HillShadeTexture { set; get; }
-
         public float[,] HeightMap { set; get; }
 
         public MeshData MeshData { set; get; }

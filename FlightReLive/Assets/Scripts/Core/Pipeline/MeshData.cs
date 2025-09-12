@@ -34,6 +34,7 @@ namespace FlightReLive.Core.Pipeline
                     mesh.SetNormals(normals);
                     mesh.RecalculateBounds();
                     mesh.RecalculateNormals();
+                    mesh.RecalculateTangents();
                     break;
                 case MeshType.Point:
 

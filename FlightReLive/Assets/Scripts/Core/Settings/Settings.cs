@@ -12,7 +12,7 @@ namespace FlightReLive.Core.Settings
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
-        public QualityPreset MapQualityPreset;
+        public QualityPreset MapQualityPreset { set; get; }
         public float CameraRotationSpeed;
         public float CameraZoomSpeed;
         public float CameraInertia;
@@ -52,6 +52,9 @@ namespace FlightReLive.Core.Settings
         public float DepthOfFieldStart;
         public float DepthOfFieldEnd;
         public string CurrentVersion;
+        public bool FogEnabled;
+        public Color FogColor;
+        public float FogDensity;
         #endregion
     }
 }

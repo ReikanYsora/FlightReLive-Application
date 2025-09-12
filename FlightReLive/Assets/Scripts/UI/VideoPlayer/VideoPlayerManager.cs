@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Settings;
@@ -175,18 +176,24 @@ namespace FlightReLive.UI.VideoPlayer
                 return;
             }
 
-            _videoPlayer.SetFile(flightData.VideoPath);
-            OnVideoLoaded?.Invoke(flightData);
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                _videoPlayer.SetFile(flightData.VideoPath);
+                OnVideoLoaded?.Invoke(flightData);
+            });
         }
 
         internal void UnloadFlightVideo()
         {
-            if (_videoPlayer == null)
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                return;
-            }
+                if (_videoPlayer == null)
+                {
+                    return;
+                }
 
-            _videoPlayer.Stop();
+                _videoPlayer.Stop();
+            });
         }
 
         private FlightDataPoint GetSafePoint(int index)

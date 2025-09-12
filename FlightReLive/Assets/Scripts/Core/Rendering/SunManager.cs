@@ -1,12 +1,10 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using Fu.Framework;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static FlightReLive.Core.Rendering.SPACalculator;
 
 namespace FlightReLive.Core.Rendering
 {
@@ -16,9 +14,11 @@ namespace FlightReLive.Core.Rendering
         [Header("Sun position and rotation effect")]
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _mainCamera;
-        [SerializeField] private List<SkyboxProfile> _skyboxProfiles;
-        private SkyboxProfile _currentSkybox;
-        private Material _skyboxMaterial;
+        [SerializeField] private Material _dawnSkybox;
+        [SerializeField] private Material _daySkybox;
+        [SerializeField] private Material _twilightSkybox;
+        [SerializeField] private Material _nightSkybox;
+        [SerializeField] private float _hdriSunOffset = 120f;
         #endregion
 
         #region PROPERTIES
@@ -39,162 +39,285 @@ namespace FlightReLive.Core.Rendering
 
         private void Start()
         {
+            //Apply saved settings
+            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
+            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
+            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
+            DynamicGI.UpdateEnvironment();
+
+            SettingsManager.OnFogEnabledChanged += OnFogEnabledChanged;
+            SettingsManager.OnFogColorChanged += OnFogColorChanged;
+            SettingsManager.OnFogDensityChanged += OnFogDensityChanged;
+
             UnloadFlightRendering();
+        }
+
+        private void OnDestroy()
+        {
+            SettingsManager.OnFogEnabledChanged -= OnFogEnabledChanged;
+            SettingsManager.OnFogColorChanged -= OnFogColorChanged;
+            SettingsManager.OnFogDensityChanged -= OnFogDensityChanged;
         }
         #endregion
 
         #region METHODS
         internal void LoadFlightRendering(FlightData flightData)
         {
-            SPAData spa = new SPAData();
-
-            spa.Year = flightData.Date.Year;
-            spa.Month = flightData.Date.Month;
-            spa.Day = flightData.Date.Day;
-            spa.Hour = flightData.Date.Hour;
-            spa.Minute = flightData.Date.Minute;
-            spa.Second = flightData.Date.Second;
-
-            DateTime flightDate = flightData.Date;
-            TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
-
-            TimeSpan utcOffset = userTimeZone.GetUtcOffset(flightDate);
-            spa.Timezone = utcOffset.TotalHours;
-
-            spa.DeltaUt1 = 0;
-            spa.DeltaT = 69;
-            spa.Longitude = flightData.GPSOrigin.Longitude;
-            spa.Latitude = flightData.GPSOrigin.Latitude;
-
-            spa.Elevation = TerrainManager.Instance.GetAltitudeAtPosition(flightData, new FlightGPSData
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                Latitude = flightData.GPSOrigin.Latitude,
-                Longitude = flightData.GPSOrigin.Longitude
+                TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
+                DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
+                DateTime flightDateUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
+                UpdateSkybox(flightDateUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
+        }
 
-            spa.Function = CalculationMode.SPA_ALL;
+        internal void UpdateSkybox(DateTime utcTime, double latitude, double longitude)
+        {
+            SunPosition sunPosition = CalculateSunPosition(utcTime, latitude, longitude);
+            SkyPhase phase = GetSkyPhase(sunPosition.Elevation);
 
-            int result = SPACalculate(ref spa);
-            Vector3 sunDirection = GetSunDirection((float)spa.Azimuth, (float)spa.E);
+            Material targetSkybox;
+            switch (phase)
+            {
+                case SkyPhase.Dawn:
+                    targetSkybox = _dawnSkybox;
+                    break;
+                default:
+                case SkyPhase.Day:
+                    targetSkybox = _daySkybox;
+                    break;
+                case SkyPhase.Twilight:
+                    targetSkybox = _twilightSkybox;
+                    break;
+                case SkyPhase.Night:
+                    targetSkybox = _nightSkybox;
+                    break;
+            }
+
             _mainCamera.clearFlags = CameraClearFlags.Skybox;
-            UpdateSkyboxForHour(flightData.Date.Hour);
-            AnimateSunScene(sunDirection, flightData.Date.Hour, spa.E);
-        }
-
-        private void UpdateSkyboxForHour(int hour)
-        {
-            SkyboxProfile selected = _skyboxProfiles
-                .Where(p => p.skyboxMaterial != null && hour >= p.startHour)
-                .OrderByDescending(p => p.startHour)
-                .FirstOrDefault();
-
-            if (selected != null && selected != _currentSkybox)
-            {
-                _skyboxMaterial = new Material(selected.skyboxMaterial);
-                RenderSettings.skybox = _skyboxMaterial;
-                RenderSettings.ambientMode = AmbientMode.Skybox;
-                RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-                RenderSettings.reflectionIntensity = 1f;
-                DynamicGI.UpdateEnvironment();
-                _currentSkybox = selected;
-            }
-        }
-
-        private void AnimateSunScene(Vector3 sunDir, int hour, double elevation)
-        {
-            // Safety check for null references
-            if (_mainLight == null || _mainCamera == null || RenderSettings.skybox == null)
-            {
-                return;
-            }
-
-            // Rotate the sun directly
-            if (_mainLight.transform != null)
-            {
-                _mainLight.transform.rotation = Quaternion.LookRotation(-sunDir);
-
-                // Update skybox rotation
-                float currentYaw = _mainLight.transform.eulerAngles.y;
-                RenderSettings.skybox.SetFloat("_Rotation", currentYaw);
-            }
-
-            //Set sun color
-            Color targetColor = GetInterpolatedSunColor(hour);
-            _mainLight.color = targetColor;
-
-            //Sun intensity
-            float targetIntensity = Mathf.Lerp(2.0f, 4.0f, Mathf.InverseLerp(0f, 90f, (float)elevation));
-            _mainLight.intensity = targetIntensity;
-
-            //Ambient light
-            Color ambientBase = new Color(0.5f, 0.5f, 0.55f);          // Base daylight
-            Color ambientScattering = new Color(1f, 0.8f, 0.7f);       // Sunrise/sunset
-            Color ambientTarget = elevation < 10f
-                ? Color.Lerp(ambientScattering, ambientBase, Mathf.InverseLerp(0f, 10f, (float)elevation))
-                : Color.Lerp(ambientBase, targetColor, Mathf.InverseLerp(10f, 90f, (float)elevation));
-            RenderSettings.ambientLight = ambientTarget;
-
-            // Apply ambient light
-            RenderSettings.ambientLight = ambientTarget;
-
-            // Apply skybox tint
-            RenderSettings.skybox.SetColor("_Tint", ambientTarget);
-
-            // Apply fog settings
-            RenderSettings.fogColor = ambientTarget;
-            RenderSettings.fogDensity = Mathf.Lerp(0.005f, 0.0001f, Mathf.InverseLerp(0f, 90f, (float)elevation));
-
-            // Apply lens flare if present
+            RenderSettings.skybox = targetSkybox;
+            RenderSettings.skybox.SetColor("_Tint", ComputeSkyboxTintRayleigh(sunPosition));
+            RenderSettings.skybox.SetFloat("_Rotation", (sunPosition.Azimuth + _hdriSunOffset) % 360f);
+            RenderSettings.skybox.SetFloat("_Exposure", ComputeSkyboxExposure(sunPosition.Elevation));
+            RenderSettings.ambientMode = AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = ComputeAmbientIntensity(sunPosition.Elevation);
+            RenderSettings.reflectionIntensity = ComputeReflectionIntensity(sunPosition.Elevation);
             LensFlareComponentSRP flare = _mainLight.GetComponent<LensFlareComponentSRP>();
+
+            OrientMainLight(sunPosition);
+
             if (flare != null)
             {
-                flare.intensity = Mathf.Lerp(0.2f, 1.0f, Mathf.InverseLerp(10f, 90f, (float)elevation));
+                if (sunPosition.Elevation <= 0f)
+                {
+                    flare.intensity = 0f;
+                }
+                else
+                {
+                    float elevation = Mathf.Clamp(sunPosition.Elevation, 0f, 90f);
+                    float t = elevation / 90f;
+                    flare.intensity = Mathf.Clamp(Mathf.Pow(t, 0.8f) * 1.2f + 0.3f, 0.3f, 1.5f);
+                }
             }
+
+            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
+            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
+            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
+            DynamicGI.UpdateEnvironment();
         }
 
-        private Vector3 GetSunDirection(float azimuthDeg, float altitudeDeg)
+        internal static SunPosition CalculateSunPosition(DateTime localTime, double latitude, double longitude)
         {
-            float azimuthRad = Mathf.Deg2Rad * azimuthDeg;
-            float altitudeRad = Mathf.Deg2Rad * altitudeDeg;
+            //Convert UTC to Julian Day
+            double julianDay = localTime.ToOADate() + 2415018.5;
+            double julianCentury = (julianDay - 2451545.0) / 36525.0;
 
-            float x = Mathf.Cos(altitudeRad) * Mathf.Sin(azimuthRad);
-            float y = Mathf.Sin(altitudeRad);
-            float z = Mathf.Cos(altitudeRad) * Mathf.Cos(azimuthRad);
+            //Approximate solar declination and hour angle
+            double solarDeclination = 23.44 * Math.Cos((360.0 / 365.25) * (julianDay - 172.0) * Math.PI / 180.0);
+            double solarTime = localTime.TimeOfDay.TotalHours + (longitude / 15.0);
+            double hourAngle = (solarTime - 12.0) * 15.0;
 
-            return new Vector3(x, y, z);
-        }
+            //Convert to radians
+            double latRad = latitude * Math.PI / 180.0;
+            double declRad = solarDeclination * Math.PI / 180.0;
+            double haRad = hourAngle * Math.PI / 180.0;
 
-        private Color GetInterpolatedSunColor(int hour)
-        {
-            SkyboxProfile selected = _skyboxProfiles
-                .Where(p => p.skyboxMaterial != null)
-                .OrderByDescending(p => p.startHour)
-                .FirstOrDefault(p => hour >= p.startHour);
+            //Elevation angle
+            double elevationRad = Math.Asin(Math.Sin(latRad) * Math.Sin(declRad) + Math.Cos(latRad) * Math.Cos(declRad) * Math.Cos(haRad));
+            float elevation = (float)(elevationRad * 180.0 / Math.PI);
 
-            if (selected != null)
+            //Azimuth angle (astronomical convention: from north, clockwise)
+            double azimuthRad = Math.Atan2(-Math.Sin(haRad), Math.Tan(declRad) * Math.Cos(latRad) - Math.Sin(latRad) * Math.Cos(haRad));
+            double azimuthDeg = azimuthRad * 180.0 / Math.PI;
+            azimuthDeg = (azimuthDeg + 360.0) % 360.0;
+
+            //Convert azimuth to Unity-compatible rotation (from north, clockwise → Unity Y rotation)
+            float unityAzimuth = (float)((360.0 - azimuthDeg) % 360.0);
+
+            return new SunPosition
             {
-                return selected.sunColor;
+                Elevation = elevation,
+                Azimuth = unityAzimuth,
+                AzimuthPhysical = (float)azimuthDeg
+            };
+        }
+
+        internal static SkyPhase GetSkyPhase(float elevation)
+        {
+            if (elevation > 10f)
+            {
+                return SkyPhase.Day;
             }
 
-            return Color.white;
+            if (elevation > 0f)
+            {
+                return SkyPhase.Twilight;
+            }
+
+            if (elevation > -6f)
+            {
+                return SkyPhase.Dawn;
+            }
+
+            return SkyPhase.Night;
+        }
+        private void OrientMainLight(SunPosition sunPosition)
+        {
+            //Convert azimuth (astronomical) and elevation to a directional vector
+            float azimuthRad = Mathf.Deg2Rad * sunPosition.AzimuthPhysical;
+            float elevationRad = Mathf.Deg2Rad * sunPosition.Elevation;
+
+            //Spherical to Cartesian conversion
+            Vector3 sunDirection = new Vector3(
+                Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad),
+                Mathf.Sin(elevationRad),
+                Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad)
+            );
+
+            //Orient the directional light to point in the opposite direction (light shines *from* the sun)
+            _mainLight.transform.rotation = Quaternion.LookRotation(-sunDirection, Vector3.up);
+
+            //Adjust intensity and color
+            _mainLight.intensity = ComputeSunIntensity(sunPosition.Elevation);
+            _mainLight.color = ComputeSkyboxTintRayleigh(sunPosition);
+        }
+
+        private float ComputeSkyboxExposure(double solarElevation)
+        {
+            float elevation = Mathf.Clamp((float)solarElevation, -6f, 90f);
+            float t = (elevation + 6f) / 96f;
+
+            return Mathf.Clamp(Mathf.Pow(t, 0.8f) * 2.2f, 0.3f, 2.2f);
+        }
+        private float ComputeSunIntensity(double solarElevation)
+        {
+            float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
+            float t = elevation / 90f;
+
+            return Mathf.Clamp(Mathf.Pow(t, 0.9f) * 1.5f, 0.3f, 1.5f);
+        }
+
+        private Color ComputeSkyboxTintRayleigh(SunPosition sunPosition)
+        {
+            float elevation = Mathf.Clamp(sunPosition.Elevation, 0.1f, 90f);
+            float airMass = 1f / (Mathf.Cos(Mathf.Deg2Rad * elevation) + 0.50572f * Mathf.Pow(96.07995f - elevation, -1.6364f));
+            float scatteringFactor = Mathf.Clamp01((airMass - 1f) / 39f);
+            float azimuth = sunPosition.AzimuthPhysical;
+            float sunriseBoost = Mathf.Clamp01((azimuth - 60f) / 60f);
+            float sunsetBoost = Mathf.Clamp01((azimuth - 240f) / 60f);
+            float directionalWarmth = Mathf.Max(sunriseBoost, sunsetBoost);
+            float warmthFactor = Mathf.Clamp01(scatteringFactor * 0.5f + directionalWarmth * 0.5f);
+
+            Color zenithColor = new Color(0.5f, 0.7f, 1f);
+            Color horizonColor = new Color(1f, 0.3f, 0.1f);
+
+            Color tint = new Color(
+                Mathf.Clamp01(zenithColor.r + (horizonColor.r - zenithColor.r) * warmthFactor),
+                Mathf.Clamp01(zenithColor.g + (horizonColor.g - zenithColor.g) * warmthFactor),
+                Mathf.Clamp01(zenithColor.b + (horizonColor.b - zenithColor.b) * warmthFactor)
+            );
+
+            float saturationBoost = 1f + 0.6f * warmthFactor;
+            tint.r = Mathf.Clamp01(tint.r * saturationBoost);
+            tint.g = Mathf.Clamp01(tint.g * saturationBoost);
+            tint.b = Mathf.Clamp01(tint.b * saturationBoost);
+
+            return tint;
+        }
+        private float ComputeReflectionIntensity(double solarElevation)
+        {
+            float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
+            float t = elevation / 90f;
+
+            return Mathf.Clamp(Mathf.Pow(t, 1.2f) * 1.2f, 0.3f, 1.2f);
+        }
+        private float ComputeAmbientIntensity(double solarElevation, float fogDensity = 0f)
+        {
+            float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
+            float t = elevation / 90f;
+            float baseIntensity = Mathf.Pow(t, 0.9f) * 1.2f;
+            float fogFactor = Mathf.Clamp01(1f - fogDensity * 8f);
+
+            return Mathf.Clamp(baseIntensity * fogFactor, 0.3f, 1.2f);
         }
 
         internal void UnloadFlightRendering()
         {
-            if (_mainCamera != null)
+            if (_mainCamera == null)
+            {
+                return;
+            }
+
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 _mainCamera.clearFlags = CameraClearFlags.SolidColor;
                 _mainCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+                RenderSettings.skybox = null;
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                DynamicGI.UpdateEnvironment();
+            });
+        }
+        #endregion
+
+        #region CALLBACKS
+        private void OnFogEnabledChanged(bool enable)
+        {
+            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
+        }
+
+        private void OnFogColorChanged(Color fogColor)
+        {
+            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
+        }
+
+        private void OnFogDensityChanged(float fogDensity)
+        {
+            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
+        }
+        #endregion
+
+        #region UI
+        internal void DisplaySunSettings(FuGrid grid)
+        {
+            grid.EnableNextElements();
+
+            bool fogEnabled = SettingsManager.CurrentSettings.FogEnabled;
+            if (grid.Toggle("Fog", ref fogEnabled))
+            {
+                SettingsManager.SaveFogEnabled(fogEnabled);
             }
 
-            if (_mainLight != null)
+            Vector4 fogColor = (Vector4)SettingsManager.CurrentSettings.FogColor;
+            if (grid.ColorPicker("Fog color", ref fogColor))
             {
-                LensFlareComponentSRP flare = _mainLight.GetComponent<LensFlareComponentSRP>();
+                SettingsManager.SaveFogColor(fogColor);
+            }
 
-                if (flare != null)
-                {
-                    flare.intensity = 0f;
-                }
+            float fogDensity = SettingsManager.CurrentSettings.FogDensity;
+            if (grid.Slider("Fog density", ref fogDensity, 0f, 0.1f, 0.001f))
+            {
+                SettingsManager.SaveFogDensity(fogDensity);
             }
         }
         #endregion

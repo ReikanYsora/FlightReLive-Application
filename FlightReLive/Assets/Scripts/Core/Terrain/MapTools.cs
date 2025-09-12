@@ -3,7 +3,6 @@ using FlightReLive.Core.Pipeline;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using VexTile.Mapbox.VectorTile.Geometry;
 
 namespace FlightReLive.Core.Terrain
 {
@@ -13,14 +12,12 @@ namespace FlightReLive.Core.Terrain
         internal static readonly int TILE_RESOLUTION = 512;
         internal static readonly int ZOOM_LEVEL_TOPOGRAPHIC = 14;
         internal static readonly int ZOOM_LEVEL_BUILDING = 14;
-        internal static readonly int ZOOM_LEVEL_HILLSHADE_RASTER = 12;
         #endregion
 
         #region METHODS
 
         internal static (int tileX, int tileY) GPSToTileXY(double latitude, double longitude)
         {
-            // 🔒 Clamp latitude pour éviter les débordements Mercator
             latitude = Math.Clamp(latitude, -85.05112878, 85.05112878);
 
             double latRad = latitude * Math.PI / 180.0;

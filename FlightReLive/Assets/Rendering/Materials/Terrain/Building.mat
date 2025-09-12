@@ -99,7 +99,7 @@ Material:
     - _Alpha: 1
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _Ambiant_Occlusion: 0.114
+    - _Ambiant_Occlusion: 0.932
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -139,8 +139,8 @@ Material:
     - _BaseColor: {r: 0.41509432, g: 0.27382767, b: 0.16642933, a: 1}
     - _Color: {r: 1, g: 0.83937883, b: 0.504717, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _MainColor: {r: 0.8867924, g: 0.7727569, b: 0.7152901, a: 1}
+    - _MainColor: {r: 0.990566, g: 0.8827649, b: 0.5980776, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _SpecularColor: {r: 0.4811321, g: 0.4811321, b: 0.4811321, a: 1}
+    - _SpecularColor: {r: 0, g: 0, b: 0, a: 0.5882353}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

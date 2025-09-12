@@ -1,6 +1,5 @@
 ﻿using FlightReLive.Core.Cache;
 using FlightReLive.Core.Loading;
-using FlightReLive.Core.Workspace;
 using FlightReLive.UI;
 using Fu;
 using Fu.Framework;
@@ -82,6 +81,9 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnDepthOfFieldEnabledChanged;
         public static event Action<float> OnDepthOfFieldStartChanged;
         public static event Action<float> OnDepthOfFieldEndChanged;
+        public static event Action<bool> OnFogEnabledChanged;
+        public static event Action<Color> OnFogColorChanged;
+        public static event Action<float> OnFogDensityChanged;
         #endregion
 
         #region METHODS
@@ -272,6 +274,32 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadDepthOfFieldEnd() =>
             CurrentSettings.DepthOfFieldEnd = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldEnd), 400f);
+
+        internal static void LoadFogEnabled() =>
+            CurrentSettings.FogEnabled = PlayerPrefs.GetInt(nameof(Settings.FogEnabled), 1) == 1;
+
+        internal static void LoadFogColor()
+        {
+            string colorString = PlayerPrefs.GetString(nameof(Settings.FogColor), "0,0,0,1");
+            string[] rgba = colorString.Split(',');
+
+            if (rgba.Length == 4 &&
+                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
+                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
+                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
+                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
+            {
+                CurrentSettings.FogColor = new Color(r, g, b, a);
+            }
+            else
+            {
+                CurrentSettings.FogColor = Color.black;
+            }
+        }
+
+        internal static void LoadFogDensity() =>
+            CurrentSettings.FogDensity = PlayerPrefs.GetFloat(nameof(Settings.FogDensity), 0.001f);
+
 
         internal static void SaveHardwareQualityPreset(QualityPreset value)
         {
@@ -619,6 +647,31 @@ namespace FlightReLive.Core.Settings
             OnDepthOfFieldEndChanged?.Invoke(value);
         }
 
+        internal static void SaveFogEnabled(bool value)
+        {
+            CurrentSettings.FogEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.FogEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnFogEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SaveFogColor(Color color)
+        {
+            CurrentSettings.FogColor = color;
+            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
+            PlayerPrefs.SetString(nameof(Settings.FogColor), colorString);
+            PlayerPrefs.Save();
+            OnFogColorChanged?.Invoke(color);
+        }
+
+        internal static void SaveFogDensity(float value)
+        {
+            CurrentSettings.FogDensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.FogDensity), value);
+            PlayerPrefs.Save();
+            OnFogDensityChanged?.Invoke(value);
+        }
+
         internal static void LoadAll()
         {
             if (!PlayerPrefs.HasKey("SettingsInitialized"))
@@ -669,6 +722,9 @@ namespace FlightReLive.Core.Settings
             LoadDepthOfFieldEnabled();
             LoadDepthOfFieldStart();
             LoadDepthOfFieldEnd();
+            LoadFogEnabled();
+            LoadFogColor();
+            LoadFogDensity();
         }
 
         internal static void LoadDefaultSettings()
@@ -719,6 +775,9 @@ namespace FlightReLive.Core.Settings
             SaveDepthOfFieldEnabled(true);
             SaveDepthOfFieldStart(200f);
             SaveDepthOfFieldEnd(400f);
+            SaveFogEnabled(true);
+            SaveFogColor(Color.black);
+            SaveFogDensity(0.001f);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -1227,7 +1286,7 @@ namespace FlightReLive.Core.Settings
 
                         int tilePadding = CurrentSettings.TilePadding;
                         tilePaddingGrid.SetNextElementToolTipWithLabel("Defines the number of additional tile rows around the flight area.\nIncreases the realism of the scene but affects performance and the amount of resources downloaded.");
-                        if (tilePaddingGrid.Slider("Tile padding", ref tilePadding, 0, 2))
+                        if (tilePaddingGrid.Slider("Tile padding", ref tilePadding, 0, 3))
                         {
                             SaveTilePadding(tilePadding);
                         }

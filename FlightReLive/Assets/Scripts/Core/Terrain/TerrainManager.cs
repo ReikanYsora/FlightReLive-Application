@@ -123,8 +123,6 @@ namespace FlightReLive.Core.Terrain
 
                 Material terrainMaterial = new Material(_meshMaterial);
                 terrainMaterial.SetTexture("_Satellite", tile.SatelliteTexture);
-                terrainMaterial.SetTexture("_HillShade", tile.HillShadeTexture);
-                terrainMaterial.SetFloat("_Contrast", 0.9f);
                 tempTile.AddComponent<MeshRenderer>().material = terrainMaterial;
                 _tiles.Add(tempTile);
             }

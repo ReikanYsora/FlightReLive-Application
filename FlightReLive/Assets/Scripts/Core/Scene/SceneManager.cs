@@ -31,9 +31,9 @@ namespace FlightReLive.Core.Scene
         #region UI
         internal void DrawSceneSettings(FuLayout layout)
         {
-            using (FuGrid gridRendering = new FuGrid("gridRenderingSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            using (FuGrid gridLight = new FuGrid("gridLightSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                SunManager.Instance.DisplaySunSettings(gridRendering);
+                SunManager.Instance.DisplaySunSettings(gridLight);
             }
 
             layout.Separator();

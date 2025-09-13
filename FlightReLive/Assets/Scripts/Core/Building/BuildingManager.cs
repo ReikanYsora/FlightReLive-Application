@@ -261,13 +261,12 @@ namespace FlightReLive.Core.Building
         {
             Mesh mesh = meshData.ConvertToUnityMesh(MeshType.Triangles);
             GameObject building = _buildingPool.Get();
-
             MeshFilter meshFilter = building.GetComponent<MeshFilter>();
             MeshRenderer meshRenderer = building.GetComponent<MeshRenderer>();
 
             meshRenderer.enabled = SettingsManager.CurrentSettings.BuildingVisibility;
             meshFilter.sharedMesh = mesh;
-
+            building.transform.SetParent(transform);
             building.transform.position = position;
             building.transform.rotation = Quaternion.identity;
 

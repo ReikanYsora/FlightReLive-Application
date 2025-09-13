@@ -26,8 +26,8 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_LightmapFlags: 1
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -65,6 +65,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 960b9c0be48ba8a4aa4b29146205b85b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _HillShade:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -74,6 +78,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 1, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -115,6 +123,7 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _Ambiant_Occlusion: 0
+    - _AmbientBoost: 1
     - _Blend: 0.5
     - _BlendMaps: 0
     - _BlendModePreserveSpecular: 1
@@ -127,6 +136,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
+    - _DisplacementStrength: 10
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EdgeFade: 0.5
@@ -157,6 +167,7 @@ Material:
     - _RadiusPercent: 1
     - _ReceiveShadows: 1
     - _Saturation: 1.1
+    - _Scale: 100
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

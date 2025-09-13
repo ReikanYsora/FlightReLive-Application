@@ -576,7 +576,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc4d76f733087744991913c9d19d5274, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.LensFlareComponentSRP
-  m_LensFlareData: {fileID: 11400000, guid: bd7eaf3bd49c39f4cb77bd809459aa72, type: 2}
+  m_LensFlareData: {fileID: 11400000, guid: d7a98431e01827641baba481f11b7977, type: 2}
   version: 0
   intensity: 1
   maxAttenuationDistance: 100
@@ -1398,11 +1398,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Rendering.SunManager
   _mainLight: {fileID: 410087040}
   _mainCamera: {fileID: 796242730}
-  _dawnSkybox: {fileID: 2100000, guid: 86f2430706ab4e7418feff8e1597aed3, type: 2}
-  _daySkybox: {fileID: 2100000, guid: 91d65f217ff16614691297105f2360a8, type: 2}
-  _twilightSkybox: {fileID: 2100000, guid: 0b0aa00ca806d4c43a3d42d3c083203b, type: 2}
-  _nightSkybox: {fileID: 2100000, guid: bba8c35590fe9ee499b316d781cd4221, type: 2}
-  _hdriSunOffset: 120
+  _dawnSkybox:
+    Material: {fileID: 2100000, guid: 86f2430706ab4e7418feff8e1597aed3, type: 2}
+    Offset: 125
+  _daySkybox:
+    Material: {fileID: 2100000, guid: 91d65f217ff16614691297105f2360a8, type: 2}
+    Offset: 125
+  _twilightSkybox:
+    Material: {fileID: 2100000, guid: 0b0aa00ca806d4c43a3d42d3c083203b, type: 2}
+    Offset: 145
+  _nightSkybox:
+    Material: {fileID: 2100000, guid: bba8c35590fe9ee499b316d781cd4221, type: 2}
+    Offset: 125
 --- !u!1 &2116168535
 GameObject:
   m_ObjectHideFlags: 0

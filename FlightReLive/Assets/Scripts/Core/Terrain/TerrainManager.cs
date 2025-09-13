@@ -62,19 +62,18 @@ namespace FlightReLive.Core.Terrain
         internal void LoadFlightMap(FlightData flightData)
         {
             List<TileDefinition> sortedTiles = flightData.MapDefinition.GetSortedTiles();
-            QualityPreset mapQualityPreset = SettingsManager.CurrentSettings.MapQualityPreset;
 
             //Get min and max altitude for coherent gradient
             float minAltitude = 0f;
             float maxAltitude = 0f;
 
             GetGlobalAltitudeRange(sortedTiles, out minAltitude, out maxAltitude);
-            StitchAdjacentTiles(sortedTiles, mapQualityPreset);
+            StitchAdjacentTiles(sortedTiles);
             float tileSize = MapTools.GetTileSizeMeters(flightData.MapDefinition.OriginLatitude);
 
             Parallel.ForEach(sortedTiles, tileDef =>
             {
-                tileDef.MeshData = GenerateTerrainMeshFromHeightmap(mapQualityPreset, tileDef.HeightMap, tileSize, minAltitude, maxAltitude);
+                tileDef.MeshData = GenerateTerrainMeshFromHeightmap(tileDef.HeightMap, tileSize, minAltitude, maxAltitude);
             });
 
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
@@ -182,32 +181,12 @@ namespace FlightReLive.Core.Terrain
             }
         }
 
-        private static MeshData GenerateTerrainMeshFromHeightmap(QualityPreset quality, float[,] heightmap, float tileSize, float minAltitude, float maxAltitude)
+        private static MeshData GenerateTerrainMeshFromHeightmap(float[,] heightmap, float tileSize, float minAltitude, float maxAltitude)
         {
             MeshData meshData = new MeshData();
 
-            int sourceWidth = heightmap.GetLength(0);
-            int sourceHeight = heightmap.GetLength(1);
-            int step;
-
-            switch (quality)
-            {
-                case QualityPreset.Quality:
-                    step = 1;
-                    break;
-                case QualityPreset.Balanced:
-                    step = 2;
-                    break;
-                case QualityPreset.Performance:
-                    step = 4;
-                    break;
-                default:
-                    step = 1;
-                    break;
-            }
-
-            int width = sourceWidth / step;
-            int height = sourceHeight / step;
+            int width = heightmap.GetLength(0);
+            int height = heightmap.GetLength(1);
             int vertexCount = width * height;
             int quadCount = (width - 1) * (height - 1);
             float xSpacing = tileSize / (width - 1);
@@ -225,10 +204,8 @@ namespace FlightReLive.Core.Terrain
                 {
                     int i = (height - 1 - y) * width + x;
 
-                    int hx = x * step;
-                    int hy = y * step;
 
-                    float altitude = heightmap[hx, hy];
+                    float altitude = heightmap[x, y];
                     float px = x * xSpacing;
                     float pz = (height - 1 - y) * zSpacing;
 
@@ -354,25 +331,9 @@ namespace FlightReLive.Core.Terrain
             return altitude;
         }
 
-        internal static void StitchAdjacentTiles(List<TileDefinition> tiles, QualityPreset quality)
+        internal static void StitchAdjacentTiles(List<TileDefinition> tiles)
         {
             int step = 1;
-
-            switch (quality)
-            {
-                case QualityPreset.Quality:
-                    step = 1;
-                    break;
-                case QualityPreset.Balanced:
-                    step = 2;
-                    break;
-                case QualityPreset.Performance:
-                    step = 4;
-                    break;
-                default:
-                    step = 1;
-                    break;
-            }
 
             Dictionary<(int x, int y), TileDefinition> tileMap = tiles.ToDictionary(t => (t.X, t.Y));
 

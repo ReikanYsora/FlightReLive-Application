@@ -1,10 +1,11 @@
 ﻿using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+using static UnityEditor.PlayerSettings;
 
 namespace FlightReLive.Core.Rendering
 {
@@ -14,11 +15,10 @@ namespace FlightReLive.Core.Rendering
         [Header("Sun position and rotation effect")]
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _mainCamera;
-        [SerializeField] private Material _dawnSkybox;
-        [SerializeField] private Material _daySkybox;
-        [SerializeField] private Material _twilightSkybox;
-        [SerializeField] private Material _nightSkybox;
-        [SerializeField] private float _hdriSunOffset = 120f;
+        [SerializeField] private SkyboxPreset _dawnSkybox;
+        [SerializeField] private SkyboxPreset _daySkybox;
+        [SerializeField] private SkyboxPreset _twilightSkybox;
+        [SerializeField] private SkyboxPreset _nightSkybox;
         #endregion
 
         #region PROPERTIES
@@ -39,24 +39,13 @@ namespace FlightReLive.Core.Rendering
 
         private void Start()
         {
-            //Apply saved settings
-            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
-            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
-            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
-            DynamicGI.UpdateEnvironment();
-
-            SettingsManager.OnFogEnabledChanged += OnFogEnabledChanged;
-            SettingsManager.OnFogColorChanged += OnFogColorChanged;
-            SettingsManager.OnFogDensityChanged += OnFogDensityChanged;
-
+            SettingsManager.OnGlobalIntensityChanged += OnGlobalIntensityChanged;
             UnloadFlightRendering();
         }
 
         private void OnDestroy()
         {
-            SettingsManager.OnFogEnabledChanged -= OnFogEnabledChanged;
-            SettingsManager.OnFogColorChanged -= OnFogColorChanged;
-            SettingsManager.OnFogDensityChanged -= OnFogDensityChanged;
+            SettingsManager.OnGlobalIntensityChanged -= OnGlobalIntensityChanged;
         }
         #endregion
 
@@ -77,53 +66,40 @@ namespace FlightReLive.Core.Rendering
             SunPosition sunPosition = CalculateSunPosition(utcTime, latitude, longitude);
             SkyPhase phase = GetSkyPhase(sunPosition.Elevation);
 
-            Material targetSkybox;
+            SkyboxPreset preset;
             switch (phase)
             {
                 case SkyPhase.Dawn:
-                    targetSkybox = _dawnSkybox;
+                    preset = _dawnSkybox;
                     break;
                 default:
                 case SkyPhase.Day:
-                    targetSkybox = _daySkybox;
+                    preset = _daySkybox;
                     break;
                 case SkyPhase.Twilight:
-                    targetSkybox = _twilightSkybox;
+                    preset = _twilightSkybox;
                     break;
                 case SkyPhase.Night:
-                    targetSkybox = _nightSkybox;
+                    preset = _nightSkybox;
                     break;
             }
 
             _mainCamera.clearFlags = CameraClearFlags.Skybox;
-            RenderSettings.skybox = targetSkybox;
+            RenderSettings.skybox = preset.Material;
+            RenderSettings.sun = _mainLight;
             RenderSettings.skybox.SetColor("_Tint", ComputeSkyboxTintRayleigh(sunPosition));
-            RenderSettings.skybox.SetFloat("_Rotation", (sunPosition.Azimuth + _hdriSunOffset) % 360f);
+            RenderSettings.skybox.SetFloat("_Rotation", (sunPosition.Azimuth + preset.Offset) % 360f);
             RenderSettings.skybox.SetFloat("_Exposure", ComputeSkyboxExposure(sunPosition.Elevation));
+            ComputeFogSettings(sunPosition, out Color fogColor, out float fogDensity);
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogDensity = fogDensity;
             RenderSettings.ambientMode = AmbientMode.Skybox;
-            RenderSettings.ambientIntensity = ComputeAmbientIntensity(sunPosition.Elevation);
             RenderSettings.reflectionIntensity = ComputeReflectionIntensity(sunPosition.Elevation);
             LensFlareComponentSRP flare = _mainLight.GetComponent<LensFlareComponentSRP>();
-
+            UpdateLensFlare(sunPosition, flare);
             OrientMainLight(sunPosition);
-
-            if (flare != null)
-            {
-                if (sunPosition.Elevation <= 0f)
-                {
-                    flare.intensity = 0f;
-                }
-                else
-                {
-                    float elevation = Mathf.Clamp(sunPosition.Elevation, 0f, 90f);
-                    float t = elevation / 90f;
-                    flare.intensity = Mathf.Clamp(Mathf.Pow(t, 0.8f) * 1.2f + 0.3f, 0.3f, 1.5f);
-                }
-            }
-
-            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
-            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
-            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
+            ComputeAmbientIntensity(sunPosition.Elevation, fogDensity);
             DynamicGI.UpdateEnvironment();
         }
 
@@ -199,38 +175,65 @@ namespace FlightReLive.Core.Rendering
             _mainLight.transform.rotation = Quaternion.LookRotation(-sunDirection, Vector3.up);
 
             //Adjust intensity and color
-            _mainLight.intensity = ComputeSunIntensity(sunPosition.Elevation);
+            _mainLight.intensity = ComputeSunIntensity(sunPosition.Elevation) * SettingsManager.CurrentSettings.GlobalIntensity;
             _mainLight.color = ComputeSkyboxTintRayleigh(sunPosition);
+        }
+
+        private void UpdateLensFlare(SunPosition sunPosition, LensFlareComponentSRP flare)
+        {
+            if (flare == null)
+            {
+                return;
+            }
+
+            if (sunPosition.Elevation <= 0f)
+            {
+                flare.intensity = 0f;
+                return;
+            }
+
+            float elevation = Mathf.Clamp(sunPosition.Elevation, 0f, 90f);
+            float t = elevation / 90f;
+            flare.intensity = Mathf.Clamp(Mathf.Pow(t, 0.6f) * 1.5f + 0.3f, 0.3f, 2f);
         }
 
         private float ComputeSkyboxExposure(double solarElevation)
         {
             float elevation = Mathf.Clamp((float)solarElevation, -6f, 90f);
             float t = (elevation + 6f) / 96f;
+            float low = Mathf.Pow(t, 0.6f) * 1.4f;
+            float high = Mathf.Pow(t, 2f) * 0.6f;
 
-            return Mathf.Clamp(Mathf.Pow(t, 0.8f) * 2.2f, 0.3f, 2.2f);
+            return Mathf.Clamp(low + high, 0.4f, 1.2f) * SettingsManager.CurrentSettings.GlobalIntensity;
         }
+
         private float ComputeSunIntensity(double solarElevation)
         {
             float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
             float t = elevation / 90f;
-
-            return Mathf.Clamp(Mathf.Pow(t, 0.9f) * 1.5f, 0.3f, 1.5f);
+            float intensity = Mathf.Pow(t, 0.8f) * (1f - 0.3f * t) * 1.0f;
+            return Mathf.Clamp(intensity, 0.3f, 1.0f);
         }
 
         private Color ComputeSkyboxTintRayleigh(SunPosition sunPosition)
         {
             float elevation = Mathf.Clamp(sunPosition.Elevation, 0.1f, 90f);
+            float normalizedElevation = Mathf.Clamp01(elevation / 90f);
+            float elevationFactor = 1f - normalizedElevation;
+
             float airMass = 1f / (Mathf.Cos(Mathf.Deg2Rad * elevation) + 0.50572f * Mathf.Pow(96.07995f - elevation, -1.6364f));
             float scatteringFactor = Mathf.Clamp01((airMass - 1f) / 39f);
+
             float azimuth = sunPosition.AzimuthPhysical;
             float sunriseBoost = Mathf.Clamp01((azimuth - 60f) / 60f);
             float sunsetBoost = Mathf.Clamp01((azimuth - 240f) / 60f);
             float directionalWarmth = Mathf.Max(sunriseBoost, sunsetBoost);
-            float warmthFactor = Mathf.Clamp01(scatteringFactor * 0.5f + directionalWarmth * 0.5f);
 
-            Color zenithColor = new Color(0.5f, 0.7f, 1f);
-            Color horizonColor = new Color(1f, 0.3f, 0.1f);
+            float adjustedWarmth = directionalWarmth * elevationFactor;
+            float warmthFactor = Mathf.Clamp01(scatteringFactor * 0.6f + adjustedWarmth * 0.4f);
+
+            Color zenithColor = new Color(0.85f, 0.9f, 1f);
+            Color horizonColor = new Color(1f, 0.5f, 0.2f);
 
             Color tint = new Color(
                 Mathf.Clamp01(zenithColor.r + (horizonColor.r - zenithColor.r) * warmthFactor),
@@ -238,28 +241,72 @@ namespace FlightReLive.Core.Rendering
                 Mathf.Clamp01(zenithColor.b + (horizonColor.b - zenithColor.b) * warmthFactor)
             );
 
-            float saturationBoost = 1f + 0.6f * warmthFactor;
+            float saturationBoost = 1f + 0.6f * warmthFactor * elevationFactor;
+            saturationBoost = Mathf.Lerp(saturationBoost, 1f, normalizedElevation * 0.8f);
             tint.r = Mathf.Clamp01(tint.r * saturationBoost);
             tint.g = Mathf.Clamp01(tint.g * saturationBoost);
             tint.b = Mathf.Clamp01(tint.b * saturationBoost);
 
+            float desaturation = normalizedElevation * 0.3f;
+            float gray = (tint.r + tint.g + tint.b) / 3f;
+            tint.r = Mathf.Lerp(tint.r, gray, desaturation);
+            tint.g = Mathf.Lerp(tint.g, gray, desaturation);
+            tint.b = Mathf.Lerp(tint.b, gray, desaturation);
+
+            if (elevationFactor > 0.6f)
+            {
+                tint.r = Mathf.Clamp01(tint.r * 1.2f);
+                tint.g = Mathf.Clamp01(tint.g * 1.1f);
+                tint.b = Mathf.Clamp01(tint.b * 1.05f);
+            }
+
             return tint;
         }
+
         private float ComputeReflectionIntensity(double solarElevation)
         {
             float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
             float t = elevation / 90f;
 
-            return Mathf.Clamp(Mathf.Pow(t, 1.2f) * 1.2f, 0.3f, 1.2f);
+            return Mathf.Clamp(Mathf.Pow(t, 1.2f) * 0.8f, 0.3f, 0.8f) * SettingsManager.CurrentSettings.GlobalIntensity;
         }
         private float ComputeAmbientIntensity(double solarElevation, float fogDensity = 0f)
         {
             float elevation = Mathf.Clamp((float)solarElevation, 0f, 90f);
             float t = elevation / 90f;
-            float baseIntensity = Mathf.Pow(t, 0.9f) * 1.2f;
-            float fogFactor = Mathf.Clamp01(1f - fogDensity * 8f);
+            float baseIntensity = Mathf.Pow(t, 0.9f) * 1.0f;
+            float fogFactor = Mathf.Clamp01(1f - fogDensity * 12f);
+            float ambientClamp = Mathf.Lerp(1.0f, 0.6f, t);
 
-            return Mathf.Clamp(baseIntensity * fogFactor, 0.3f, 1.2f);
+            return Mathf.Clamp(baseIntensity * fogFactor, 0.3f, ambientClamp);
+        }
+
+        private void ComputeFogSettings(SunPosition sunPosition, out Color fogColor, out float fogDensity)
+        {
+            fogColor = ComputeSkyboxTintRayleigh(sunPosition);
+            SkyPhase phase = GetSkyPhase(sunPosition.Elevation);
+
+            switch (phase)
+            {
+                case SkyPhase.Day:
+                    fogDensity = 0.0005f;
+                    break;
+                case SkyPhase.Twilight:
+                    fogDensity = 0.0012f;
+                    break;
+                case SkyPhase.Dawn:
+                    fogDensity = 0.0018f;
+                    break;
+                case SkyPhase.Night:
+                    fogDensity = 0.0025f;
+                    break;
+                default:
+                    fogDensity = 0.001f;
+                    break;
+            }
+
+            float t = Mathf.Clamp01(sunPosition.Elevation / 90f);
+            fogDensity *= Mathf.Lerp(1f, 0.4f, t);
         }
 
         internal void UnloadFlightRendering()
@@ -281,43 +328,32 @@ namespace FlightReLive.Core.Rendering
         #endregion
 
         #region CALLBACKS
-        private void OnFogEnabledChanged(bool enable)
+        private void OnGlobalIntensityChanged(float globalIntensity)
         {
-            RenderSettings.fog = SettingsManager.CurrentSettings.FogEnabled;
-        }
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                FlightData flightData = LoadingManager.Instance.CurrentFlightData;
 
-        private void OnFogColorChanged(Color fogColor)
-        {
-            RenderSettings.fogColor = SettingsManager.CurrentSettings.FogColor;
-        }
+                if (flightData == null)
+                {
+                    return;
+                }
 
-        private void OnFogDensityChanged(float fogDensity)
-        {
-            RenderSettings.fogDensity = SettingsManager.CurrentSettings.FogDensity;
+                TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
+                DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
+                DateTime flightDateUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
+                UpdateSkybox(flightDateUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+            });
         }
         #endregion
 
         #region UI
-        internal void DisplaySunSettings(FuGrid grid)
+        internal void DisplaySunSettings(FuGrid gridLight)
         {
-            grid.EnableNextElements();
-
-            bool fogEnabled = SettingsManager.CurrentSettings.FogEnabled;
-            if (grid.Toggle("Fog", ref fogEnabled))
+            float globalIntensity = SettingsManager.CurrentSettings.GlobalIntensity;
+            if (gridLight.Slider("GLobal intensity", ref globalIntensity, 0.6f, 1f, 0.01f))
             {
-                SettingsManager.SaveFogEnabled(fogEnabled);
-            }
-
-            Vector4 fogColor = (Vector4)SettingsManager.CurrentSettings.FogColor;
-            if (grid.ColorPicker("Fog color", ref fogColor))
-            {
-                SettingsManager.SaveFogColor(fogColor);
-            }
-
-            float fogDensity = SettingsManager.CurrentSettings.FogDensity;
-            if (grid.Slider("Fog density", ref fogDensity, 0f, 0.1f, 0.001f))
-            {
-                SettingsManager.SaveFogDensity(fogDensity);
+                SettingsManager.SaveGlobalIntensity(globalIntensity);
             }
         }
         #endregion

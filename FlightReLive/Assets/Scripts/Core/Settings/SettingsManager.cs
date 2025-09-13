@@ -40,7 +40,6 @@ namespace FlightReLive.Core.Settings
 
         #region EVENTS
         public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
-        public static event Action<QualityPreset> OnMapQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -57,11 +56,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<SatelliteTileQualityPreset> OnSatelliteTileQualityPresetChanged;
         public static event Action<int> OnTilePaddingChanged;
         public static event Action<float> OnGlobalScaleChanged;
-        //public static event Action<PointCloudMode> OnPointCloudModeChanged;
-        //public static event Action<float> OnAbsoluteAltitudeMinChanged;
-        //public static event Action<float> OnAbsoluteAltitudeMaxChanged;
-        //public static event Action<float> OnHeightPointSizeChanged;
-        //public static event Action<float> OnHeightOpacityChanged;
         public static event Action<float> OnPathWidthChanged;
         public static event Action<Color> OnPathRemainingColor1Changed;
         public static event Action<Color> OnPathRemainingColor2Changed;
@@ -81,17 +75,12 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnDepthOfFieldEnabledChanged;
         public static event Action<float> OnDepthOfFieldStartChanged;
         public static event Action<float> OnDepthOfFieldEndChanged;
-        public static event Action<bool> OnFogEnabledChanged;
-        public static event Action<Color> OnFogColorChanged;
-        public static event Action<float> OnFogDensityChanged;
+        public static event Action<float> OnGlobalIntensityChanged;
         #endregion
 
         #region METHODS
         internal static void LoadHardwareQualityPreset() =>
             CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
-
-        internal static void LoadMapQualityPreset() =>
-            CurrentSettings.MapQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.MapQualityPreset), (int)QualityPreset.Quality);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -149,21 +138,6 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadGlobalScale() =>
             CurrentSettings.GlobalScale = PlayerPrefs.GetFloat(nameof(Settings.GlobalScale), 1f);
-
-        //internal static void LoadPointCloudMode() =>
-        //    CurrentSettings.PointCloudMode = (PointCloudMode)PlayerPrefs.GetInt(nameof(Settings.PointCloudMode), (int)PointCloudMode.Relative);
-
-        //internal static void LoadAbsoluteAltitudeMin() =>
-        //    CurrentSettings.AbsoluteAltitudeMin = PlayerPrefs.GetFloat(nameof(Settings.AbsoluteAltitudeMin), 0f);
-
-        //internal static void LoadAbsoluteAltitudeMax() =>
-        //    CurrentSettings.AbsoluteAltitudeMax = PlayerPrefs.GetFloat(nameof(Settings.AbsoluteAltitudeMax), 1000f);
-
-        //internal static void LoadHeightPointSize() =>
-        //    CurrentSettings.HeightPointSize = PlayerPrefs.GetFloat(nameof(Settings.HeightPointSize), 0.3f);
-
-        //internal static void LoadHeightOpacity() =>
-        //    CurrentSettings.HeightOpacity = PlayerPrefs.GetFloat(nameof(Settings.HeightOpacity), 0.05f);
 
         internal static void LoadPathWidth() =>
             CurrentSettings.PathWidth = PlayerPrefs.GetFloat(nameof(Settings.PathWidth), 0.15f);
@@ -275,31 +249,8 @@ namespace FlightReLive.Core.Settings
         internal static void LoadDepthOfFieldEnd() =>
             CurrentSettings.DepthOfFieldEnd = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldEnd), 400f);
 
-        internal static void LoadFogEnabled() =>
-            CurrentSettings.FogEnabled = PlayerPrefs.GetInt(nameof(Settings.FogEnabled), 1) == 1;
-
-        internal static void LoadFogColor()
-        {
-            string colorString = PlayerPrefs.GetString(nameof(Settings.FogColor), "0,0,0,1");
-            string[] rgba = colorString.Split(',');
-
-            if (rgba.Length == 4 &&
-                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
-                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
-                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
-                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
-            {
-                CurrentSettings.FogColor = new Color(r, g, b, a);
-            }
-            else
-            {
-                CurrentSettings.FogColor = Color.black;
-            }
-        }
-
-        internal static void LoadFogDensity() =>
-            CurrentSettings.FogDensity = PlayerPrefs.GetFloat(nameof(Settings.FogDensity), 0.001f);
-
+        internal static void LoadGLobalIntensity() =>
+            CurrentSettings.GlobalIntensity = PlayerPrefs.GetFloat(nameof(Settings.GlobalIntensity), 0.8f);
 
         internal static void SaveHardwareQualityPreset(QualityPreset value)
         {
@@ -307,14 +258,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.HardwareQualityPreset), (int)value);
             PlayerPrefs.Save();
             OnHardwareQualityPresetChanged?.Invoke(value);
-        }
-
-        internal static void SaveMapQualityPreset(QualityPreset value)
-        {
-            CurrentSettings.MapQualityPreset = value;
-            PlayerPrefs.SetInt(nameof(Settings.MapQualityPreset), (int)value);
-            PlayerPrefs.Save();
-            OnMapQualityPresetChanged?.Invoke(value);
         }
 
         internal static void SaveApplicationTargetFPS(int value)
@@ -451,46 +394,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetString(nameof(Settings.CurrentVersion), currentVersion);
             PlayerPrefs.Save();
         }
-
-        //internal static void SavePointCloudMode(PointCloudMode value)
-        //{
-        //    CurrentSettings.PointCloudMode = value;
-        //    PlayerPrefs.SetInt(nameof(Settings.PointCloudMode), (int)value);
-        //    PlayerPrefs.Save();
-        //    OnPointCloudModeChanged?.Invoke(value);
-        //}
-
-        //internal static void SaveAbsoluteAltitudeMin(float value)
-        //{
-        //    CurrentSettings.AbsoluteAltitudeMin = value;
-        //    PlayerPrefs.SetFloat(nameof(Settings.AbsoluteAltitudeMin), value);
-        //    PlayerPrefs.Save();
-        //    OnAbsoluteAltitudeMinChanged?.Invoke(value);
-        //}
-
-        //internal static void SaveAbsoluteAltitudeMax(float value)
-        //{
-        //    CurrentSettings.AbsoluteAltitudeMax = value;
-        //    PlayerPrefs.SetFloat(nameof(Settings.AbsoluteAltitudeMax), value);
-        //    PlayerPrefs.Save();
-        //    OnAbsoluteAltitudeMaxChanged?.Invoke(value);
-        //}
-
-        //internal static void SaveHeightPointSize(float value)
-        //{
-        //    CurrentSettings.HeightPointSize = value;
-        //    PlayerPrefs.SetFloat(nameof(Settings.HeightPointSize), value);
-        //    PlayerPrefs.Save();
-        //    OnHeightPointSizeChanged?.Invoke(value);
-        //}
-
-        //internal static void SaveHeightOpacity(float value)
-        //{
-        //    CurrentSettings.HeightOpacity = value;
-        //    PlayerPrefs.SetFloat(nameof(Settings.HeightOpacity), value);
-        //    PlayerPrefs.Save();
-        //    OnHeightOpacityChanged?.Invoke(value);
-        //}
 
         internal static void SavePathWidth(float value)
         {
@@ -647,29 +550,12 @@ namespace FlightReLive.Core.Settings
             OnDepthOfFieldEndChanged?.Invoke(value);
         }
 
-        internal static void SaveFogEnabled(bool value)
+        internal static void SaveGlobalIntensity(float value)
         {
-            CurrentSettings.FogEnabled = value;
-            PlayerPrefs.SetInt(nameof(Settings.FogEnabled), value ? 1 : 0);
+            CurrentSettings.GlobalIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.GlobalIntensity), value);
             PlayerPrefs.Save();
-            OnFogEnabledChanged?.Invoke(value);
-        }
-
-        internal static void SaveFogColor(Color color)
-        {
-            CurrentSettings.FogColor = color;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.FogColor), colorString);
-            PlayerPrefs.Save();
-            OnFogColorChanged?.Invoke(color);
-        }
-
-        internal static void SaveFogDensity(float value)
-        {
-            CurrentSettings.FogDensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.FogDensity), value);
-            PlayerPrefs.Save();
-            OnFogDensityChanged?.Invoke(value);
+            OnGlobalIntensityChanged?.Invoke(value);
         }
 
         internal static void LoadAll()
@@ -681,7 +567,6 @@ namespace FlightReLive.Core.Settings
 
             LoadCurrentVersion();
             LoadHardwareQualityPreset();
-            LoadMapQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -698,11 +583,6 @@ namespace FlightReLive.Core.Settings
             LoadMapTilerApiKey();
             LoadSatelliteTileQualityPreset();
             LoadTilePadding();
-            //LoadPointCloudMode();
-            //LoadAbsoluteAltitudeMin();
-            //LoadAbsoluteAltitudeMax();
-            //LoadHeightPointSize();
-            //LoadHeightOpacity();
             LoadPathWidth();
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
@@ -722,16 +602,13 @@ namespace FlightReLive.Core.Settings
             LoadDepthOfFieldEnabled();
             LoadDepthOfFieldStart();
             LoadDepthOfFieldEnd();
-            LoadFogEnabled();
-            LoadFogColor();
-            LoadFogDensity();
+            LoadGLobalIntensity();
         }
 
         internal static void LoadDefaultSettings()
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
-            SaveMapQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -751,11 +628,6 @@ namespace FlightReLive.Core.Settings
             SaveMapTilerApiKey("");
             SaveSatelliteTileQualityPreset(SatelliteTileQualityPreset.High);
             SaveTilePadding(1);
-            //SavePointCloudMode(PointCloudMode.Disabled);
-            //SaveAbsoluteAltitudeMin(0f);
-            //SaveAbsoluteAltitudeMax(1000f);
-            //SaveHeightPointSize(0.3f);
-            //SaveHeightOpacity(0.05f);
             SavePathWidth(0.15f);
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
@@ -775,9 +647,7 @@ namespace FlightReLive.Core.Settings
             SaveDepthOfFieldEnabled(true);
             SaveDepthOfFieldStart(200f);
             SaveDepthOfFieldEnd(400f);
-            SaveFogEnabled(true);
-            SaveFogColor(Color.black);
-            SaveFogDensity(0.001f);
+            SaveGlobalIntensity(0.8f);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -1043,33 +913,6 @@ namespace FlightReLive.Core.Settings
                                 if (ImGui.Selectable(label))
                                 {
                                     SaveHardwareQualityPreset(preset);
-                                }
-                            }
-                        });
-                    }
-
-                    using (FuGrid mapQualityGrid = new FuGrid("mapQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        if (isLoading)
-                        {
-                            mapQualityGrid.DisableNextElements();
-                        }
-
-                        mapQualityGrid.SetNextElementToolTipWithLabel("This parameter allows you to set the resolution of the topography.\nChanging this parameter affects the amount of RAM/VRAM that will be used to display the topography.\nThe higher the quality setting, the longer it will take to load the scene.\nThis setting does not affect the quality/quantity of images needed to load the scene, only the 3D mesh.\nThe change will only be applied the next time a flight is loaded.");
-
-                        QualityPreset currentPreset = CurrentSettings.MapQualityPreset;
-                        string comboLabel = currentPreset.ToString();
-
-                        mapQualityGrid.Combobox("MapQualityPreset##MapQualityCombobox", comboLabel, () =>
-                        {
-                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
-                            {
-                                bool isSelected = preset == currentPreset;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveMapQualityPreset(preset);
                                 }
                             }
                         });

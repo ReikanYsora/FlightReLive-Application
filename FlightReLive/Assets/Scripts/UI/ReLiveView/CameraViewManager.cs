@@ -207,19 +207,6 @@ namespace FlightReLive.UI.ReLiveView
             Fugui.PopFont();
             ImGui.Dummy(Vector2.zero);
         }
-
-        //private void DrawHeightSettings(float popupButtonWidth, FuLayout layout)
-        //{
-        //    ImGui.Dummy(Vector2.zero);
-        //    Fugui.PushDefaultFont();
-        //    layout.FramedText("Heightmap Settings");
-        //    layout.Separator();
-
-        //    TerrainManager.Instance.DrawHeightmapSettings(layout);
-
-        //    Fugui.PopFont();
-        //    ImGui.Dummy(Vector2.zero);
-        //}
         #endregion
 
         #region CALLBACKS

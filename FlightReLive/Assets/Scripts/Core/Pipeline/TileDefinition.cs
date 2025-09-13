@@ -6,23 +6,23 @@ namespace FlightReLive.Core.Pipeline
     public class TileDefinition
     {
         #region PROPERTIES
-        public GPSBoundingBox BoundingBox { set; get; }
+        internal GPSBoundingBox BoundingBox { set; get; }
 
-        public TilePriority TilePriority { set; get; }
+        internal TilePriority TilePriority { set; get; }
 
-        public int ZoomLevel { set; get; }
+        internal int ZoomLevel { set; get; }
 
-        public int X { set; get; }
+        internal int X { set; get; }
 
-        public int Y { set; get; }
+        internal int Y { set; get; }
 
-        public Texture2D SatelliteTexture { set; get; }
+        internal Texture2D SatelliteTexture { set; get; }
 
-        public float[,] HeightMap { set; get; }
+        internal float[,] HeightMap { set; get; }
 
-        public MeshData MeshData { set; get; }
+        internal MeshData MeshData { set; get; }
 
-        public List<BuildingData> Buildings { get; internal set; }
+        internal List<BuildingData> Buildings { get; set; }
 
         internal FeatureCollection GeoData { get; set; }
         #endregion

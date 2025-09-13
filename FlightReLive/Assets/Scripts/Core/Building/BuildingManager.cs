@@ -259,7 +259,7 @@ namespace FlightReLive.Core.Building
 
         private void CreateBuilding(MeshData meshData, Vector3 position)
         {
-            Mesh mesh = meshData.ConvertToUnityMesh(MeshType.Triangles);
+            Mesh mesh = meshData.ConvertToUnityMesh();
             GameObject building = _buildingPool.Get();
             MeshFilter meshFilter = building.GetComponent<MeshFilter>();
             MeshRenderer meshRenderer = building.GetComponent<MeshRenderer>();

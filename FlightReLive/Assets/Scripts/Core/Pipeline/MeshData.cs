@@ -15,44 +15,20 @@ namespace FlightReLive.Core.Pipeline
         public List<int> triangles = new List<int>();
         public List<Vector3> normals = new List<Vector3>();
 
-        public Mesh ConvertToUnityMesh(MeshType meshType)
+        public Mesh ConvertToUnityMesh()
         {
             Mesh mesh = new Mesh();
             mesh.MarkDynamic();
             mesh.indexFormat = IndexFormat.UInt32;
             Vector3 center = CalculateMeshCenter(vertices);
-            List<Vector3> centeredVertices = vertices.Select(v => v - center).ToList();
-
-            switch (meshType)
-            {
-                default:
-                case MeshType.Triangles:
-                    mesh.SetVertices(centeredVertices);
-                    mesh.SetTriangles(triangles, 0);
-                    mesh.SetUVs(0, uvs);
-                    mesh.SetUVs(1, uvs2);
-                    mesh.SetNormals(normals);
-                    mesh.RecalculateBounds();
-                    mesh.RecalculateNormals();
-                    mesh.RecalculateTangents();
-                    break;
-                case MeshType.Point:
-
-                    int[] indices = new int[centeredVertices.Count];
-
-                    for (int i = 0; i < indices.Length; i++)
-                    {
-                        indices[i] = i;
-                    }
-
-                    mesh.SetVertices(centeredVertices);
-                    mesh.SetIndices(indices, MeshTopology.Points, 0);
-                    mesh.uv = uvs2.ToArray();
-                    mesh.normals = normals.ToArray();
-                    mesh.RecalculateBounds();
-                    break;
-            }
-
+            mesh.SetVertices(vertices.Select(v => v - center).ToList());
+            mesh.SetTriangles(triangles, 0);
+            mesh.SetUVs(0, uvs);
+            mesh.SetUVs(1, uvs2);
+            mesh.SetNormals(normals);
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
             return mesh;
         }
 
@@ -66,7 +42,7 @@ namespace FlightReLive.Core.Pipeline
             float sumX = 0f;
             float sumZ = 0f;
 
-            foreach (var v in vertices)
+            foreach (Vector3 v in vertices)
             {
                 sumX += v.x;
                 sumZ += v.z;
@@ -78,11 +54,5 @@ namespace FlightReLive.Core.Pipeline
             return new Vector3(centerX, 0f, centerZ);
         }
 
-    }
-
-    public enum MeshType
-    {
-        Triangles = 0,
-        Point = 1
     }
 }

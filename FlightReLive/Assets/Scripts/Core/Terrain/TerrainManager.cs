@@ -116,7 +116,7 @@ namespace FlightReLive.Core.Terrain
                 tempTile.transform.localPosition = new Vector3(posX, 0f, posZ);
                 tempTile.transform.localScale = Vector3.one * globalScale;
 
-                Mesh mesh = tile.MeshData.ConvertToUnityMesh(MeshType.Triangles);
+                Mesh mesh = tile.MeshData.ConvertToUnityMesh();
                 tempTile.AddComponent<MeshFilter>().mesh = mesh;
                 tempTile.AddComponent<MeshCollider>().sharedMesh = mesh;
 

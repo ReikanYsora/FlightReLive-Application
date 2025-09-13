@@ -1,8 +1,5 @@
-﻿using FlightReLive.Core.Cache;
-using FlightReLive.Core.FFmpeg;
+﻿using FlightReLive.Core.FFmpeg;
 using FlightReLive.Core.Settings;
-using Fu;
-using Fu.Framework;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,8 +18,7 @@ namespace FlightReLive.Core.Workspace
 
         #region PROPERTIES
         internal static WorkspaceManager Instance { get; private set; }
-
-        internal ConcurrentBag<FlightFile> LoadedFlights { get; private set; }
+        internal ConcurrentDictionary<string, FlightFile> LoadedFlights { get; private set; }
         #endregion
 
         #region EVENTS
@@ -43,7 +39,7 @@ namespace FlightReLive.Core.Workspace
 
             Instance = this;
 
-            LoadedFlights = new ConcurrentBag<FlightFile>();
+            LoadedFlights = new ConcurrentDictionary<string, FlightFile>();
 
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
             // Enable Mono-managed watcher for macOS compatibility
@@ -88,16 +84,20 @@ namespace FlightReLive.Core.Workspace
                 EnableRaisingEvents = true
             };
 
-            _watcher.Created += OnFileCreated;
-            _watcher.Deleted += OnFileDeleted;
-            _watcher.Changed += OnFileChanged;
-            _watcher.Renamed += OnFileRenamed;
+            _watcher.Created += OnWorkspaceNeedToBeReloaded;
+            _watcher.Deleted += OnWorkspaceNeedToBeReloaded;
+            _watcher.Changed += OnWorkspaceNeedToBeReloaded;
+            _watcher.Renamed += OnWorkspaceNeedToBeReloaded;
         }
 
         private void StopWatching()
         {
             if (_watcher != null)
             {
+                _watcher.Created -= OnWorkspaceNeedToBeReloaded;
+                _watcher.Deleted -= OnWorkspaceNeedToBeReloaded;
+                _watcher.Changed -= OnWorkspaceNeedToBeReloaded;
+                _watcher.Renamed -= OnWorkspaceNeedToBeReloaded;
                 _watcher.EnableRaisingEvents = false;
                 _watcher.Dispose();
                 _watcher = null;
@@ -177,23 +177,21 @@ namespace FlightReLive.Core.Workspace
             });
         }
 
-        private void LoadVideoFile(string videoPath)
+        private void LoadVideoFile(string fullVideoPath)
         {
-            if (SettingsManager.CurrentSettings == null || string.IsNullOrEmpty(SettingsManager.CurrentSettings.WorkspacePath) || !Directory.Exists(SettingsManager.CurrentSettings.WorkspacePath))
-            {
-                return;
-            }
-
-            string fullVideoPath = Path.Combine(SettingsManager.CurrentSettings.WorkspacePath, videoPath);
-
-            if (!File.Exists(fullVideoPath))
+            if (string.IsNullOrEmpty(fullVideoPath) || !File.Exists(fullVideoPath))
             {
                 return;
             }
 
             FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
 
-            if (container == null)
+            if (container == null || string.IsNullOrEmpty(container.VideoPath))
+            {
+                return;
+            }
+
+            if (LoadedFlights.ContainsKey(container.VideoPath))
             {
                 return;
             }
@@ -219,7 +217,7 @@ namespace FlightReLive.Core.Workspace
                 texture.LoadImage(container.Thumbnail);
                 tempFile.Thumbnail = texture;
 
-                LoadedFlights.Add(tempFile);
+                LoadedFlights[container.VideoPath] = tempFile;
             });
         }
 
@@ -235,25 +233,7 @@ namespace FlightReLive.Core.Workspace
         #endregion
 
         #region CALLBACKS
-        private void OnFileCreated(object sender, FileSystemEventArgs e)
-        {
-            //Load flights files in workspace
-            _ = StartLoadingWorkspaceAsync();
-        }
-
-        private void OnFileDeleted(object sender, FileSystemEventArgs e)
-        {
-            //Load flights files in workspace
-            _ = StartLoadingWorkspaceAsync();
-        }
-
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            //Load flights files in workspace
-            _ = StartLoadingWorkspaceAsync();
-        }
-
-        private void OnFileRenamed(object sender, RenamedEventArgs e)
+        private void OnWorkspaceNeedToBeReloaded(object sender, FileSystemEventArgs e)
         {
             //Load flights files in workspace
             _ = StartLoadingWorkspaceAsync();
@@ -263,6 +243,8 @@ namespace FlightReLive.Core.Workspace
         {
             //Load flights files in workspace
             _ = StartLoadingWorkspaceAsync();
+
+            StartWatching(SettingsManager.CurrentSettings.WorkspacePath);
         }
         #endregion
     }

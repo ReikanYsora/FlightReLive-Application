@@ -330,7 +330,7 @@ namespace FlightReLive.UI.Workspace
                 float y = cursorPos.y;
                 float maxY = y;
 
-                foreach (FlightFile file in WorkspaceManager.Instance.LoadedFlights
+                foreach (FlightFile file in WorkspaceManager.Instance.LoadedFlights.Values
                     .Where(f => string.IsNullOrEmpty(_filterWord) || f.Name.Contains(_filterWord, StringComparison.OrdinalIgnoreCase))
                     .OrderBy(f => f.Name))
                 {

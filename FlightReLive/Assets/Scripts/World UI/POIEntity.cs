@@ -15,7 +15,6 @@ namespace FlightReLive.Core.WorldUI
         [SerializeField] private float _maxVisibleDistance = 100f;
         [SerializeField] private float _manualElevation = -1f;
         [SerializeField] private float _randomElevationRange = 0.5f;
-        private POIType _type;
         private float _randomOffset = 0f;
         private LineRenderer _lineRenderer;
         private Vector3 _parentOrigin;
@@ -39,11 +38,6 @@ namespace FlightReLive.Core.WorldUI
         {
             set
             {
-                if (_type == POIType.HomePoint)
-                {
-                    return;
-                }
-
                 _manualElevation = value;
             }
             get
@@ -65,9 +59,8 @@ namespace FlightReLive.Core.WorldUI
         #endregion
 
         #region METHODS
-        internal void Inialize(POIType poiType, Camera camera, Vector3 parentPosition)
+        internal void Inialize(Camera camera, Vector3 parentPosition)
         {
-            _type = poiType;
             _targetCamera = camera;
             _lineRenderer = gameObject.AddComponent<LineRenderer>();
             _lineRenderer.material = _lineMaterial;
@@ -84,9 +77,8 @@ namespace FlightReLive.Core.WorldUI
             ManualElevation = -1;
         }
 
-        internal void Inialize(POIType poiType, Camera camera, Vector3 parentPosition, string text, float height = -1f)
+        internal void Inialize(Camera camera, Vector3 parentPosition, string text, float height = -1f)
         {
-            _type = poiType;
             _text.text = text;
             _targetCamera = camera;
             _lineRenderer = gameObject.AddComponent<LineRenderer>();
@@ -216,13 +208,6 @@ namespace FlightReLive.Core.WorldUI
             _lineRenderer.startWidth = scale / 5f;
             _lineRenderer.endWidth = scale / 5f;
         }
-
         #endregion
-    }
-
-    public enum POIType
-    {
-        HomePoint,
-        Text
     }
 }

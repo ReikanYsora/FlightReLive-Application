@@ -183,7 +183,7 @@ namespace FlightReLive.UI.VideoPlayer
             });
         }
 
-        internal void UnloadFlightVideo()
+        internal void Unload()
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {

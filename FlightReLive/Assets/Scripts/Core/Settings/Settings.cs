@@ -21,7 +21,6 @@ namespace FlightReLive.Core.Settings
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
         public SatelliteTileQualityPreset SatelliteTileQualityPreset;
-        public int TilePadding;
         public float GlobalScale;
         public Color CameraBackgroundColor;
         public Color CameraCaptureBackgroundColor;

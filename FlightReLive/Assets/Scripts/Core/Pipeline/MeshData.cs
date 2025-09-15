@@ -64,7 +64,6 @@ namespace FlightReLive.Core.Pipeline
             return mesh;
         }
 
-
         /// <summary>
         /// Computes centroid of the mesh using a parallel reduction on X/Z.
         /// </summary>

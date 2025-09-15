@@ -40,7 +40,7 @@ namespace FlightReLive.Core.Rendering
         private void Start()
         {
             SettingsManager.OnGlobalIntensityChanged += OnGlobalIntensityChanged;
-            UnloadFlightRendering();
+            Unload();
         }
 
         private void OnDestroy()
@@ -309,7 +309,7 @@ namespace FlightReLive.Core.Rendering
             fogDensity *= Mathf.Lerp(1f, 0.4f, t);
         }
 
-        internal void UnloadFlightRendering()
+        internal void Unload()
         {
             if (_mainCamera == null)
             {

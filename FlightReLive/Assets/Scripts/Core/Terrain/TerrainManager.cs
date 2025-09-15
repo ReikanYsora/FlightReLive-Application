@@ -17,12 +17,8 @@ namespace FlightReLive.Core.Terrain
 
         #region ATTRIBUTES
         [SerializeField] internal Material _meshMaterial;
-        private List<GameObject> _tiles;
+        private readonly Dictionary<(int, int), GameObject> _tileObjects = new Dictionary<(int, int), GameObject>();
         private MaterialPropertyBlock _materialPropertyBlock;
-        #endregion
-
-        #region EVENTS
-        internal event Action<FlightData> OnTerrainLoaded;
         #endregion
 
         #region PROPERTIES
@@ -39,67 +35,92 @@ namespace FlightReLive.Core.Terrain
             }
 
             Instance = this;
-            _tiles = new List<GameObject>();
             _materialPropertyBlock = new MaterialPropertyBlock();
         }
         #endregion
 
         #region METHODS
-        internal void LoadFlightMap(FlightData flightData)
+        /// <summary>
+        /// Construit et instancie une seule tuile dans la scène.
+        /// </summary>
+        internal void LoadTile(TileDefinition tile, FlightData flightData)
         {
-            List<TileDefinition> sortedTiles = flightData.MapDefinition.GetSortedTiles();
-            StitchAdjacentTiles(sortedTiles);
+            if (tile.HeightMap == null)
+            {
+                Debug.LogWarning($"Tile {tile.X},{tile.Y} has no heightmap, cannot build terrain.");
+                return;
+            }
+
+            // Calculer min/max altitude pour cette tuile
+            float minAltitude = float.MaxValue;
+            float maxAltitude = -float.MaxValue;
+            int w = tile.HeightMap.GetLength(0);
+            int h = tile.HeightMap.GetLength(1);
+
+            for (int x = 0; x < w; x++)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    float a = tile.HeightMap[x, y];
+                    if (a < minAltitude) minAltitude = a;
+                    if (a > maxAltitude) maxAltitude = a;
+                }
+            }
 
             float tileSize = MapTools.GetTileSizeMeters(flightData.MapDefinition.OriginLatitude);
-            StartCoroutine(GenerateAndBuildTilesCoroutine(flightData, sortedTiles, tileSize, flightData.GlobalScale, 1, 1));
+
+            // Génération du mesh en coroutine
+            StartCoroutine(GenerateTerrainMeshFromHeightmapAsync(tile.HeightMap, tileSize, minAltitude, maxAltitude,
+                (meshData) =>
+                {
+                    tile.MeshData = meshData;
+
+                    // Calcul du centre global pour le positionnement
+                    int minX = flightData.MapDefinition.TileDefinitions.Min(t => t.X);
+                    int maxX = flightData.MapDefinition.TileDefinitions.Max(t => t.X);
+                    int minY = flightData.MapDefinition.TileDefinitions.Min(t => t.Y);
+                    int maxY = flightData.MapDefinition.TileDefinitions.Max(t => t.Y);
+
+                    float centerTileX = (minX + maxX) / 2f;
+                    float centerTileY = (minY + maxY) / 2f;
+
+                    CreateSingleTileGameObject(tile, tileSize, flightData.GlobalScale, centerTileX, centerTileY);
+                }, MESH_LINE_PERF_FRAME));
         }
 
-        private IEnumerator GenerateAndBuildTilesCoroutine(FlightData flight, List<TileDefinition> tiles, float tileSize, float globalScale, int meshPerFrame, int goPerFrame)
+        /// <summary>
+        /// Unload a loaded tile
+        /// </summary>
+        internal void UnloadTile(TileDefinition tile)
         {
-            float minAltitude = 0f, maxAltitude = 0f;
-            GetGlobalAltitudeRange(tiles, out minAltitude, out maxAltitude);
-
-            int meshDone = 0;
-            foreach (TileDefinition tile in tiles)
+            if (_tileObjects.TryGetValue((tile.X, tile.Y), out GameObject go))
             {
-                bool done = false;
-                yield return StartCoroutine(GenerateTerrainMeshFromHeightmapAsync(tile.HeightMap, tileSize, minAltitude, maxAltitude, (md) => { tile.MeshData = md; done = true; }, MESH_LINE_PERF_FRAME));
-
-                while (!done)
-                {
-                    yield return null;
-                }
-
-                meshDone++;
-                if (meshDone >= meshPerFrame)
-                {
-                    meshDone = 0;
-                    yield return null;
-                }
+                Destroy(go);
+                _tileObjects.Remove((tile.X, tile.Y));
             }
 
-            int minX = tiles.Min(t => t.X);
-            int maxX = tiles.Max(t => t.X);
-            int minY = tiles.Min(t => t.Y);
-            int maxY = tiles.Max(t => t.Y);
-            float centerTileX = (minX + maxX) / 2f;
-            float centerTileY = (minY + maxY) / 2f;
-
-            int goDone = 0;
-            foreach (TileDefinition tile in tiles)
-            {
-                CreateSingleTileGameObject(tile, tileSize, globalScale, centerTileX, centerTileY);
-                goDone++;
-                if (goDone >= goPerFrame)
-                {
-                    goDone = 0;
-                    yield return null;
-                }
-            }
-
-            OnTerrainLoaded?.Invoke(flight);
+            tile.MeshData = null;
+            tile.SatelliteTexture = null;
         }
 
+        /// <summary>
+        /// Unload all tiles
+        /// </summary>
+        internal void Unload()
+        {
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                foreach (var go in _tileObjects.Values)
+                {
+                    Destroy(go);
+                }
+                _tileObjects.Clear();
+            });
+        }
+
+        /// <summary>
+        /// Create tile gameobject
+        /// </summary>
         private void CreateSingleTileGameObject(TileDefinition tile, float tileSize, float globalScale, float centerTileX, float centerTileY)
         {
             float posX = (tile.X - centerTileX) * tileSize * globalScale;
@@ -114,53 +135,22 @@ namespace FlightReLive.Core.Terrain
             Mesh mesh = tile.MeshData.ConvertToUnityMesh();
             tempTile.AddComponent<MeshFilter>().mesh = mesh;
             tempTile.AddComponent<MeshCollider>().sharedMesh = mesh;
+
             MeshRenderer meshRenderer = tempTile.AddComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = _meshMaterial;
+
             _materialPropertyBlock.Clear();
             _materialPropertyBlock.SetTexture("_Satellite", tile.SatelliteTexture);
             meshRenderer.SetPropertyBlock(_materialPropertyBlock);
-            _tiles.Add(tempTile);
+
+            _tileObjects[(tile.X, tile.Y)] = tempTile;
             tempTile.SetActive(true);
         }
 
-        internal void UnloadFlightMap()
-        {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
-            {
-                foreach (GameObject tempTile in _tiles)
-                {
-                    Destroy(tempTile);
-                }
-
-                _tiles.Clear();
-            });
-        }
-
-        internal static void GetGlobalAltitudeRange(List<TileDefinition> tiles, out float minAltitude, out float maxAltitude)
-        {
-            minAltitude = float.MaxValue;
-            maxAltitude = -float.MaxValue;
-
-            foreach (var tile in tiles)
-            {
-                float[,] map = tile.HeightMap;
-                if (map == null || map.GetLength(0) == 0 || map.GetLength(1) == 0) continue;
-
-                int width = map.GetLength(0);
-                int height = map.GetLength(1);
-                for (int x = 0; x < width; x++)
-                {
-                    for (int z = 0; z < height; z++)
-                    {
-                        float altitude = map[x, z];
-                        if (altitude < minAltitude) minAltitude = altitude;
-                        if (altitude > maxAltitude) maxAltitude = altitude;
-                    }
-                }
-            }
-        }
-
-        private IEnumerator GenerateTerrainMeshFromHeightmapAsync(float[,] heightmap, float tileSize, float minAltitude, float maxAltitude, Action<MeshData> onCompleted, int linesPerFrame = 64)              
+        /// <summary>
+        /// Coroutine for generate mesh from heightmap
+        /// </summary>
+        private IEnumerator GenerateTerrainMeshFromHeightmapAsync(float[,] heightmap, float tileSize, float minAltitude, float maxAltitude, Action<MeshData> onCompleted, int linesPerFrame = 64)
         {
             int width = heightmap.GetLength(0);
             int height = heightmap.GetLength(1);
@@ -179,7 +169,7 @@ namespace FlightReLive.Core.Terrain
                 triangles = new NativeArray<int>(quadCount * 6, Allocator.Persistent)
             };
 
-            // Step 1 : fill vertices & UVs progressively
+            //Step 1 : vertices & UV
             for (int y = height - 1; y >= 0; y--)
             {
                 for (int x = 0; x < width; x++)
@@ -197,14 +187,13 @@ namespace FlightReLive.Core.Terrain
                     meshData.uvs2[i] = new Vector2(altitude, relativeNorm);
                 }
 
-                // Toutes les X lignes → on laisse respirer la frame
                 if (y % linesPerFrame == 0)
                 {
                     yield return null;
                 }
             }
 
-            // Step 2 : build triangles & normals progressively
+            //Step 2 : triangles & normales
             int triIndex = 0;
             for (int y = 0; y < height - 1; y++)
             {
@@ -240,53 +229,15 @@ namespace FlightReLive.Core.Terrain
                 }
             }
 
-            // Step 3 : normalize normals
+            //Step 3 : normalization
             for (int i = 0; i < vertexCount; i++)
             {
                 meshData.normals[i] = meshData.normals[i].normalized;
             }
 
-            // Mesh ready
             onCompleted?.Invoke(meshData);
         }
 
-        internal static void StitchAdjacentTiles(List<TileDefinition> tiles)
-        {
-            Dictionary<(int x, int y), TileDefinition> tileMap = tiles.ToDictionary(t => (t.X, t.Y));
-
-            foreach (var tile in tiles)
-            {
-                float[,] heightmap = tile.HeightMap;
-                int width = heightmap.GetLength(0);
-                int height = heightmap.GetLength(1);
-
-                //Right neighbor
-                if (tileMap.TryGetValue((tile.X + 1, tile.Y), out var rightTile))
-                {
-                    float[,] rightMap = rightTile.HeightMap;
-
-                    for (int y = 0; y < height; y++)
-                    {
-                        float avg = (heightmap[width - 1, y] + rightMap[0, y]) / 2f;
-                        heightmap[width - 1, y] = avg;
-                        rightMap[0, y] = avg;
-                    }
-                }
-
-                //Top neighbor
-                if (tileMap.TryGetValue((tile.X, tile.Y + 1), out var topTile))
-                {
-                    float[,] topMap = topTile.HeightMap;
-
-                    for (int x = 0; x < width; x++)
-                    {
-                        float avg = (heightmap[x, height - 1] + topMap[x, 0]) / 2f;
-                        heightmap[x, height - 1] = avg;
-                        topMap[x, 0] = avg;
-                    }
-                }
-            }
-        }
         #endregion
     }
 }

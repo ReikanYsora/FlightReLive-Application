@@ -1,6 +1,5 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
-using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Terrain;
 using FlightReLive.Core.WorldUI;
@@ -102,7 +101,6 @@ namespace FlightReLive.Core.Paths
         private void Start()
         {
             VideoPlayerManager.Instance.OnProgressChanged += OnProgressChanged;
-            TerrainManager.Instance.OnTerrainLoaded += OnTerrainLoaded;
             SettingsManager.OnPathRemainingColor1Changed += OnPathRemainingColor1Changed;
             SettingsManager.OnPathRemainingColor2Changed += OnPathRemainingColor2Changed;
             _progressionPathMaterialInstance.SetColor("_ColorC", SettingsManager.CurrentSettings.PathRemainingColor1);
@@ -177,7 +175,6 @@ namespace FlightReLive.Core.Paths
         private void OnDisable()
         {
             VideoPlayerManager.Instance.OnProgressChanged -= OnProgressChanged;
-            TerrainManager.Instance.OnTerrainLoaded -= OnTerrainLoaded;
             SettingsManager.OnPathRemainingColor1Changed -= OnPathRemainingColor1Changed;
             SettingsManager.OnPathRemainingColor2Changed -= OnPathRemainingColor2Changed;
             Destroy(_progressionPath);
@@ -185,12 +182,14 @@ namespace FlightReLive.Core.Paths
         #endregion
 
         #region METHODS
-        private void LoadFlightPath(FlightData flightData)
+        internal void LoadFlightPath(FlightData flightData)
         {
             if (flightData == null || flightData.Points == null || flightData.Points.Count < 2)
             {
                 return;
             }
+
+            BaseThickness = SettingsManager.CurrentSettings.PathWidth;
 
             //Estimate altitude at takeoff point
             Vector3 positionGPS = new Vector3((float)flightData.EstimateTakeOffPosition.Latitude, flightData.TakeOffAltitude, (float)flightData.EstimateTakeOffPosition.Longitude);
@@ -206,6 +205,7 @@ namespace FlightReLive.Core.Paths
                 _progressionPathCollider.enabled = true;
             }
         }
+
         private Vector3 GetWorldPositionAtUVProgress(float progress)
         {
             for (int i = 0; i < _fullPath.Count - 1; i++)
@@ -223,12 +223,11 @@ namespace FlightReLive.Core.Paths
             return _fullPath[_fullPath.Count - 1].Position;
         }
 
-
-        internal void UnloadFlightPath()
+        internal void Unload()
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                WorldUIManager.Instance.UnloadFlightPOIs();
+                WorldUIManager.Instance.Unload();
                 _interpolatedToFlightPoint.Clear();
                 _progressionPathFilter.sharedMesh = null;
                 _progressionPathCollider.enabled = false;
@@ -578,12 +577,6 @@ namespace FlightReLive.Core.Paths
         #endregion
 
         #region CALLBACKS
-        private void OnTerrainLoaded(FlightData flightData)
-        {
-            LoadFlightPath(flightData);
-            BaseThickness = SettingsManager.CurrentSettings.PathWidth;
-        }
-
         private void OnPathRemainingColor1Changed(Color color)
         {
             _progressionPathMaterialInstance.SetColor("_ColorC", SettingsManager.CurrentSettings.PathRemainingColor1);

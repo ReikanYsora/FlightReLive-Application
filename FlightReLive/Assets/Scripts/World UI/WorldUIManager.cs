@@ -1,14 +1,16 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
 using Fu.Framework;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace FlightReLive.Core.WorldUI
 {
+    /// <summary>
+    /// Manager responsible for handling 3D world-space UI icons (POIs).
+    /// Supports tile-by-tile loading/unloading for dynamic streaming.
+    /// </summary>
     public class WorldUIManager : MonoBehaviour
     {
         #region ATTRIBUTES
@@ -17,8 +19,9 @@ namespace FlightReLive.Core.WorldUI
 
         [Header("3D Icons prefabs")]
         [SerializeField] private GameObject _gpsPrefab;
-        private List<POIEntity> _pois;
 
+        private readonly List<POIEntity> _allPOIs = new List<POIEntity>();
+        private readonly Dictionary<(int, int), List<POIEntity>> _tileToPOIs = new Dictionary<(int, int), List<POIEntity>>();
         #endregion
 
         #region PROPERTIES
@@ -35,7 +38,6 @@ namespace FlightReLive.Core.WorldUI
             }
 
             Instance = this;
-            _pois = new List<POIEntity>();
         }
 
         private void Start()
@@ -54,97 +56,123 @@ namespace FlightReLive.Core.WorldUI
         #endregion
 
         #region METHODS
-        internal void UnloadFlightPOIs()
+
+        /// <summary>
+        /// Unloads all POIs from the scene.
+        /// </summary>
+        internal void Unload()
         {
-            foreach (POIEntity poi in _pois)
+            foreach (POIEntity poi in _allPOIs)
             {
                 Destroy(poi.gameObject);
             }
 
-            _pois.Clear();
+            _allPOIs.Clear();
+            _tileToPOIs.Clear();
+        }
+
+        /// <summary>
+        /// Unloads only POIs from a specific tile.
+        /// </summary>
+        internal void UnloadTile(TileDefinition tile)
+        {
+            (int, int) key = (tile.X, tile.Y);
+
+            if (_tileToPOIs.TryGetValue(key, out List<POIEntity> pois))
+            {
+                foreach (POIEntity poi in pois)
+                {
+                    Destroy(poi.gameObject);
+                    _allPOIs.Remove(poi);
+                }
+
+                _tileToPOIs.Remove(key);
+            }
+        }
+
+        /// <summary>
+        /// Loads all POIs from a specific tile.
+        /// </summary>
+        internal void LoadTile(TileDefinition tile, FlightData flightData)
+        {
+            if (tile.GeoData == null || tile.GeoData.features == null)
+            {
+                return;
+            }
+
+            HashSet<string> processedKeys = new HashSet<string>();
+            List<POIEntity> createdForTile = new List<POIEntity>();
+
+            foreach (Feature feature in tile.GeoData.features)
+            {
+                string name = feature.place_name ?? feature.text ?? "Unknown name";
+
+                if (feature.geometry?.coordinates == null || feature.geometry.coordinates.Count < 2)
+                {
+                    continue;
+                }
+
+                FlightGPSData gpsData = new FlightGPSData
+                {
+                    Longitude = feature.geometry.coordinates[0],
+                    Latitude = feature.geometry.coordinates[1]
+                };
+
+                // Check if GPS coordinate is inside bounding box
+                GPSBoundingBox bbox = flightData.MapDefinition.MapBoundingBox;
+                bool isInsideBoundingBox =
+                    gpsData.Latitude >= bbox.MinLatitude &&
+                    gpsData.Latitude <= bbox.MaxLatitude &&
+                    gpsData.Longitude >= bbox.MinLongitude &&
+                    gpsData.Longitude <= bbox.MaxLongitude;
+
+                string key = $"{name}_{gpsData.Latitude}_{gpsData.Longitude}";
+
+                if (!isInsideBoundingBox || processedKeys.Contains(key))
+                {
+                    continue;
+                }
+
+                processedKeys.Add(key);
+
+                float altitude = flightData.GetAltitudeAtPosition(tile, gpsData);
+                Vector3 gpsVector3 = new Vector3((float)gpsData.Latitude, altitude, (float)gpsData.Longitude);
+                Vector3 worldPos = flightData.ConvertGPSPositionToWorld(gpsVector3);
+
+                GameObject poiGO = GameObject.Instantiate(_gpsPrefab, _mainCanvas.transform);
+                poiGO.transform.position = worldPos;
+                POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
+                poiEntity.Inialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.WorldIconHeight);
+                _allPOIs.Add(poiEntity);
+                createdForTile.Add(poiEntity);
+            }
+
+            _tileToPOIs[(tile.X, tile.Y)] = createdForTile;
         }
         #endregion
 
         #region CALLBACKS
         private void OnWorldIconScaleChanged(float value)
         {
-            if (_pois != null &&  _pois.Count > 0)
+            foreach (POIEntity poi in _allPOIs)
             {
-                _pois.ForEach(p => p.GetComponent<POIEntity>().ScaleFactor = value / 100f);
+                poi.ScaleFactor = value / 100f;
             }
         }
 
         private void On3DIconVisibilityChanged(bool visibility)
         {
-            if (_pois != null && _pois.Count > 0)
+            foreach (POIEntity poi in _allPOIs)
             {
-                _pois.ForEach(p => p.gameObject.SetActive(visibility));
+                poi.gameObject.SetActive(visibility);
             }
         }
 
         private void On3DIconHeightChanged(float height)
         {
-            if (_pois != null && _pois.Count > 0)
+            foreach (POIEntity poi in _allPOIs)
             {
-                _pois.ForEach(p => p.ManualElevation = height);
-            }
-        }
-
-        internal void LoadFlightPOIs(FlightData flightData)
-        {
-            if (flightData == null)
-            {
-                return;
-            }
-
-            HashSet<string> processedKeys = new HashSet<string>();
-
-            foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
-            {
-                if (tile.GeoData == null || tile.GeoData.features == null)
-                {
-                    return;
-                }
-
-                foreach (Feature feature in tile.GeoData.features)
-                {
-                    string name = feature.place_name ?? feature.text ?? "Nom inconnu";
-
-                    if (feature.geometry?.coordinates != null && feature.geometry.coordinates.Count >= 2)
-                    {
-                        FlightGPSData flightGPSData = new FlightGPSData
-                        {
-                            Longitude = feature.geometry.coordinates[0],
-                            Latitude = feature.geometry.coordinates[1]
-                        };
-
-                        //Check if GPS coordinate are in globalBoundingBox
-                        GPSBoundingBox bbox = flightData.MapDefinition.MapBoundingBox;
-                        bool isInsideBoundingBox =
-                            flightGPSData.Latitude >= bbox.MinLatitude &&
-                            flightGPSData.Latitude <= bbox.MaxLatitude &&
-                            flightGPSData.Longitude >= bbox.MinLongitude &&
-                            flightGPSData.Longitude <= bbox.MaxLongitude;
-
-                        string key = $"{name}_{flightGPSData.Latitude}_{flightGPSData.Longitude}";
-
-                        if (!isInsideBoundingBox || processedKeys.Contains(key))
-                        {
-                            continue;
-                        }
-
-                        processedKeys.Add(key);
-
-                        float altitude = flightData.GetAltitudeAtPosition(tile, flightGPSData);
-                        Vector3 gpsVector3 = new Vector3((float)flightGPSData.Latitude, altitude, (float)flightGPSData.Longitude);
-                        Vector3 tempWorldPosition = flightData.ConvertGPSPositionToWorld(gpsVector3);
-                        GameObject _tempPOI = GameObject.Instantiate(_gpsPrefab, _mainCanvas.transform);
-                        _tempPOI.transform.position = tempWorldPosition;
-                        POIEntity poiEntityComponent = _tempPOI.GetComponent<POIEntity>();
-                        poiEntityComponent.Inialize(POIType.Text, _mainCamera, tempWorldPosition, name, SettingsManager.CurrentSettings.WorldIconHeight);
-                        _pois.Add(poiEntityComponent);
-                    }
-                }
+                poi.ManualElevation = height;
             }
         }
         #endregion

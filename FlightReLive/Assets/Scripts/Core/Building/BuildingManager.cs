@@ -11,6 +11,10 @@ using VexTile.Mapbox.VectorTile.Geometry;
 
 namespace FlightReLive.Core.Building
 {
+    /// <summary>
+    /// Manager responsible for creating, displaying and unloading buildings in the scene.
+    /// Preserves original triangulation and placement logic, with per-tile streaming support.
+    /// </summary>
     [RequireComponent(typeof(BuildingPool))]
     internal class BuildingManager : MonoBehaviour
     {
@@ -23,7 +27,8 @@ namespace FlightReLive.Core.Building
         #region ATTRIBUTES
         [SerializeField] private Material _buildingMaterial;
         private BuildingPool _buildingPool;
-        private List<GameObject> _buildings = new List<GameObject>();
+        private readonly List<GameObject> _buildings = new List<GameObject>();
+        private readonly Dictionary<(int, int), List<GameObject>> _tileToBuildings = new Dictionary<(int, int), List<GameObject>>();
         #endregion
 
         #region PROPERTIES
@@ -40,42 +45,42 @@ namespace FlightReLive.Core.Building
             }
 
             Instance = this;
-
-            _buildings = new List<GameObject>();
             _buildingPool = GetComponent<BuildingPool>();
         }
 
         private void Start()
         {
-            TerrainManager.Instance.OnTerrainLoaded += OnTerrainLoaded;
             SettingsManager.OnBuildingVisibilityChanged += OnBuildingVisibilityChanged;
         }
 
         private void OnDestroy()
         {
-            TerrainManager.Instance.OnTerrainLoaded -= OnTerrainLoaded;
             SettingsManager.OnBuildingVisibilityChanged -= OnBuildingVisibilityChanged;
         }
         #endregion
 
         #region METHODS
-        private void LoadFlightBuildings(FlightData flighData)
+
+        /// <summary>
+        /// Builds all buildings for a single tile.
+        /// </summary>
+        internal void LoadTile(TileDefinition tile, FlightData flight)
         {
-            if (flighData == null)
+            if (tile == null || tile.Buildings == null || tile.Buildings.Count == 0)
             {
                 return;
             }
 
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                foreach (TileDefinition tile in flighData.MapDefinition.TileDefinitions)
-                {
-                    GenerateBuildingsFromVectorTile(tile, flighData);
-                }
+                GenerateBuildingsFromVectorTile(tile, flight);
             });
         }
 
-        internal void UnloadFLightBuildings()
+        /// <summary>
+        /// Clears all buildings currently loaded.
+        /// </summary>
+        internal void Unload()
         {
             foreach (GameObject building in _buildings)
             {
@@ -83,8 +88,89 @@ namespace FlightReLive.Core.Building
             }
 
             _buildings.Clear();
+            _tileToBuildings.Clear();
         }
 
+        /// <summary>
+        /// Unloads only the buildings from a specific tile.
+        /// </summary>
+        internal void UnloadTile(TileDefinition tile)
+        {
+            (int, int) key = (tile.X, tile.Y);
+
+            if (_tileToBuildings.TryGetValue(key, out List<GameObject> buildings))
+            {
+                foreach (GameObject building in buildings)
+                {
+                    _buildingPool.Return(building);
+                    _buildings.Remove(building);
+                }
+
+                _tileToBuildings.Remove(key);
+            }
+        }
+
+        /// <summary>
+        /// Generates all buildings for the given tile using LibTessDotNet triangulation.
+        /// Preserves original extrusion and triangle winding order.
+        /// </summary>
+        private void GenerateBuildingsFromVectorTile(TileDefinition tile, FlightData flight)
+        {
+            List<BuildingData> buildings = tile.Buildings;
+            List<GameObject> createdForTile = new List<GameObject>();
+
+            for (int i = 0; i < buildings.Count; i++)
+            {
+                BuildingData building = buildings[i];
+
+                for (int j = 0; j < building.Geometry.Count; j++)
+                {
+                    List<SerializablePoint2D> ringRaw = building.Geometry[j];
+
+                    if (ringRaw.Count < 3)
+                    {
+                        continue;
+                    }
+
+                    List<Point2d<int>> ring = new List<Point2d<int>>(ringRaw.Count);
+                    for (int k = 0; k < ringRaw.Count; k++)
+                    {
+                        ring.Add(ringRaw[k].ToPoint2D());
+                    }
+
+                    if (ring.Count < 3)
+                    {
+                        continue;
+                    }
+
+                    List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y);
+
+                    // Compute barycenter (2D world-space)
+                    Vector2 center = Vector2.zero;
+                    for (int k = 0; k < contour.Count; k++)
+                    {
+                        center += contour[k];
+                    }
+                    center /= contour.Count;
+
+                    // Altitude at barycenter (GPS space)
+                    FlightGPSData barycenterGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y);
+                    float terrainAltitude = flight.GetAltitudeAtPosition(tile, barycenterGPS);
+
+                    Vector3 position = new Vector3(center.x, terrainAltitude * flight.GlobalScale, center.y);
+                    MeshData meshData = TriangulateAndExtrude(flight, contour, building.Height);
+
+                    GameObject buildingGO = CreateBuilding(meshData, position);
+                    createdForTile.Add(buildingGO);
+                }
+            }
+
+            _tileToBuildings[(tile.X, tile.Y)] = createdForTile;
+        }
+
+        /// <summary>
+        /// Converts a raw geometry ring into a contour in Unity world space.
+        /// </summary>
         private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY)
         {
             List<Vector2> contour = new List<Vector2>();
@@ -111,53 +197,9 @@ namespace FlightReLive.Core.Building
             return contour;
         }
 
-        private void GenerateBuildingsFromVectorTile(TileDefinition tile, FlightData flight)
-        {
-            List<BuildingData> buildings = tile.Buildings;
-
-            for (int i = 0; i < buildings.Count; i++)
-            {
-                BuildingData building = buildings[i];
-
-                for (int j = 0; j < building.Geometry.Count; j++)
-                {
-                    List<SerializablePoint2D> ringRaw = building.Geometry[j];
-
-                    if (ringRaw.Count < 3)
-                    {
-                        continue;
-                    }
-
-                    List<Point2d<int>> ring = new List<Point2d<int>>(ringRaw.Count);
-
-                    for (int k = 0; k < ringRaw.Count; k++)
-                    {
-                        ring.Add(ringRaw[k].ToPoint2D());
-                    }
-
-                    if (ring.Count < 3)
-                    {
-                        continue;
-                    }
-
-                    List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y);
-
-                    Vector2 center = Vector2.zero;
-                    for (int k = 0; k < contour.Count; k++)
-                    {
-                        center += contour[k];
-                    }
-                    center /= contour.Count;
-
-                    FlightGPSData barycenterGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y);
-                    float terrainAltitude = flight.GetAltitudeAtPosition(tile, barycenterGPS);
-                    Vector3 position = new Vector3(center.x, terrainAltitude * flight.GlobalScale, center.y);
-                    MeshData meshData = TriangulateAndExtrude(flight, contour, building.Height);
-                    CreateBuilding(meshData, position);
-                }
-            }
-        }
-
+        /// <summary>
+        /// Computes barycenter of a ring in GPS coordinates.
+        /// </summary>
         private FlightGPSData ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY)
         {
             const ulong extent = 4096;
@@ -186,6 +228,10 @@ namespace FlightReLive.Core.Building
             return new FlightGPSData(avgLat, avgLon);
         }
 
+        /// <summary>
+        /// Extrudes a 2D contour into a 3D building mesh (roof + walls).
+        /// Preserves original winding order.
+        /// </summary>
         private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float buildingHeight)
         {
             float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
@@ -222,6 +268,7 @@ namespace FlightReLive.Core.Building
             int v = 0;
             int t = 0;
 
+            // Roof vertices
             for (int i = 0; i < roofVertexCount; i++)
             {
                 Vec3 vertex = tess.Vertices[i].Position;
@@ -232,6 +279,7 @@ namespace FlightReLive.Core.Building
                 v++;
             }
 
+            // Roof triangles (keep original winding order)
             for (int i = 0; i < tess.ElementCount; i++)
             {
                 int index0 = tess.Elements[i * 3 + 0];
@@ -243,6 +291,7 @@ namespace FlightReLive.Core.Building
                 meshData.triangles[t++] = index0;
             }
 
+            // Walls
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 p0 = contour[i];
@@ -277,6 +326,7 @@ namespace FlightReLive.Core.Building
                 meshData.uvs2[baseIndex + 2] = Vector2.zero;
                 meshData.uvs2[baseIndex + 3] = Vector2.zero;
 
+                // Keep original triangle winding
                 meshData.triangles[t++] = baseIndex + 2;
                 meshData.triangles[t++] = baseIndex + 1;
                 meshData.triangles[t++] = baseIndex + 0;
@@ -289,32 +339,36 @@ namespace FlightReLive.Core.Building
             return meshData;
         }
 
-        private void CreateBuilding(MeshData meshData, Vector3 position)
+        /// <summary>
+        /// Instantiates a building GameObject from a mesh.
+        /// </summary>
+        private GameObject CreateBuilding(MeshData meshData, Vector3 position)
         {
             Mesh mesh = meshData.ConvertToUnityMesh();
             GameObject building = _buildingPool.Get();
+
             MeshFilter meshFilter = building.GetComponent<MeshFilter>();
             MeshRenderer meshRenderer = building.GetComponent<MeshRenderer>();
 
             meshRenderer.enabled = SettingsManager.CurrentSettings.BuildingVisibility;
             meshFilter.sharedMesh = mesh;
+
             building.transform.SetParent(transform);
             building.transform.position = position;
             building.transform.rotation = Quaternion.identity;
 
             _buildings.Add(building);
+            return building;
         }
         #endregion
 
         #region CALLBACKS
         private void OnBuildingVisibilityChanged(bool buildingVisible)
         {
-            _buildings.ForEach(x => x.GetComponent<MeshRenderer>().enabled = buildingVisible);
-        }
-
-        private void OnTerrainLoaded(FlightData flightData)
-        {
-            LoadFlightBuildings(flightData);
+            foreach (GameObject go in _buildings)
+            {
+                go.GetComponent<MeshRenderer>().enabled = buildingVisible;
+            }
         }
         #endregion
 
@@ -331,5 +385,4 @@ namespace FlightReLive.Core.Building
         }
         #endregion
     }
-
 }

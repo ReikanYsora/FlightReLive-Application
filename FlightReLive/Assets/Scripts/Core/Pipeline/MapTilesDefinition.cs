@@ -1,3 +1,4 @@
+using FlightReLive.Core.FlightDefinition;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -73,6 +74,7 @@ namespace FlightReLive.Core.Pipeline
             if (addDefinition != null)
             {
                 _tileDefinitions.Add(addDefinition);
+                UpdateBoundingBoxFromTiles();
             }
         }
 

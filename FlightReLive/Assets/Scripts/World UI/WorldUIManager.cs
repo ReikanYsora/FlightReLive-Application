@@ -118,20 +118,7 @@ namespace FlightReLive.Core.WorldUI
                     Latitude = feature.geometry.coordinates[1]
                 };
 
-                // Check if GPS coordinate is inside bounding box
-                GPSBoundingBox bbox = flightData.MapDefinition.MapBoundingBox;
-                bool isInsideBoundingBox =
-                    gpsData.Latitude >= bbox.MinLatitude &&
-                    gpsData.Latitude <= bbox.MaxLatitude &&
-                    gpsData.Longitude >= bbox.MinLongitude &&
-                    gpsData.Longitude <= bbox.MaxLongitude;
-
                 string key = $"{name}_{gpsData.Latitude}_{gpsData.Longitude}";
-
-                if (!isInsideBoundingBox || processedKeys.Contains(key))
-                {
-                    continue;
-                }
 
                 processedKeys.Add(key);
 

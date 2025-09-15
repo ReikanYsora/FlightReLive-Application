@@ -26,8 +26,6 @@ namespace FlightReLive.Core.Pipeline
         /// </summary>
         public Mesh ConvertToUnityMesh()
         {
-            Stopwatch sw = Stopwatch.StartNew();
-
             Mesh mesh = new Mesh();
             mesh.indexFormat = IndexFormat.UInt32;
 
@@ -58,9 +56,6 @@ namespace FlightReLive.Core.Pipeline
             uvs2.Dispose();
             triangles.Dispose();
 
-            sw.Stop();
-            UnityEngine.Debug.Log("ConvertToUnityMesh: " + sw.ElapsedMilliseconds + " ms");
-
             return mesh;
         }
 
@@ -69,11 +64,8 @@ namespace FlightReLive.Core.Pipeline
         /// </summary>
         private Vector3 CalculateMeshCenter(NativeArray<Vector3> verts)
         {
-            Stopwatch sw = Stopwatch.StartNew();
-
             if (!verts.IsCreated || verts.Length == 0)
             {
-                sw.Stop();
                 UnityEngine.Debug.Log("CalculateMeshCenter: empty verts (0 ms)");
                 return Vector3.zero;
             }
@@ -104,9 +96,6 @@ namespace FlightReLive.Core.Pipeline
 
             chunkSumsX.Dispose();
             chunkSumsZ.Dispose();
-
-            sw.Stop();
-            UnityEngine.Debug.Log("CalculateMeshCenter: " + sw.ElapsedMilliseconds + " ms");
 
             return new Vector3(totalX / verts.Length, 0f, totalZ / verts.Length);
         }

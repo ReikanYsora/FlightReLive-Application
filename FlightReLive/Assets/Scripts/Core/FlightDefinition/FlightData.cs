@@ -20,41 +20,32 @@ namespace FlightReLive.Core.FlightDefinition
 
         #region ATTRIBUTES
         private Dictionary<(int, int), TileDefinition> _tileLookup;
+        private bool _sceneCenterInitialized = false;
         #endregion
 
         #region PROPERTIES
         internal string Name { set; get; }
-
         internal string VideoPath { set; get; }
-
         internal DateTime Date { set; get; }
-
         internal List<FlightDataPoint> Points { set; get; }
-
         internal MapTilesDefinition MapDefinition { set; get; }
-
         internal Texture2D Thumbnail { set; get; }
 
-        internal Vector2 SceneCenterGPS { get; set; }
+        /// <summary>
+        /// Reference GPS point used as world origin.
+        /// Set once when tiles are first built.
+        /// </summary>
+        internal Vector2 SceneCenterGPS { get; private set; }
 
         internal bool HasTakeOffPosition { get; set; }
-
         internal bool HasExtractionError { get; set; }
-
         internal bool IsValid { get; set; }
-
         internal FlightGPSData EstimateTakeOffPosition { set; get; }
-
         internal float TakeOffAltitude { get; set; }
-
         internal FlightGPSData GPSOrigin { get; set; }
-
         internal TimeSpan Length { get; set; }
 
-        internal float GlobalScale
-        {
-            get { return GLOBAL_SCALE; }
-        }
+        internal float GlobalScale => GLOBAL_SCALE;
         #endregion
 
         #region METHODS
@@ -69,6 +60,7 @@ namespace FlightReLive.Core.FlightDefinition
 
         /// <summary>
         /// Initializes the altitude of the takeoff position.
+        /// Should only be called once heightmaps are ready.
         /// </summary>
         internal void InitializeAltitude()
         {
@@ -100,7 +92,8 @@ namespace FlightReLive.Core.FlightDefinition
         }
 
         /// <summary>
-        /// Builds the lookup dictionary for fast tile access and computes SceneCenterGPS.
+        /// Builds the lookup dictionary for fast tile access.
+        /// SceneCenterGPS is set only once (the first time).
         /// </summary>
         internal void BuildTileLookup()
         {
@@ -115,14 +108,20 @@ namespace FlightReLive.Core.FlightDefinition
                 .GroupBy(t => (t.X, t.Y))
                 .ToDictionary(g => g.Key, g => g.First());
 
-            // Recompute scene center (important for world coordinate conversion)
-            double avgLat = MapDefinition.TileDefinitions.Average(
-                t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
-            double avgLon = MapDefinition.TileDefinitions.Average(
-                t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
-            SceneCenterGPS = new Vector2((float)avgLat, (float)avgLon);
+            // Fix: do NOT recompute SceneCenterGPS every time.
+            if (!_sceneCenterInitialized)
+            {
+                double avgLat = MapDefinition.TileDefinitions.Average(
+                    t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
+                double avgLon = MapDefinition.TileDefinitions.Average(
+                    t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
 
-            InitializeAltitude();
+                SceneCenterGPS = new Vector2((float)avgLat, (float)avgLon);
+                _sceneCenterInitialized = true;
+            }
+
+            // Do NOT call InitializeAltitude() here!
+            // Wait until topographic heightmaps are downloaded.
         }
 
         /// <summary>
@@ -167,20 +166,17 @@ namespace FlightReLive.Core.FlightDefinition
             int width = heightmap.GetLength(0);
             int height = heightmap.GetLength(1);
 
-            // Normalized [0,1] coordinates
             float nx = Mathf.InverseLerp((float)bbox.MinLongitude, (float)bbox.MaxLongitude, (float)gps.Longitude);
             float ny = Mathf.InverseLerp((float)bbox.MinLatitude, (float)bbox.MaxLatitude, (float)gps.Latitude);
 
-            // Map to heightmap indices
             float fx = nx * (width - 1);
-            float fy = (1f - ny) * (height - 1); // Y inverted
+            float fy = (1f - ny) * (height - 1);
 
             int x0 = Mathf.FloorToInt(fx);
             int x1 = Mathf.Min(x0 + 1, width - 1);
             int y0 = Mathf.FloorToInt(fy);
             int y1 = Mathf.Min(y0 + 1, height - 1);
 
-            // Bilinear interpolation
             float hx0 = Mathf.Lerp(heightmap[x0, y0], heightmap[x1, y0], fx - x0);
             float hx1 = Mathf.Lerp(heightmap[x0, y1], heightmap[x1, y1], fx - x0);
             float h = Mathf.Lerp(hx0, hx1, fy - y0);
@@ -193,10 +189,8 @@ namespace FlightReLive.Core.FlightDefinition
         /// </summary>
         internal Vector3 ConvertGPSPositionToWorld(Vector3 gpsPosition)
         {
-            float xMeters = (float)MapTools.HaversineDistance(
-                SceneCenterGPS.x, SceneCenterGPS.y, SceneCenterGPS.x, gpsPosition.z);
-            float zMeters = (float)MapTools.HaversineDistance(
-                SceneCenterGPS.x, SceneCenterGPS.y, gpsPosition.x, SceneCenterGPS.y);
+            float xMeters = (float)MapTools.HaversineDistance(SceneCenterGPS.x, SceneCenterGPS.y, SceneCenterGPS.x, gpsPosition.z);
+            float zMeters = (float)MapTools.HaversineDistance(SceneCenterGPS.x, SceneCenterGPS.y, gpsPosition.x, SceneCenterGPS.y);
 
             if (gpsPosition.z < SceneCenterGPS.y)
             {

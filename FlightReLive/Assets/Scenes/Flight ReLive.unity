@@ -374,7 +374,6 @@ GameObject:
   m_Component:
   - component: {fileID: 311396844}
   - component: {fileID: 311396845}
-  - component: {fileID: 311396846}
   m_Layer: 0
   m_Name: LoadingManager
   m_TagString: Untagged
@@ -409,33 +408,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bcdb7fabd80845048eb761d9db002cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Loading.LoadingManager
-  _animationManager: {fileID: 311396846}
---- !u!114 &311396846
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 311396843}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 40a0b1b0dbbeca440b4366f55f357d45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Loading.LoadingAnimationManager
-  _displacementRadius: 0.7
-  _edgeFalloffRadius: 1
-  _maxDisplacementHeight: 3
-  _gridResolution: 128
-  _gridWidth: 20
-  _surfaceColor: {r: 2.9960785, g: 0.9254902, b: 0, a: 1}
-  _wireframeColor: {r: 1.3041189, g: 0.07008469, b: 0, a: 1}
-  _loadingMaterial: {fileID: 2100000, guid: 8b12ea26bb1c0ce44968255e4ada386a, type: 2}
-  _ringMaterial: {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
-  _ringWidth: 0.15
-  _progressColor: {r: 0, g: 0.53333336, b: 5.992157, a: 1}
-  _ringRadius: 9
-  _ringHeight: 4
-  _ringSegments: 256
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -818,37 +790,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _meshMaterial: {fileID: 2100000, guid: c375300b30c6c7345a4fabd4953304b9, type: 2}
-  _pointCloudMaterial: {fileID: 2100000, guid: 9e560c7b24591ad46bc863b58a3e1bc4, type: 2}
-  _elevateGradient:
-    serializedVersion: 2
-    key0: {r: 1, g: 1, b: 1, a: 1}
-    key1: {r: 0.24957967, g: 1, b: 0, a: 1}
-    key2: {r: 0.9296404, g: 1, b: 0, a: 0}
-    key3: {r: 1, g: 0.9220363, b: 0, a: 0}
-    key4: {r: 1, g: 0.5589782, b: 0, a: 0}
-    key5: {r: 1, g: 0.37588555, b: 0, a: 0}
-    key6: {r: 1, g: 0.13217431, b: 0, a: 0}
-    key7: {r: 1, g: 0.029678369, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 6554
-    ctime2: 15035
-    ctime3: 21974
-    ctime4: 29876
-    ctime5: 40285
-    ctime6: 53777
-    ctime7: 65535
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: -1
-    m_NumColorKeys: 8
-    m_NumAlphaKeys: 2
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0

@@ -57,7 +57,6 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
-
         private async void StartLoadingScene(FlightFile flightFile)
         {
             //Convert FlightFile into FlightData
@@ -96,11 +95,35 @@ namespace FlightReLive.Core.Loading
             FlightChartsManager.Instance.Load(flightData);
             VideoPlayerManager.Instance.LoadFlightVideo(flightData);
             SunManager.Instance.LoadFlightRendering(flightData);
-            PathManager.Instance.LoadFlightPath(flightData);
 
             IsLoading = false;
             OnFlightEndLoading?.Invoke();
+            flightData.InitializeAltitude();
+            PathManager.Instance.LoadFlightPath(flightData);
             Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
+
+            // --- TEST: Now chain-load priority 1 tiles ---
+            List<TileDefinition> priorityOneTiles = flightData.MapDefinition.TileDefinitions
+                .Where(t => t.Priority == 1)
+                .ToList();
+
+            foreach (TileDefinition tile in priorityOneTiles)
+            {
+                await LoadTile(tile.X, tile.Y);
+            }
+
+            Fugui.Notify("Streaming update", $"Priority 1 tiles loaded for {flightData.Name}.", StateType.Info);
+
+            List<TileDefinition> priority2Tiles = flightData.MapDefinition.TileDefinitions
+                .Where(t => t.Priority == 2)
+                .ToList();
+
+            foreach (TileDefinition tile in priority2Tiles)
+            {
+                await LoadTile(tile.X, tile.Y);
+            }
+
+            Fugui.Notify("Streaming update", $"Priority 1 tiles loaded for {flightData.Name}.", StateType.Info);
         }
 
         private void NotifyError(string message)
@@ -197,6 +220,7 @@ namespace FlightReLive.Core.Loading
                 VideoPath = file.VideoPath
             };
 
+            // Set GPS origin
             if (file.HasTakeOffPosition)
             {
                 flightData.GPSOrigin = new FlightGPSData(file.FlightGPSCoordinates.x, file.FlightGPSCoordinates.y);
@@ -209,13 +233,17 @@ namespace FlightReLive.Core.Loading
 
             flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
-            int padding = 0;
 
+            //Configurable padding
+            int padding = 2;
+
+            // Collect all GPS points (including estimated takeoff)
             IEnumerable<(double Latitude, double Longitude)> allPoints;
-
             if (file.HasTakeOffPosition)
             {
-                allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude)).Append((file.EstimateTakeOffPosition.Latitude, file.EstimateTakeOffPosition.Longitude));
+                allPoints = file.DataPoints
+                    .Select(p => (p.Latitude, p.Longitude))
+                    .Append((file.EstimateTakeOffPosition.Latitude, file.EstimateTakeOffPosition.Longitude));
             }
             else
             {
@@ -227,17 +255,17 @@ namespace FlightReLive.Core.Loading
             double minLon = allPoints.Min(p => p.Longitude);
             double maxLon = allPoints.Max(p => p.Longitude);
 
-            //Get inside bounds
+            // Get inside bounds
             (int baseMinTileX, int baseMaxTileY) = MapTools.GPSToTileXY(minLat, minLon);
             (int baseMaxTileX, int baseMinTileY) = MapTools.GPSToTileXY(maxLat, maxLon);
 
-            //Inside bounds
+            // Inside bounds (priority 0)
             int originalMinTileX = baseMinTileX;
             int originalMaxTileX = baseMaxTileX;
             int originalMinTileY = baseMinTileY;
             int originalMaxTileY = baseMaxTileY;
 
-            //Outside bounds (padding)
+            // Outside bounds (with padding)
             int minTileX = originalMinTileX - padding;
             int maxTileX = originalMaxTileX + padding;
             int minTileY = originalMinTileY - padding;
@@ -247,6 +275,11 @@ namespace FlightReLive.Core.Loading
             {
                 for (int y = minTileY; y <= maxTileY; y++)
                 {
+                    // Compute padding level for this tile
+                    int dx = Math.Max(0, Math.Max(originalMinTileX - x, x - originalMaxTileX));
+                    int dy = Math.Max(0, Math.Max(originalMinTileY - y, y - originalMaxTileY));
+                    int priority = Math.Max(dx, dy); // distance in "rings"
+
                     TileDefinition tileDefinition = new TileDefinition
                     {
                         BoundingBox = MapTools.GetBoundingBoxFromTileXY(x, y),
@@ -255,17 +288,16 @@ namespace FlightReLive.Core.Loading
                         Y = y,
                         SatelliteTexture = null,
                         HeightMap = null,
-                        Priority = 0
+                        Priority = priority
                     };
 
                     flightData.MapDefinition.AddTile(tileDefinition);
                 }
             }
 
-            flightData.MapDefinition.UpdateBoundingBoxFromTiles();
-
             return flightData;
         }
+
         #endregion
 
         #region CALLBACKS

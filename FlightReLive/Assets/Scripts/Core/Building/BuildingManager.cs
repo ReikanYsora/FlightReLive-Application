@@ -5,6 +5,7 @@ using FlightReLive.Core.Terrain;
 using Fu.Framework;
 using LibTessDotNet;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
 
@@ -102,7 +103,7 @@ namespace FlightReLive.Core.Building
                 double lon = bbox.MinLongitude + normalizedX * (bbox.MaxLongitude - bbox.MinLongitude);
 
                 Vector3 gps = new Vector3((float)lat, 0f, (float)lon);
-                Vector3 worldPos = TerrainManager.Instance.ConvertGPSPositionToWorld(flight, gps);
+                Vector3 worldPos = flight.ConvertGPSPositionToWorld(gps);
 
                 contour.Add(new Vector2(worldPos.x, worldPos.z));
             }
@@ -149,9 +150,9 @@ namespace FlightReLive.Core.Building
                     center /= contour.Count;
 
                     FlightGPSData barycenterGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y);
-                    float terrainAltitude = TerrainManager.Instance.GetAltitudeAtPosition(flight, barycenterGPS);
-                    Vector3 position = new Vector3(center.x, terrainAltitude * TerrainManager.Instance.GlobalScale, center.y);
-                    MeshData meshData = TriangulateAndExtrude(contour, building.Height);
+                    float terrainAltitude = flight.GetAltitudeAtPosition(tile, barycenterGPS);
+                    Vector3 position = new Vector3(center.x, terrainAltitude * flight.GlobalScale, center.y);
+                    MeshData meshData = TriangulateAndExtrude(flight, contour, building.Height);
                     CreateBuilding(meshData, position);
                 }
             }
@@ -185,12 +186,11 @@ namespace FlightReLive.Core.Building
             return new FlightGPSData(avgLat, avgLon);
         }
 
-
-        private MeshData TriangulateAndExtrude(List<Vector2> contour, float buildingHeight)
+        private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float buildingHeight)
         {
-            MeshData meshData = new MeshData();
-            float baseY = -BOTTOM_EXTRUSION * TerrainManager.Instance.GlobalScale;
-            float topY = Random.Range(MIN_BUILDING_HEIGHT, MAX_BUILDING_HEIGHT) * TerrainManager.Instance.GlobalScale;
+            float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
+            float topY = Mathf.Clamp(buildingHeight, MIN_BUILDING_HEIGHT, MAX_BUILDING_HEIGHT) * flight.GlobalScale;
+
             Tess tess = new Tess();
             ContourVertex[] tessContour = new ContourVertex[contour.Count];
 
@@ -202,23 +202,45 @@ namespace FlightReLive.Core.Building
             tess.AddContour(tessContour, ContourOrientation.Clockwise);
             tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
 
-            for (int i = 0; i < tess.Vertices.Length; i++)
+            int roofVertexCount = tess.Vertices.Length;
+            int roofTriangleCount = tess.ElementCount * 3;
+            int wallVertexCount = contour.Count * 4;
+            int wallTriangleCount = contour.Count * 6;
+
+            int totalVertexCount = roofVertexCount + wallVertexCount;
+            int totalTriangleCount = roofTriangleCount + wallTriangleCount;
+
+            MeshData meshData = new MeshData
+            {
+                vertices = new NativeArray<Vector3>(totalVertexCount, Allocator.Persistent),
+                normals = new NativeArray<Vector3>(totalVertexCount, Allocator.Persistent),
+                triangles = new NativeArray<int>(totalTriangleCount, Allocator.Persistent),
+                uvs = new NativeArray<Vector2>(totalVertexCount, Allocator.Persistent),
+                uvs2 = new NativeArray<Vector2>(totalVertexCount, Allocator.Persistent)
+            };
+
+            int v = 0;
+            int t = 0;
+
+            for (int i = 0; i < roofVertexCount; i++)
             {
                 Vec3 vertex = tess.Vertices[i].Position;
-                meshData.vertices.Add(new Vector3(vertex.X, topY, vertex.Y));
-                meshData.normals.Add(Vector3.up);
+                meshData.vertices[v] = new Vector3(vertex.X, topY, vertex.Y);
+                meshData.normals[v] = Vector3.up;
+                meshData.uvs[v] = Vector2.zero;
+                meshData.uvs2[v] = Vector2.zero;
+                v++;
             }
 
             for (int i = 0; i < tess.ElementCount; i++)
             {
-                int index2 = tess.Elements[i * 3 + 2];
-                int index1 = tess.Elements[i * 3 + 1];
                 int index0 = tess.Elements[i * 3 + 0];
+                int index1 = tess.Elements[i * 3 + 1];
+                int index2 = tess.Elements[i * 3 + 2];
 
-                meshData.triangles.Add(index2);
-                meshData.triangles.Add(index1);
-                meshData.triangles.Add(index0);
-
+                meshData.triangles[t++] = index2;
+                meshData.triangles[t++] = index1;
+                meshData.triangles[t++] = index0;
             }
 
             for (int i = 0; i < contour.Count; i++)
@@ -226,32 +248,42 @@ namespace FlightReLive.Core.Building
                 Vector2 p0 = contour[i];
                 Vector2 p1 = contour[(i + 1) % contour.Count];
 
-                int baseIndex = meshData.vertices.Count;
+                int baseIndex = v;
 
                 Vector3 v0 = new Vector3(p0.x, baseY, p0.y);
                 Vector3 v1 = new Vector3(p0.x, topY, p0.y);
                 Vector3 v2 = new Vector3(p1.x, topY, p1.y);
                 Vector3 v3 = new Vector3(p1.x, baseY, p1.y);
 
-                meshData.vertices.Add(v0);
-                meshData.vertices.Add(v1);
-                meshData.vertices.Add(v2);
-                meshData.vertices.Add(v3);
+                meshData.vertices[v++] = v0;
+                meshData.vertices[v++] = v1;
+                meshData.vertices[v++] = v2;
+                meshData.vertices[v++] = v3;
 
                 Vector3 normal = Vector3.Cross(v2 - v1, v0 - v1).normalized;
 
-                meshData.normals.Add(normal);
-                meshData.normals.Add(normal);
-                meshData.normals.Add(normal);
-                meshData.normals.Add(normal);
+                meshData.normals[baseIndex + 0] = normal;
+                meshData.normals[baseIndex + 1] = normal;
+                meshData.normals[baseIndex + 2] = normal;
+                meshData.normals[baseIndex + 3] = normal;
 
-                meshData.triangles.Add(baseIndex + 2);
-                meshData.triangles.Add(baseIndex + 1);
-                meshData.triangles.Add(baseIndex + 0);
+                meshData.uvs[baseIndex + 0] = Vector2.zero;
+                meshData.uvs[baseIndex + 1] = Vector2.zero;
+                meshData.uvs[baseIndex + 2] = Vector2.zero;
+                meshData.uvs[baseIndex + 3] = Vector2.zero;
 
-                meshData.triangles.Add(baseIndex + 3);
-                meshData.triangles.Add(baseIndex + 2);
-                meshData.triangles.Add(baseIndex + 0);
+                meshData.uvs2[baseIndex + 0] = Vector2.zero;
+                meshData.uvs2[baseIndex + 1] = Vector2.zero;
+                meshData.uvs2[baseIndex + 2] = Vector2.zero;
+                meshData.uvs2[baseIndex + 3] = Vector2.zero;
+
+                meshData.triangles[t++] = baseIndex + 2;
+                meshData.triangles[t++] = baseIndex + 1;
+                meshData.triangles[t++] = baseIndex + 0;
+
+                meshData.triangles[t++] = baseIndex + 3;
+                meshData.triangles[t++] = baseIndex + 2;
+                meshData.triangles[t++] = baseIndex + 0;
             }
 
             return meshData;

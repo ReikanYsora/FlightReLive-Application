@@ -15,6 +15,7 @@ namespace FlightReLive.Core.Pipeline
     {
         #region ATTRIBUTES
         private List<string> _errors = new List<string>();
+        private FlightData _currentFlightData;
         private float _globalProgress = 0f;
         private int _totalTileDownloads = 0;
         private int _satelliteCompleted = 0;
@@ -55,8 +56,8 @@ namespace FlightReLive.Core.Pipeline
                 flightData.GPSOrigin = new FlightGPSData(firstPoint.Latitude, firstPoint.Longitude);
             }
 
+            flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
-
             int padding = SettingsManager.CurrentSettings.TilePadding;
 
             IEnumerable<(double Latitude, double Longitude)> allPoints;
@@ -95,7 +96,10 @@ namespace FlightReLive.Core.Pipeline
             {
                 for (int y = minTileY; y <= maxTileY; y++)
                 {
-                    TilePriority priority = (x >= originalMinTileX && x <= originalMaxTileX && y >= originalMinTileY && y <= originalMaxTileY) ? TilePriority.Inside : TilePriority.Outside;
+                    TilePriority priority = (x >= originalMinTileX && x <= originalMaxTileX &&
+                                             y >= originalMinTileY && y <= originalMaxTileY)
+                        ? TilePriority.Inside
+                        : TilePriority.Outside;
 
                     TileDefinition tileDefinition = new TileDefinition
                     {
@@ -124,6 +128,7 @@ namespace FlightReLive.Core.Pipeline
                 return;
             }
 
+            _currentFlightData = flightData;
             _errors.Clear();
 
             //Reset counts
@@ -136,19 +141,32 @@ namespace FlightReLive.Core.Pipeline
 
             OnDownloadStarted?.Invoke();
 
-            int satelliteZoomLevel = SettingsManager.GetSatelliteTileZoom();            
+            int satelliteZoomLevel = SettingsManager.GetSatelliteTileZoom();
 
-            List<Task> tasks = new List<Task>
-            {
-                SafeDownload(() => MapTilerAPIHelper.DownloadSatelliteTilesParallelAsync(flightData,  satelliteZoomLevel, satelliteZoomLevel - 1, () => OnTileDownloaded("Satellite")), "Satellite"),
-                SafeDownload(() => MapTilerAPIHelper.DownloadTopographicTilesParallelAsync(flightData, MapTools.ZOOM_LEVEL_TOPOGRAPHIC, () => OnTileDownloaded("Topographic")), "Topographic"),
-                SafeDownload(() => MapTilerAPIHelper.DownloadGeoDataTilesParallelAsync(flightData, () => OnTileDownloaded("GeoData")), "GeoData"),
-                SafeDownload(() => MapTilerAPIHelper.DownloadBuildingTilesParallelAsync(flightData, MapTools.ZOOM_LEVEL_BUILDING, () => OnTileDownloaded("Building")), "Building"),
-            };
+            await SafeDownload(() => MapTilerAPIHelper.DownloadTopographicTilesParallelAsync(
+                flightData,
+                MapTools.ZOOM_LEVEL_TOPOGRAPHIC,
+                () => OnTileDownloaded("Topographic")
+            ), "Topographic");
 
-            await Task.WhenAll(tasks);
+            await SafeDownload(() => MapTilerAPIHelper.DownloadSatelliteTilesParallelAsync(
+                flightData,
+                satelliteZoomLevel,
+                satelliteZoomLevel - 1,
+                () => OnTileDownloaded("Satellite")
+            ), "Satellite");
+
+            await SafeDownload(() => MapTilerAPIHelper.DownloadBuildingTilesParallelAsync(
+                flightData,
+                MapTools.ZOOM_LEVEL_BUILDING,
+                () => OnTileDownloaded("Building")
+            ), "Building");
+
+            await SafeDownload(() => MapTilerAPIHelper.DownloadGeoDataTilesParallelAsync(
+                flightData,
+                () => OnTileDownloaded("GeoData")
+            ), "GeoData");
         }
-
 
         private int CalculateTotalTileDownloads(FlightData flightData)
         {
@@ -167,15 +185,16 @@ namespace FlightReLive.Core.Pipeline
                 }
 
                 int satelliteZoomLevel = SettingsManager.GetSatelliteTileZoom();
-                satelliteCount += tile.TilePriority == TilePriority.Inside ? MapTools.GetTileCountFromZoomLevels(tile.ZoomLevel, satelliteZoomLevel) : MapTools.GetTileCountFromZoomLevels(tile.ZoomLevel, satelliteZoomLevel - 1);
+                satelliteCount += tile.TilePriority == TilePriority.Inside
+                    ? MapTools.GetTileCountFromZoomLevels(tile.ZoomLevel, satelliteZoomLevel)
+                    : MapTools.GetTileCountFromZoomLevels(tile.ZoomLevel, satelliteZoomLevel - 1);
+
                 topographicCount += 1;
                 buildingCount += MapTools.GetTileCountFromZoomLevels(tile.ZoomLevel, MapTools.ZOOM_LEVEL_BUILDING);
                 geoDataCount += 1;
             }
 
-            int total = satelliteCount + topographicCount + geoDataCount + buildingCount + unknown;
-
-            return total;
+            return satelliteCount + topographicCount + geoDataCount + buildingCount + unknown;
         }
 
         private async Task SafeDownload(Func<Task> downloadFunc, string propertyName)
@@ -194,26 +213,19 @@ namespace FlightReLive.Core.Pipeline
         {
             switch (propertyName)
             {
-                case "Satellite":
-                    _satelliteCompleted++;
-                    break;
-                case "Topographic":
-                    _topographicCompleted++;
-                    break;
-                case "GeoData":
-                    _geoDataCompleted++;
-                    break;
-                case "Building":
-                    _buildingCompleted++;
-                    break;
-                default:
-                    _unknownCompleted++;
-                    break;
+                case "Satellite": _satelliteCompleted++; break;
+                case "Topographic": _topographicCompleted++; break;
+                case "GeoData": _geoDataCompleted++; break;
+                case "Building": _buildingCompleted++; break;
+                default: _unknownCompleted++; break;
             }
 
-            int completed = _satelliteCompleted + _topographicCompleted + _geoDataCompleted + _buildingCompleted + _unknownCompleted;
+            int completed = _satelliteCompleted + _topographicCompleted + _geoDataCompleted +
+                            _buildingCompleted + _unknownCompleted;
 
-            _globalProgress = _totalTileDownloads > 0 ? Mathf.Clamp01((float)completed / _totalTileDownloads) : 0f;
+            _globalProgress = _totalTileDownloads > 0
+                ? Mathf.Clamp01((float)completed / _totalTileDownloads)
+                : 0f;
 
             OnGlobalProgressUpdated?.Invoke(_globalProgress);
             CheckCompletion();
@@ -223,6 +235,8 @@ namespace FlightReLive.Core.Pipeline
         {
             if (_satelliteCompleted + _topographicCompleted + _geoDataCompleted + _buildingCompleted + _unknownCompleted >= _totalTileDownloads)
             {
+                _currentFlightData.BuildTileLookup();
+                _currentFlightData.InitializeAltitude();
                 OnDownloadCompleted?.Invoke(_errors);
             }
         }

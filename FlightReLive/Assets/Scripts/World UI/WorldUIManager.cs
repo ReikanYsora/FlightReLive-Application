@@ -92,19 +92,16 @@ namespace FlightReLive.Core.WorldUI
 
         internal void LoadFlightPOIs(FlightData flightData)
         {
-            if (flightData != null)
+            if (flightData == null)
             {
-                ExtractLocation(flightData);
+                return;
             }
-        }
 
-        private void ExtractLocation(FlightData flightData)
-        {
             HashSet<string> processedKeys = new HashSet<string>();
 
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
             {
-                if (tile.GeoData == null && tile.GeoData.features == null)
+                if (tile.GeoData == null || tile.GeoData.features == null)
                 {
                     return;
                 }
@@ -138,9 +135,9 @@ namespace FlightReLive.Core.WorldUI
 
                         processedKeys.Add(key);
 
-                        float altitude = TerrainManager.Instance.GetAltitudeAtPosition(flightData, flightGPSData);
+                        float altitude = flightData.GetAltitudeAtPosition(tile, flightGPSData);
                         Vector3 gpsVector3 = new Vector3((float)flightGPSData.Latitude, altitude, (float)flightGPSData.Longitude);
-                        Vector3 tempWorldPosition = TerrainManager.Instance.ConvertGPSPositionToWorld(flightData, gpsVector3);
+                        Vector3 tempWorldPosition = flightData.ConvertGPSPositionToWorld(gpsVector3);
                         GameObject _tempPOI = GameObject.Instantiate(_gpsPrefab, _mainCanvas.transform);
                         _tempPOI.transform.position = tempWorldPosition;
                         POIEntity poiEntityComponent = _tempPOI.GetComponent<POIEntity>();

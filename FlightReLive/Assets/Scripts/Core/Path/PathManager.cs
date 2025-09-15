@@ -192,18 +192,11 @@ namespace FlightReLive.Core.Paths
                 return;
             }
 
-            // Récupère les tuiles
-            List<TileDefinition> tiles = flightData.MapDefinition.TileDefinitions;
-            if (tiles == null || tiles.Count == 0)
-            {
-                return;
-            }
-
             //Estimate altitude at takeoff point
             Vector3 positionGPS = new Vector3((float)flightData.EstimateTakeOffPosition.Latitude, flightData.TakeOffAltitude, (float)flightData.EstimateTakeOffPosition.Longitude);
 
             //Create bezier path
-            List<Vector3> bezierPath = TerrainManager.CreateBezierFlightPath(flightData, flightData.Points, tiles, positionGPS.y, samplesPerSegment: 10, controlOffsetFactor: 0.5f);
+            List<Vector3> bezierPath = flightData.CreateBezierFlightPath(positionGPS.y, samplesPerSegment: 10, controlOffsetFactor: 0.5f);
 
             //Apply path
             SetFlightPaths(flightData, bezierPath, samplesPerSegment: 20, controlOffsetFactor: 0.3f, minUVStep: 0.0005f, smoothUVs: false);

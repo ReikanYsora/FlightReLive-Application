@@ -28,23 +28,16 @@ namespace FlightReLive.Core.Loading
 
         #region PROPERTIES
         internal static LoadingManager Instance { get; private set; }
-
         internal float LoadingProgress { set; get; }
-
         internal bool IsLoading { set; get; }
-
         internal FlightFile CurrentFlightFile { set; get; }
-
         internal FlightData CurrentFlightData { set; get; }
         #endregion
 
         #region EVENTS
         internal event Action OnFlightStartLoading;
-
         internal event Action OnFlightEndLoading;
-
         internal event Action<float> OnFlightLoadingProgressChanged;
-
         internal event Action OnFlightUnloaded;
         #endregion
 
@@ -72,21 +65,8 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
-        private void LoadFlightDataInModules(FlightData flightData)
-        {
-            //Load FlightData in all modules
-            //Certains modules need to wait TerrainManager because we need data about topography altitude (display graph, buildins, path..). They work with the TerrainManager.Instance.OnTerrainLoaded event
-            TerrainManager.Instance.LoadFlightMap(flightData);
-            VideoPlayerManager.Instance.LoadFlightVideo(flightData);
-            SunManager.Instance.LoadFlightRendering(flightData);
-
-            OnFlightEndLoading?.Invoke();
-            IsLoading = false;
-        }
-
         private void UnloadFlightDataInModules()
         {
-            //Unload FLightData in all modules
             FlightChartsManager.Instance.UnloadFlightCharts();
             VideoPlayerManager.Instance.UnloadFlightVideo();
             TerrainManager.Instance.UnloadFlightMap();
@@ -102,15 +82,15 @@ namespace FlightReLive.Core.Loading
         private async void StartLoadingScene(FlightFile flightFile)
         {
             FlightData flightData = FlightMapDownloader.ConvertFileToFlight(flightFile);
-
             IsLoading = true;
             OnFlightStartLoading?.Invoke();
 
             string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
-
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                OnFlightMapBuildEnd(flightData, new List<string> { "The application requires a valid MapTiler API key to download satellite imagery.\nPlease enter your key in 'Preferences' before continuing." });
+                OnFlightMapBuildEnd(flightData, new List<string> {
+                    "The application requires a valid MapTiler API key to download satellite imagery.\nPlease enter your key in 'Preferences' before continuing."
+                });
                 IsLoading = false;
 
                 return;
@@ -120,24 +100,17 @@ namespace FlightReLive.Core.Loading
 
             if (!isValid)
             {
-                OnFlightMapBuildEnd(flightData, new List<string> { "The provided MapTiler API key is not authorized or has expired.\nPlease verify your key and try again.\nDownloads cannot proceed until a valid key is set." });
+                OnFlightMapBuildEnd(flightData, new List<string> {
+                    "The provided MapTiler API key is not authorized or has expired.\nPlease verify your key and try again.\nDownloads cannot proceed until a valid key is set."
+                });
                 IsLoading = false;
 
                 return;
             }
 
             FlightMapDownloader builder = new FlightMapDownloader();
-
-            builder.OnDownloadStarted += () =>
-            {
-                OnFlightMapBuildStart();
-            };
-
-            builder.OnGlobalProgressUpdated += progress =>
-            {
-                OnFlightMapBuildProgressChanged(progress);
-            };
-
+            builder.OnDownloadStarted += () => { OnFlightMapBuildStart(); };
+            builder.OnGlobalProgressUpdated += progress => { OnFlightMapBuildProgressChanged(progress); };
             builder.OnDownloadCompleted += errors =>
             {
                 OnFlightMapBuildEnd(flightData, errors);
@@ -146,7 +119,6 @@ namespace FlightReLive.Core.Loading
 
             builder.BuildFlightMap(flightData);
         }
-
         #endregion
 
         #region CALLBACKS
@@ -158,8 +130,6 @@ namespace FlightReLive.Core.Loading
             }
 
             CurrentFlightFile = flightFile;
-
-            //Start loading
             StartLoadingScene(flightFile);
         }
 
@@ -171,41 +141,41 @@ namespace FlightReLive.Core.Loading
         private void OnFlightMapBuildProgressChanged(float progress)
         {
             LoadingProgress = progress;
-
             _animationManager.Progress = LoadingProgress;
-
             OnFlightLoadingProgressChanged?.Invoke(progress);
         }
 
         private void OnFlightMapBuildEnd(FlightData flightData, List<string> errors)
         {
-            LoadingProgress = 0f;
-
-            _animationManager.StopLoadingAnimation();
-
             if (errors.Count > 0)
             {
-                string error = string.Empty;
+                _animationManager.StopLoadingAnimation();
+                IsLoading = false;
 
-                for (int i = 0; i < errors.Count; i++)
-                {
-                    error += "\n" + errors[i];
-                }
-
+                string error = string.Join("\n", errors);
                 Fugui.Notify("Resource loading error", error, StateType.Danger);
                 return;
             }
 
-            //Bake scene center GPS 
             double averageLatitude = flightData.MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
             double averageLongitude = flightData.MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
             flightData.SceneCenterGPS = new Vector2((float)averageLatitude, (float)averageLongitude);
 
-            //Load FLightData in all modules
-            LoadFlightDataInModules(flightData);
-
             CurrentFlightData = flightData;
+            WorldUIManager.Instance.LoadFlightPOIs(flightData);
+            VideoPlayerManager.Instance.LoadFlightVideo(flightData);
+            SunManager.Instance.LoadFlightRendering(flightData);
+            TerrainManager.Instance.OnTerrainLoaded += (fd) => OnTerrainReady(fd, flightData);
+            TerrainManager.Instance.LoadFlightMap(flightData);
+        }
 
+        private void OnTerrainReady(FlightData loadedData, FlightData flightData)
+        {
+            TerrainManager.Instance.OnTerrainLoaded -= (fd) => OnTerrainReady(fd, flightData);
+
+            _animationManager.StopLoadingAnimation();
+            IsLoading = false;
+            OnFlightEndLoading?.Invoke();
             Fugui.Notify("Successful operation", $"{flightData.Name} loaded successfully.", StateType.Info);
         }
         #endregion

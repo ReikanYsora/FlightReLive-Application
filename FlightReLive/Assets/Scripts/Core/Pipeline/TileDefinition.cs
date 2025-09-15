@@ -8,7 +8,7 @@ namespace FlightReLive.Core.Pipeline
         #region PROPERTIES
         internal GPSBoundingBox BoundingBox { set; get; }
 
-        internal TilePriority TilePriority { set; get; }
+        internal int Priority { get; set; }
 
         internal int ZoomLevel { set; get; }
 

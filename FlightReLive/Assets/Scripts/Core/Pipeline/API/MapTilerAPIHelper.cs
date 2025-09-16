@@ -6,6 +6,7 @@ using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Terrain;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -319,6 +320,13 @@ internal static class MapTilerAPIHelper
     #region GEODATA
     private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token)
     {
+        string lang = GetPreferredLanguage();
+
+        if (await CacheManager.GeoTileDataExistsAsync(tile.X, tile.Y, lang))
+        {
+            return await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+        }
+
         FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
 
         string url = string.Format(
@@ -331,7 +339,7 @@ internal static class MapTilerAPIHelper
             tile.BoundingBox.MinLatitude,
             tile.BoundingBox.MaxLongitude,
             tile.BoundingBox.MaxLatitude,
-            GetPreferredLanguage()
+            lang
         );
 
         TaskCompletionSource<string> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -377,13 +385,46 @@ internal static class MapTilerAPIHelper
 
             try
             {
-                return JsonUtility.FromJson<FeatureCollection>(json);
+                FeatureCollection raw = JsonConvert.DeserializeObject<FeatureCollection>(json);
+                FeatureCollection filtered = FilterByBoundingBox(raw, tile.BoundingBox);
+
+                if (filtered != null && filtered.features != null && filtered.features.Count > 0)
+                {
+                    await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
+                }
+
+                return filtered;
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.LogWarning($"Failed to parse GeoData for tile {tile.X}_{tile.Y}_{lang} : {ex.Message}");
                 return null;
             }
         }
+    }
+
+    private static FeatureCollection FilterByBoundingBox(FeatureCollection collection, GPSBoundingBox bbox)
+    {
+        if (collection == null || collection.features == null)
+        {
+            return collection;
+        }
+
+        collection.features = collection.features
+            .Where(f =>
+            {
+                if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2)
+                {
+                    return false;
+                }
+
+                double lon = f.geometry.coordinates[0];
+                double lat = f.geometry.coordinates[1];
+                return lon >= bbox.MinLongitude && lon <= bbox.MaxLongitude && lat >= bbox.MinLatitude && lat <= bbox.MaxLatitude;
+            })
+            .ToList();
+
+        return collection;
     }
     #endregion
 

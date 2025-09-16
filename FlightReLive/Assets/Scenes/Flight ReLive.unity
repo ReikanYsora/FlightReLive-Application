@@ -1121,7 +1121,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1531727482}
   - component: {fileID: 1531727483}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: WorldUIManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1169,7 +1169,7 @@ GameObject:
   - component: {fileID: 1721477097}
   - component: {fileID: 1721477100}
   - component: {fileID: 1721477098}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: World Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}

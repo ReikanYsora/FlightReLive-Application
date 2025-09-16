@@ -261,8 +261,7 @@ namespace FlightReLive.Core.Building
                 vertices = new NativeArray<Vector3>(totalVertexCount, Allocator.Persistent),
                 normals = new NativeArray<Vector3>(totalVertexCount, Allocator.Persistent),
                 triangles = new NativeArray<int>(totalTriangleCount, Allocator.Persistent),
-                uvs = new NativeArray<Vector2>(totalVertexCount, Allocator.Persistent),
-                uvs2 = new NativeArray<Vector2>(totalVertexCount, Allocator.Persistent)
+                uvs = new NativeArray<Vector2>(totalVertexCount, Allocator.Persistent)
             };
 
             int v = 0;
@@ -275,7 +274,6 @@ namespace FlightReLive.Core.Building
                 meshData.vertices[v] = new Vector3(vertex.X, topY, vertex.Y);
                 meshData.normals[v] = Vector3.up;
                 meshData.uvs[v] = Vector2.zero;
-                meshData.uvs2[v] = Vector2.zero;
                 v++;
             }
 
@@ -320,11 +318,6 @@ namespace FlightReLive.Core.Building
                 meshData.uvs[baseIndex + 1] = Vector2.zero;
                 meshData.uvs[baseIndex + 2] = Vector2.zero;
                 meshData.uvs[baseIndex + 3] = Vector2.zero;
-
-                meshData.uvs2[baseIndex + 0] = Vector2.zero;
-                meshData.uvs2[baseIndex + 1] = Vector2.zero;
-                meshData.uvs2[baseIndex + 2] = Vector2.zero;
-                meshData.uvs2[baseIndex + 3] = Vector2.zero;
 
                 // Keep original triangle winding
                 meshData.triangles[t++] = baseIndex + 2;

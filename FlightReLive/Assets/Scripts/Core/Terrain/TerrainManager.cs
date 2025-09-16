@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.Settings;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ namespace FlightReLive.Core.Terrain
     public class TerrainManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const int MESH_LINE_PERF_FRAME = 64;
+        private const int MESH_LINE_PERF_FRAME = 32;
         #endregion
 
         #region ATTRIBUTES
@@ -51,33 +52,10 @@ namespace FlightReLive.Core.Terrain
                 return;
             }
 
-            // Calculer min/max altitude pour cette tuile
-            float minAltitude = float.MaxValue;
-            float maxAltitude = -float.MaxValue;
-            int w = tile.HeightMap.GetLength(0);
-            int h = tile.HeightMap.GetLength(1);
-
-            for (int x = 0; x < w; x++)
-            {
-                for (int y = 0; y < h; y++)
-                {
-                    float a = tile.HeightMap[x, y];
-                    if (a < minAltitude)
-                    {
-                        minAltitude = a;
-                    }
-
-                    if (a > maxAltitude)
-                    {
-                        maxAltitude = a;
-                    }
-                }
-            }
-
             float tileSize = MapTools.GetTileSizeMeters(flightData.MapDefinition.OriginLatitude);
 
             // Génération du mesh en coroutine
-            StartCoroutine(GenerateTerrainMeshFromHeightmapAsync(tile.HeightMap, tileSize, minAltitude, maxAltitude,
+            StartCoroutine(GenerateTerrainMeshFromHeightmapAsync(tile.HeightMap, tileSize,
                 (meshData) =>
                 {
                     tile.MeshData = meshData;
@@ -157,10 +135,32 @@ namespace FlightReLive.Core.Terrain
         /// <summary>
         /// Coroutine for generate mesh from heightmap
         /// </summary>
-        private IEnumerator GenerateTerrainMeshFromHeightmapAsync(float[,] heightmap, float tileSize, float minAltitude, float maxAltitude, Action<MeshData> onCompleted, int linesPerFrame = 64)
+        /// <summary>
+        /// Coroutine for generating a terrain mesh from a heightmap with adjustable quality (downsampling).
+        /// </summary>
+        private IEnumerator GenerateTerrainMeshFromHeightmapAsync(float[,] heightmap, float tileSize, Action<MeshData> onCompleted, int linesPerFrame = 64)
         {
-            int width = heightmap.GetLength(0);
-            int height = heightmap.GetLength(1);
+            QualityPreset quality = SettingsManager.CurrentSettings.MapQualityPreset;
+            int step;
+
+            switch (quality)
+            {
+                case QualityPreset.Quality:
+                    step = 1;
+                    break;
+                case QualityPreset.Balanced:
+                    step = 2;
+                    break;
+                default:
+                case QualityPreset.Performance:
+                    step = 4;
+                    break;
+            }
+
+            int sourceWidth = heightmap.GetLength(0);
+            int sourceHeight = heightmap.GetLength(1);
+            int width = sourceWidth / step;
+            int height = sourceHeight / step;
             int vertexCount = width * height;
             int quadCount = (width - 1) * (height - 1);
 
@@ -171,27 +171,26 @@ namespace FlightReLive.Core.Terrain
             {
                 vertices = new NativeArray<Vector3>(vertexCount, Allocator.Persistent),
                 uvs = new NativeArray<Vector2>(vertexCount, Allocator.Persistent),
-                uvs2 = new NativeArray<Vector2>(vertexCount, Allocator.Persistent),
                 normals = new NativeArray<Vector3>(vertexCount, Allocator.Persistent),
                 triangles = new NativeArray<int>(quadCount * 6, Allocator.Persistent)
             };
 
-            //Step 1 : vertices & UV
+            //vertices & UVs
             for (int y = height - 1; y >= 0; y--)
             {
                 for (int x = 0; x < width; x++)
                 {
                     int i = (height - 1 - y) * width + x;
 
-                    float altitude = heightmap[x, y];
+                    int hx = x * step;
+                    int hy = y * step;
+
+                    float altitude = heightmap[hx, hy];
                     float px = x * xSpacing;
                     float pz = (height - 1 - y) * zSpacing;
 
                     meshData.vertices[i] = new Vector3(px, altitude, pz);
                     meshData.uvs[i] = new Vector2((float)x / (width - 1), (float)(height - 1 - y) / (height - 1));
-
-                    float relativeNorm = Mathf.InverseLerp(minAltitude, maxAltitude, altitude);
-                    meshData.uvs2[i] = new Vector2(altitude, relativeNorm);
                 }
 
                 if (y % linesPerFrame == 0)
@@ -200,7 +199,7 @@ namespace FlightReLive.Core.Terrain
                 }
             }
 
-            //Step 2 : triangles & normales
+            //triangles & normals
             int triIndex = 0;
             for (int y = 0; y < height - 1; y++)
             {
@@ -211,6 +210,7 @@ namespace FlightReLive.Core.Terrain
                     int i2 = (y + 1) * width + (x + 1);
                     int i3 = y * width + (x + 1);
 
+                    // Triangle 1
                     meshData.triangles[triIndex++] = i0;
                     meshData.triangles[triIndex++] = i1;
                     meshData.triangles[triIndex++] = i2;
@@ -220,6 +220,7 @@ namespace FlightReLive.Core.Terrain
                     meshData.normals[i1] += normal1;
                     meshData.normals[i2] += normal1;
 
+                    // Triangle 2
                     meshData.triangles[triIndex++] = i0;
                     meshData.triangles[triIndex++] = i2;
                     meshData.triangles[triIndex++] = i3;
@@ -236,7 +237,6 @@ namespace FlightReLive.Core.Terrain
                 }
             }
 
-            //Step 3 : normalization
             for (int i = 0; i < vertexCount; i++)
             {
                 meshData.normals[i] = meshData.normals[i].normalized;
@@ -244,7 +244,6 @@ namespace FlightReLive.Core.Terrain
 
             onCompleted?.Invoke(meshData);
         }
-
         #endregion
     }
 }

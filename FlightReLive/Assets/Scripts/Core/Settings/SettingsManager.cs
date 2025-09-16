@@ -40,6 +40,7 @@ namespace FlightReLive.Core.Settings
 
         #region EVENTS
         public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
+        public static event Action<QualityPreset> OnMapQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -60,7 +61,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<Color> OnPathRemainingColor2Changed;
         public static event Action<float> OnWorldIconScaleChanged;
         public static event Action<float> OnWorldIconHeightChanged;
-        public static event Action<bool> OnOutlineVisibilityChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<bool> On3DIconVisibilityChanged;
         public static event Action<Color> OnCameraCaptureBackgroundColorChanged;
@@ -80,6 +80,8 @@ namespace FlightReLive.Core.Settings
         #region METHODS
         internal static void LoadHardwareQualityPreset() =>
             CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
+        internal static void LoadMapQualityPreset() =>
+             CurrentSettings.MapQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.MapQualityPreset), (int)QualityPreset.Quality);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -184,9 +186,6 @@ namespace FlightReLive.Core.Settings
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
 
-        internal static void LoadOutlineVisibility() =>
-            CurrentSettings.OutlineVisibility = PlayerPrefs.GetInt(nameof(Settings.OutlineVisibility), 1) == 1;
-
         internal static void LoadIcon3DVisibility() =>
             CurrentSettings.Icon3DVisibility = PlayerPrefs.GetInt(nameof(Settings.Icon3DVisibility), 1) == 1;
 
@@ -254,6 +253,14 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.HardwareQualityPreset), (int)value);
             PlayerPrefs.Save();
             OnHardwareQualityPresetChanged?.Invoke(value);
+        }
+
+        internal static void SaveMapQualityPreset(QualityPreset value)
+        {
+            CurrentSettings.MapQualityPreset = value;
+            PlayerPrefs.SetInt(nameof(Settings.MapQualityPreset), (int)value);
+            PlayerPrefs.Save();
+            OnMapQualityPresetChanged?.Invoke(value);
         }
 
         internal static void SaveApplicationTargetFPS(int value)
@@ -433,14 +440,6 @@ namespace FlightReLive.Core.Settings
             OnBuildingVisibilityChanged?.Invoke(value);
         }
 
-        internal static void SaveOutlineVisibility(bool value)
-        {
-            CurrentSettings.OutlineVisibility = value;
-            PlayerPrefs.SetInt(nameof(Settings.OutlineVisibility), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnOutlineVisibilityChanged?.Invoke(value);
-        }
-
         internal static void Save3DIconVisibility(bool value)
         {
             CurrentSettings.Icon3DVisibility = value;
@@ -555,6 +554,7 @@ namespace FlightReLive.Core.Settings
 
             LoadCurrentVersion();
             LoadHardwareQualityPreset();
+            LoadMapQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -577,7 +577,6 @@ namespace FlightReLive.Core.Settings
             LoadWorldIconHeight();
             LoadIcon3DVisibility();
             LoadBuildingVisibility();
-            LoadOutlineVisibility();
             LoadCaptureResolution();
             LoadCaptureEncoder();
             LoadCaptureFramerate();
@@ -596,6 +595,7 @@ namespace FlightReLive.Core.Settings
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
+            SaveMapQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -620,7 +620,6 @@ namespace FlightReLive.Core.Settings
             SaveWorldIconScale(0.5f);
             SaveWorldIconHeight(5f);
             SaveBuildingVisibility(true);
-            SaveOutlineVisibility(true);
             Save3DIconVisibility(true);
             SaveCaptureResolution(1);
             SaveCaptureEncoder(0);
@@ -899,6 +898,33 @@ namespace FlightReLive.Core.Settings
                                 if (ImGui.Selectable(label))
                                 {
                                     SaveHardwareQualityPreset(preset);
+                                }
+                            }
+                        });
+                    }
+
+                    using (FuGrid mapQualityGrid = new FuGrid("mapQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        if (isLoading)
+                        {
+                            mapQualityGrid.DisableNextElements();
+                        }
+
+                        mapQualityGrid.SetNextElementToolTipWithLabel("This parameter allows you to set the resolution of the topography.\nChanging this parameter affects the amount of RAM/VRAM that will be used to display the topography.\nThe higher the quality setting, the longer it will take to load the scene.\nThis setting does not affect the quality/quantity of images needed to load the scene, only the 3D mesh.\nThe change will only be applied the next time a flight is loaded.");
+
+                        QualityPreset currentPreset = CurrentSettings.MapQualityPreset;
+                        string comboLabel = currentPreset.ToString();
+
+                        mapQualityGrid.Combobox("MapQualityPreset##MapQualityCombobox", comboLabel, () =>
+                        {
+                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
+                            {
+                                bool isSelected = preset == currentPreset;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SaveMapQualityPreset(preset);
                                 }
                             }
                         });

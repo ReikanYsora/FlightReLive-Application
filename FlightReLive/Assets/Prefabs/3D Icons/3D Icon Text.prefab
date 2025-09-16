@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5675490081541453565}
   - component: {fileID: 162887447095939525}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: 3D Icon Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -69,7 +69,7 @@ GameObject:
   - component: {fileID: 4446364998329764487}
   - component: {fileID: 1616237882173438931}
   - component: {fileID: 9159514316741244395}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -205,7 +205,7 @@ GameObject:
   - component: {fileID: 2537598513952366810}
   - component: {fileID: 4888063430620647327}
   - component: {fileID: 6662274289654364687}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Point
   m_TagString: Untagged
   m_Icon: {fileID: 0}

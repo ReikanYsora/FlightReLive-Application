@@ -7,6 +7,7 @@ namespace FlightReLive.Core.Settings
     {
         #region ATTRIBUTES
         public QualityPreset HardwareQualityPreset;
+        public QualityPreset MapQualityPreset;        
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
@@ -28,7 +29,6 @@ namespace FlightReLive.Core.Settings
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
-        public bool OutlineVisibility;
         public float WorldIconScale;
         public float WorldIconHeight;
         public bool Icon3DVisibility;

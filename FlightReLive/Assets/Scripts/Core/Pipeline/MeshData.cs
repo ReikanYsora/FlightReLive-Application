@@ -13,7 +13,6 @@ namespace FlightReLive.Core.Pipeline
         #region ATTRIBUTES
         public NativeArray<Vector3> vertices;
         public NativeArray<Vector2> uvs;
-        public NativeArray<Vector2> uvs2;
         public NativeArray<int> triangles;
         public NativeArray<Vector3> normals;
         #endregion
@@ -41,7 +40,6 @@ namespace FlightReLive.Core.Pipeline
             mesh.SetVertices(offsetVerts);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
-            mesh.SetUVs(1, uvs2);
             mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
             mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
             SubMeshDescriptor subMesh = new SubMeshDescriptor(0, triangles.Length, MeshTopology.Triangles);
@@ -52,7 +50,6 @@ namespace FlightReLive.Core.Pipeline
             vertices.Dispose();
             normals.Dispose();
             uvs.Dispose();
-            uvs2.Dispose();
             triangles.Dispose();
 
             return mesh;

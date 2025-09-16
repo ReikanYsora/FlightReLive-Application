@@ -23,9 +23,6 @@ namespace FlightReLive.Core
 
         [Header("PostProcess Settings")]
         [SerializeField] private Volume _volume;
-
-        [Header("Outline")]
-        [SerializeField] private ScriptableRendererFeature _edgeFeature;
         private DepthOfField _depthOfField;
         private Vignette _vignette;
         #endregion
@@ -76,7 +73,6 @@ namespace FlightReLive.Core
             SettingsManager.OnHardwareQualityPresetChanged += OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
-            SettingsManager.OnOutlineVisibilityChanged += OnOutlineVisibilityChanged;
             SettingsManager.OnDepthOfFieldEnabledChanged += OnDepthOfFieldEnabledChanged;
             SettingsManager.OnDepthOfFieldStartChanged += OnDepthOfFieldStartChanged;
             SettingsManager.OnDepthOfFieldEndChanged += OnDepthOfFieldEndChanged;
@@ -119,7 +115,6 @@ namespace FlightReLive.Core
             SettingsManager.OnHardwareQualityPresetChanged -= OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
-            SettingsManager.OnOutlineVisibilityChanged -= OnOutlineVisibilityChanged;
             SettingsManager.OnDepthOfFieldEnabledChanged -= OnDepthOfFieldEnabledChanged;
             SettingsManager.OnDepthOfFieldStartChanged -= OnDepthOfFieldStartChanged;
             SettingsManager.OnDepthOfFieldEndChanged -= OnDepthOfFieldEndChanged;
@@ -197,8 +192,6 @@ namespace FlightReLive.Core
                 _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
                 _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
             }
-
-            _edgeFeature.SetActive(SettingsManager.CurrentSettings.OutlineVisibility);
         }
 
         internal void QuitApplication()
@@ -379,22 +372,11 @@ namespace FlightReLive.Core
                 }
 
                 float depthOfFieldStart = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                if (grid.Slider("DoF Start", ref depthOfFieldStart, 10f, 300f, 0.1f))
+                float depthOfFieldEnd = SettingsManager.CurrentSettings.DepthOfFieldEnd;
+                if (grid.Range("DoF limits", ref depthOfFieldStart, ref depthOfFieldEnd, 10f, 1500f, 1f))
                 {
                     SettingsManager.SaveDepthOfFieldStart(depthOfFieldStart);
-                }
-
-                float depthOfFieldEnd = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-                if (grid.Slider("DoF End", ref depthOfFieldEnd, 300f, 1000f, 0.1f))
-                {
                     SettingsManager.SaveDepthOfFieldEnd(depthOfFieldEnd);
-                }
-
-                grid.EnableNextElements();
-                bool outlineEnabled = SettingsManager.CurrentSettings.OutlineVisibility;
-                if (grid.Toggle("Display Outline", ref outlineEnabled))
-                {
-                    SettingsManager.SaveOutlineVisibility(outlineEnabled);
                 }
             }
         }
@@ -405,14 +387,6 @@ namespace FlightReLive.Core
             {
                 _vignette.intensity.value = intensity;
                 _vignette.active = true;
-            }
-        }
-
-        private void OnOutlineVisibilityChanged(bool status)
-        {
-            if (_edgeFeature != null)
-            {
-                _edgeFeature.SetActive(status);
             }
         }
 

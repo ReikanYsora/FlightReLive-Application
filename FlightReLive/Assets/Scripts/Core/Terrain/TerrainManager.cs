@@ -62,8 +62,15 @@ namespace FlightReLive.Core.Terrain
                 for (int y = 0; y < h; y++)
                 {
                     float a = tile.HeightMap[x, y];
-                    if (a < minAltitude) minAltitude = a;
-                    if (a > maxAltitude) maxAltitude = a;
+                    if (a < minAltitude)
+                    {
+                        minAltitude = a;
+                    }
+
+                    if (a > maxAltitude)
+                    {
+                        maxAltitude = a;
+                    }
                 }
             }
 

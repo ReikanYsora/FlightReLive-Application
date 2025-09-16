@@ -120,6 +120,11 @@ namespace FlightReLive.Core.WorldUI
 
                 string key = $"{name}_{gpsData.Latitude}_{gpsData.Longitude}";
 
+                if (processedKeys.Contains(name))
+                {
+                    continue;
+                }
+
                 processedKeys.Add(key);
 
                 float altitude = flightData.GetAltitudeAtPosition(tile, gpsData);

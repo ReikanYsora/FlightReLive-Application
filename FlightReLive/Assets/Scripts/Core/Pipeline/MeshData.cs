@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -66,7 +65,7 @@ namespace FlightReLive.Core.Pipeline
         {
             if (!verts.IsCreated || verts.Length == 0)
             {
-                UnityEngine.Debug.Log("CalculateMeshCenter: empty verts (0 ms)");
+                Debug.Log("CalculateMeshCenter: empty verts (0 ms)");
                 return Vector3.zero;
             }
 

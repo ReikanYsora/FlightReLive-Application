@@ -173,6 +173,15 @@ namespace FlightReLive.Core.Terrain
 
             return (float)(TILE_RESOLUTION * metersPerPixel);
         }
+
+        internal static float GetTileSizeMetersFromBoundingBox(GPSBoundingBox boundingBox)
+        {
+            double latCenter = (boundingBox.MinLatitude + boundingBox.MaxLatitude) * 0.5;
+            double widthMeters = HaversineDistance(latCenter, boundingBox.MinLongitude, latCenter, boundingBox.MaxLongitude);
+            double heightMeters = HaversineDistance(boundingBox.MinLatitude, boundingBox.MinLongitude, boundingBox.MaxLatitude, boundingBox.MinLongitude);
+
+            return (float)((widthMeters + heightMeters) * 0.5);
+        }
         #endregion
     }
 }

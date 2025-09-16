@@ -1360,7 +1360,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2116168536}
-  - component: {fileID: 2116168537}
+  - component: {fileID: 2116168539}
   - component: {fileID: 2116168538}
   m_Layer: 0
   m_Name: BuildingManager
@@ -1384,19 +1384,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2116168537
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2116168535}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 250065d41474ab14fa9d36357dffad9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingManager
-  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
 --- !u!114 &2116168538
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1411,6 +1398,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingPool
   _buildingPrefab: {fileID: 547569354533486219, guid: 7994d44f06d00dd4c98601907cbb3b57, type: 3}
   _initialSize: 10000
+--- !u!114 &2116168539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2116168535}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 250065d41474ab14fa9d36357dffad9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingManager
+  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
 --- !u!114 &2932005272595287964
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -300,7 +300,7 @@ namespace FlightReLive.UI.VideoPlayer
                     float verticalOffset = (size.y - textSize.y) / 2f;
                     Fugui.MoveY(verticalOffset);
 
-                    layout.CenterNextItem(currentFlightData.Name);
+                    layout.CenterNextItemHV(currentFlightData.Name);
                     layout.Text(currentFlightData.Name);
                     Fugui.PopFont();
                 }

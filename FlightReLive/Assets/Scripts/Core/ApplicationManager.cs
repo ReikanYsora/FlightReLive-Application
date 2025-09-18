@@ -23,8 +23,8 @@ namespace FlightReLive.Core
 
         [Header("PostProcess Settings")]
         [SerializeField] private Volume _volume;
-        private DepthOfField _depthOfField;
-        private Vignette _vignette;
+        //private DepthOfField _depthOfField;
+        //private Vignette _vignette;
         #endregion
 
         #region PROPERTIES
@@ -161,37 +161,37 @@ namespace FlightReLive.Core
 
         private void LoadPostProcessingValues()
         {
-            //Apply saved post-processing values
-            if (_volume != null && _volume.profile != null && _volume.profile.TryGet<Vignette>(out Vignette vignette))
-            {
-                _vignette = vignette;
-            }
+            ////Apply saved post-processing values
+            //if (_volume != null && _volume.profile != null && _volume.profile.TryGet<Vignette>(out Vignette vignette))
+            //{
+            //    _vignette = vignette;
+            //}
 
-            if (_volume != null && _volume.profile != null && _volume.profile.TryGet<DepthOfField>(out DepthOfField depthOfField))
-            {
-                _depthOfField = depthOfField;
-            }
+            //if (_volume != null && _volume.profile != null && _volume.profile.TryGet<DepthOfField>(out DepthOfField depthOfField))
+            //{
+            //    _depthOfField = depthOfField;
+            //}
 
-            if (_vignette != null)
-            {
-                _vignette.intensity.value = SettingsManager.CurrentSettings.VignettingIntensity;
-                _vignette.active = true;
-            }
+            //if (_vignette != null)
+            //{
+            //    _vignette.intensity.value = SettingsManager.CurrentSettings.VignettingIntensity;
+            //    _vignette.active = true;
+            //}
 
-            if (_depthOfField != null)
-            {
-                if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
-                {
-                    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                }
-                else
-                {
-                    _depthOfField.mode.value = DepthOfFieldMode.Off;
-                }
+            //if (_depthOfField != null)
+            //{
+            //    if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
+            //    {
+            //        _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
+            //    }
+            //    else
+            //    {
+            //        _depthOfField.mode.value = DepthOfFieldMode.Off;
+            //    }
 
-                _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-            }
+            //    _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
+            //    _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
+            //}
         }
 
         internal void QuitApplication()
@@ -269,12 +269,12 @@ namespace FlightReLive.Core
 
         internal void DisablePostProcessing()
         {
-            _camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+            //_camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
         }
 
         internal void EnablePostProcessing()
         {
-            _camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+           // _camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         }
         #endregion
 
@@ -292,7 +292,7 @@ namespace FlightReLive.Core
 
                 ImGui.Indent(10f);
                 Fugui.PushFont(18, FontType.Bold);
-                layout.CenterNextItem("Flight ReLive is 100% free.");
+                layout.CenterNextItemHV("Flight ReLive is 100% free.");
                 layout.Text("Flight ReLive is 100% free.");
                 Fugui.PopFont();
 
@@ -307,15 +307,15 @@ namespace FlightReLive.Core
                 Fugui.PopFont();
 
                 Fugui.PushFont(16, FontType.Italic);
-                layout.CenterNextItem("Make a donation — so Flight ReLive can continue to fly freely.");
+                layout.CenterNextItemHV("Make a donation — so Flight ReLive can continue to fly freely.");
                 layout.Text("Make a donation — so Flight ReLive can continue to fly freely.", FuTextWrapping.Wrap);
                 Fugui.PopFont();
                 layout.Spacing();
                 Fugui.PushFont(16, FontType.Bold);
-                layout.CenterNextItem("Support Flight ReLive on Tipee !");
+                layout.CenterNextItemHV("Support Flight ReLive on Tipee !");
                 layout.TextURL("Support Flight ReLive on Tipee !", "https://fr.tipeee.com/flight-relive/", FuTextWrapping.Wrap);
                 layout.Spacing();
-                layout.CenterNextItem("Thank you for being here. And happy reliving.");
+                layout.CenterNextItemHV("Thank you for being here. And happy reliving.");
                 layout.Text("Thank you for being here. And happy reliving.");
                 Fugui.PopFont();
                 ImGui.Unindent(10);
@@ -383,42 +383,42 @@ namespace FlightReLive.Core
 
         private void OnVignettingIntensityChanged(float intensity)
         {
-            if (_vignette != null)
-            {
-                _vignette.intensity.value = intensity;
-                _vignette.active = true;
-            }
+            //if (_vignette != null)
+            //{
+            //    _vignette.intensity.value = intensity;
+            //    _vignette.active = true;
+            //}
         }
 
         private void OnDepthOfFieldEnabledChanged(bool enabled)
         {
-            if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-            }
-            else
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Off;
-            }
+            //if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
+            //{
+            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
+            //}
+            //else
+            //{
+            //    _depthOfField.mode.value = DepthOfFieldMode.Off;
+            //}
         }
 
         private void OnDepthOfFieldStartChanged(float start)
         {
-            if (_depthOfField != null)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
-            }
+            //if (_depthOfField != null)
+            //{
+            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
+            //    _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
+            //}
         }
 
         private void OnDepthOfFieldEndChanged(float end)
         {
-            if (_depthOfField != null)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
+            //if (_depthOfField != null)
+            //{
+            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
+            //    _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
 
-            }
+            //}
         }
 
         private void OnApplicationTargetFPSChanged(int value)

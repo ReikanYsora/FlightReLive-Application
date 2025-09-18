@@ -44,6 +44,9 @@ namespace FlightReLive.Core.Pipeline
             mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
             SubMeshDescriptor subMesh = new SubMeshDescriptor(0, triangles.Length, MeshTopology.Triangles);
             mesh.SetSubMesh(0, subMesh, MeshUpdateFlags.DontRecalculateBounds);
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
 
             // Dispose
             offsetVerts.Dispose();

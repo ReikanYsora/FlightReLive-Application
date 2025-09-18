@@ -401,10 +401,9 @@ namespace FlightReLive.Core.Loading
                 _displayedProgress = Mathf.MoveTowards(_displayedProgress, targetProgress, Time.deltaTime * 0.25f);
                 float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
                 Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
-                layout.CenterNextItem(_currentLoadingText);
+                layout.CenterNextItemHV(_currentLoadingText);
                 layout.Text(_currentLoadingText);
-
-                layout.CenterNextItem(availableX);
+                layout.CenterNextItemH(availableX);
                 layout.ProgressBar("Global", _displayedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
             },
             FuModalSize.Medium,

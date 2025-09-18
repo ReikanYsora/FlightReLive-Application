@@ -1,5 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Pipeline;
+﻿using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.ProceduralTerrain;
 using Fu.Framework;
@@ -8,6 +7,8 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
+using FlightReLive.Core.FlightDefinition;
+using System;
 
 namespace FlightReLive.Core.Building
 {
@@ -166,6 +167,10 @@ namespace FlightReLive.Core.Building
             }
 
             _tileToBuildings[(tile.X, tile.Y)] = createdForTile;
+
+            //Cleanup
+            tile.Buildings = null;
+            GC.Collect();
         }
 
         /// <summary>

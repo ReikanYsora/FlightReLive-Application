@@ -2,6 +2,7 @@
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
@@ -61,6 +62,15 @@ namespace FlightReLive.Core.Rendering
                 }
             }
 
+            if (_mainLight != null)
+            {
+                HDAdditionalLightData hdLight = _mainLight.GetComponent<HDAdditionalLightData>();
+                if (hdLight != null)
+                {
+                    hdLight.volumetricDimmer = 1.0f;
+                }
+            }
+
             //Ensure overrides exist
             if (!_profile.TryGet(out _visualEnvironment))
             {
@@ -102,6 +112,14 @@ namespace FlightReLive.Core.Rendering
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
+                if (flightData != null)
+                {
+                    TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
+                    DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
+                    DateTime flightDateUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
+                    UpdateAtmosphere(flightDateUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+                }
+
                 if (_mainCamera != null)
                 {
                     _mainCamera.clearFlags = CameraClearFlags.Skybox;
@@ -123,9 +141,11 @@ namespace FlightReLive.Core.Rendering
                 {
                     _fog.active = true;
                     _fog.enableVolumetricFog.Override(true);
-                    _fog.meanFreePath.Override(15000f);
+                    _fog.meanFreePath.Override(500f);
                     _fog.baseHeight.Override(0f);
-                    _fog.maximumHeight.Override(2000f);
+                    _fog.maximumHeight.Override(3000f);
+                    _fog.anisotropy.Override(0.5f);
+                    _fog.albedo.Override(new Color(0.6f, 0.6f, 0.6f));
                 }
 
                 if (_clouds != null)
@@ -136,14 +156,6 @@ namespace FlightReLive.Core.Rendering
                     _clouds.altitudeRange.Override(1200f);
                     _clouds.densityMultiplier.Override(0.25f);
                     _clouds.sunLightDimmer.Override(1.0f);
-                }
-
-                if (flightData != null)
-                {
-                    TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
-                    DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
-                    DateTime flightDateUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
-                    UpdateAtmosphere(flightDateUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
                 }
             });
         }
@@ -192,6 +204,10 @@ namespace FlightReLive.Core.Rendering
         public void UpdateAtmosphere(DateTime utcTime, double latitude, double longitude)
         {
             SunPosition sun = CalculateSunPosition(utcTime, latitude, longitude);
+
+            float horizonFog = Mathf.Clamp01(Mathf.InverseLerp(45f, 0f, sun.Elevation));
+            _fog.meanFreePath.Override(Mathf.Lerp(15000f, 500f, horizonFog));
+
             OrientMainLight(sun);
         }
 

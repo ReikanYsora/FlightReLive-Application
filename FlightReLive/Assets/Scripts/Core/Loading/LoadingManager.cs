@@ -128,7 +128,7 @@ namespace FlightReLive.Core.Loading
                         token.ThrowIfCancellationRequested();
 
                         _tileProgress = 0f;
-                        _currentLoadingText = $"Downloading tile {tile.X},{tile.Y} (priority {priority})...";
+                        _currentLoadingText = $"Create tile resources <{tile.X},{tile.Y}>";
 
                         TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, token, (phase, progress) =>
                         {
@@ -157,12 +157,15 @@ namespace FlightReLive.Core.Loading
                     }
                 }
 
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
                 ProceduralTerrainManager.Instance.GenerateTerrain(flightData);
                 VideoPlayerManager.Instance.LoadFlightVideo(flightData);
                 SunManager.Instance.LoadFlightRendering(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.LoadFlightPath(flightData);
-
+                sw.Stop();
+                Debug.Log("Time : " + sw.ElapsedMilliseconds);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
 
@@ -342,10 +345,8 @@ namespace FlightReLive.Core.Loading
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
                 float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
                 Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
-
-                layout.CenterNextItemHV(_currentLoadingText);
+                layout.CenterNextItemH(_currentLoadingText);
                 layout.Text(_currentLoadingText);
-
                 layout.CenterNextItemH(availableX);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
             },

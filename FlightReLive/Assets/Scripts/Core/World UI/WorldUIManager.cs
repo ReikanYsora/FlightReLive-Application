@@ -2,6 +2,7 @@
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -140,6 +141,10 @@ namespace FlightReLive.Core.WorldUI
             }
 
             _tileToPOIs[(tile.X, tile.Y)] = createdForTile;
+
+            //Cleanup
+            tile.GeoData = null;
+            GC.Collect();
         }
         #endregion
 

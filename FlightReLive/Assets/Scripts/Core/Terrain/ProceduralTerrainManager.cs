@@ -10,6 +10,8 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region ATTRIBUTES
         private GameObject _terrain;
+        [SerializeField] private Texture2D _detailNormalMap;
+        [SerializeField] private Texture2D _detailMaskMap;
         #endregion
 
         #region PROPERTIES
@@ -187,12 +189,38 @@ namespace FlightReLive.Core.ProceduralTerrain
             float offsetY = minHVal * flightData.GlobalScale;
             _terrain.transform.localPosition = new Vector3(offsetX, offsetY, -offsetZ);
 
-            //Apply satellite texture & layers
-            TerrainLayer layer = new TerrainLayer();
-            layer.diffuseTexture = globalSatellite;
-            layer.tileSize = new Vector2(terrainData.size.x, terrainData.size.z);
+            //Satellite
+            TerrainLayer satelliteLayer = new TerrainLayer
+            {
+                diffuseTexture = globalSatellite,
+                tileSize = new Vector2(terrainData.size.x, terrainData.size.z)
+            };
 
-            terrain.terrainData.terrainLayers = new TerrainLayer[] { layer };
+            //Micro details
+            TerrainLayer detailLayer = new TerrainLayer
+            {
+                diffuseTexture = Texture2D.blackTexture,   //Neutral
+                normalMapTexture = _detailNormalMap,       //Normal map HDRP
+                maskMapTexture = _detailMaskMap,           //Maskmap (AO/Rough/Metal)
+                tileSize = new Vector2(100f, 100f)         //Tiling
+            };
+
+            terrain.terrainData.terrainLayers = new TerrainLayer[] { satelliteLayer, detailLayer };
+
+            //Alphamap, blend 2 layers
+            int alphaRes = terrain.terrainData.alphamapResolution;
+            float[,,] maps = new float[alphaRes, alphaRes, 2];
+
+            for (int y = 0; y < alphaRes; y++)
+            {
+                for (int x = 0; x < alphaRes; x++)
+                {
+                    maps[y, x, 0] = 0.80f;
+                    maps[y, x, 1] = 0.20f;
+                }
+            }
+            terrain.terrainData.SetAlphamaps(0, 0, maps);
+
         }
         /// <summary>
         /// Unload a loaded tile
@@ -245,6 +273,33 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             return dst;
         }
+
+        private Texture2D GenerateMaskMap(float[,] heightmap)
+        {
+            int w = heightmap.GetLength(1);
+            int h = heightmap.GetLength(0);
+            Texture2D mask = new Texture2D(w, h, TextureFormat.RGBA32, false);
+
+            Color[] pixels = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float hVal = heightmap[y, x]; // déjà entre 0–1
+                    pixels[y * w + x] = new Color(
+                        0f,        // Metallic
+                        1f,        // AO
+                        1f,        // DetailMask
+                        1f - hVal  // Smoothness (=> rugosité plus forte en altitude)
+                    );
+                }
+            }
+
+            mask.SetPixels(pixels);
+            mask.Apply();
+            return mask;
+        }
+
         #endregion
     }
 }

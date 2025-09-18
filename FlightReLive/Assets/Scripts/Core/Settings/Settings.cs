@@ -6,8 +6,7 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
-        public QualityPreset HardwareQualityPreset;
-        public QualityPreset MapQualityPreset;        
+        public QualityPreset HardwareQualityPreset; 
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
@@ -21,7 +20,6 @@ namespace FlightReLive.Core.Settings
         public string WorkspacePath;
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
-        public SatelliteTileQualityPreset SatelliteTileQualityPreset;
         public float GlobalScale;
         public Color CameraBackgroundColor;
         public Color CameraCaptureBackgroundColor;

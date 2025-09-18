@@ -10,6 +10,10 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region CONSTANTS
         internal static readonly int TILE_RESOLUTION = 512;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_0 = 17;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_1 = 16;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_2 = 15;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_3 = 14;
         internal static readonly int ZOOM_LEVEL_TOPOGRAPHIC = 14;
         internal static readonly int ZOOM_LEVEL_BUILDING = 14;
         #endregion
@@ -80,22 +84,6 @@ namespace FlightReLive.Core.ProceduralTerrain
             return result;
         }
 
-
-        internal static int GetTileCountFromZoomLevels(int currentZoom, int targetZoom)
-        {
-            int zoomDiff = targetZoom - currentZoom;
-
-            if (zoomDiff < 0)
-            {
-                return 1;
-            }
-
-            int factor = 1 << zoomDiff;
-
-            return factor * factor;
-        }
-
-
         internal static List<Vector3> PreSmoothGPS(List<Vector3> rawPoints, int radius = 3)
         {
             List<Vector3> smoothed = new List<Vector3>();
@@ -120,7 +108,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         internal static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
         {
-            const double R = 6371000; // rayon de la Terre en mètres
+            const double R = 6371000; //Earth radius in meters
             double dLat = Math.PI / 180 * (lat2 - lat1);
             double dLon = Math.PI / 180 * (lon2 - lon1);
             double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +

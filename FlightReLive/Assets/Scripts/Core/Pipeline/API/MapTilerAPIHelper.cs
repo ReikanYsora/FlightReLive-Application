@@ -17,11 +17,13 @@ using UnityEngine;
 using UnityEngine.Networking;
 using VexTile.Mapbox.VectorTile;
 using VexTile.Mapbox.VectorTile.Geometry;
+using System.Text;
 
 internal static class MapTilerAPIHelper
 {
     #region CONSTANTS
     private const int TILE_SIZE = 512;
+    private const int SATELLITE_TILE_SUPER_SAMPLING_SIZE = 2048;
     #endregion
 
     #region ATTRIBUTES
@@ -48,47 +50,68 @@ internal static class MapTilerAPIHelper
         return uwr.result == UnityWebRequest.Result.Success && uwr.responseCode == 200;
     }
 
-    internal static async Task<TileDefinition> DownloadTileAsync(TileDefinition tile, int satelliteZoom, int topographicZoom, int buildingZoom, CancellationToken token = default)
+    internal static async Task<TileDefinition> DownloadTileAsync(TileDefinition tile, CancellationToken token, Action<int, float> onProgress = null)
     {
         try
         {
+            //Phase 0 : Satellite
+            tile.SatelliteTexture = await DownloadSatelliteAsync(tile, token, p => onProgress?.Invoke(0, p));
             token.ThrowIfCancellationRequested();
-            tile.SatelliteTexture = await DownloadSatelliteAsync(tile, satelliteZoom, token);
 
+            //Phase 1 : Heightmap
+            tile.HeightMap = await DownloadHeightmapAsync(tile, token, p => onProgress?.Invoke(1, p));
             token.ThrowIfCancellationRequested();
-            tile.HeightMap = await DownloadHeightmapAsync(tile, topographicZoom, token);
 
+            //Phase 2 : Buildings
+            tile.Buildings = await DownloadBuildingsAsync(tile, token, p => onProgress?.Invoke(2, p));
             token.ThrowIfCancellationRequested();
-            tile.Buildings = await DownloadBuildingsAsync(tile, buildingZoom, token);
 
+            //Phase 3 : GeoData
+            tile.GeoData = await DownloadGeoDataAsync(tile, token, p => onProgress?.Invoke(3, p));
             token.ThrowIfCancellationRequested();
-            tile.GeoData = await DownloadGeoDataAsync(tile, token);
 
             return tile;
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Debug.LogWarning($"Failed to download tile {tile.X}/{tile.Y}: {ex.Message}");
             return tile;
         }
     }
-
     #endregion
 
     #region SATELLITE
-    private static async Task<Texture2D> DownloadSatelliteAsync(TileDefinition tile, int zoom, CancellationToken token)
+    private static async Task<Texture2D> DownloadSatelliteAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
-        HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, zoom);
+        int targetZoom;
+
+        switch (tile.Priority)
+        {
+            case 0:
+                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0;
+                break;
+            case 1:
+                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1;
+                break;
+            case 2:
+                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2;
+                break;
+            default:
+            case 3:
+                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3;
+                break;
+        }
+
+        HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, targetZoom);
         Dictionary<(int, int), Texture2D> downloaded = new();
 
+        int i = 0;
         foreach ((int x, int y) in coords)
         {
             token.ThrowIfCancellationRequested();
-            Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, zoom, token);
+            Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
+            i++;
 
             if (texture != null)
             {
@@ -97,14 +120,14 @@ internal static class MapTilerAPIHelper
         }
 
         if (downloaded.Count == 0)
-        {
+        { 
             return null;
         }
 
-        return CombinePNGTiles(downloaded);
+        return CombinePNGTiles(downloaded, SATELLITE_TILE_SUPER_SAMPLING_SIZE);
     }
 
-    private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token)
+    private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.SatelliteTileExistsAsync(zoom, x, y))
         {
@@ -114,14 +137,11 @@ internal static class MapTilerAPIHelper
         string url = $"https://api.maptiler.com/tiles/satellite-v2/{zoom}/{x}/{y}.png?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
         TaskCompletionSource<Texture2D> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        DownloadManager.EnqueueDownload(url,
+        DownloadManager.EnqueueDownload(
+            url,
             async data =>
             {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled(token);
-                    return;
-                }
+                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
 
                 Texture2D tex = new Texture2D(2, 2);
                 if (tex.LoadImage(data))
@@ -134,7 +154,9 @@ internal static class MapTilerAPIHelper
                     tcs.TrySetResult(null);
                 }
             },
-            error => tcs.TrySetResult(null));
+            error => tcs.TrySetResult(null),
+            (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
+        );
 
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
@@ -142,12 +164,16 @@ internal static class MapTilerAPIHelper
         }
     }
 
-    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles)
+    /// <summary>
+    /// Combine multiple MapTiler subtiles into a single atlas
+    /// </summary>
+    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles, int finalSize = 1024)
     {
         int minX = tiles.Keys.Min(k => k.Item1);
         int maxX = tiles.Keys.Max(k => k.Item1);
         int minY = tiles.Keys.Min(k => k.Item2);
         int maxY = tiles.Keys.Max(k => k.Item2);
+
         int width = (maxX - minX + 1) * TILE_SIZE;
         int height = (maxY - minY + 1) * TILE_SIZE;
         Texture2D atlas = new Texture2D(width, height);
@@ -156,42 +182,88 @@ internal static class MapTilerAPIHelper
         {
             int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
             int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
-            atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, kv.Value.GetPixels());
+
+            Texture2D src = kv.Value;
+
+            // Si la subtile n’est pas exactement TILE_SIZE, on la rescale en TILE_SIZE
+            if (src.width != TILE_SIZE || src.height != TILE_SIZE)
+            {
+                Texture2D resized = new Texture2D(TILE_SIZE, TILE_SIZE);
+                Color[] scaledPixels = new Color[TILE_SIZE * TILE_SIZE];
+
+                for (int y = 0; y < TILE_SIZE; y++)
+                {
+                    float v = (float)y / (TILE_SIZE - 1);
+                    for (int x = 0; x < TILE_SIZE; x++)
+                    {
+                        float u = (float)x / (TILE_SIZE - 1);
+                        scaledPixels[y * TILE_SIZE + x] = src.GetPixelBilinear(u, v);
+                    }
+                }
+
+                resized.SetPixels(scaledPixels);
+                resized.Apply();
+
+                atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, resized.GetPixels());
+                UnityEngine.Object.Destroy(resized);
+            }
+            else
+            {
+                atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, src.GetPixels());
+            }
         }
 
         atlas.Apply();
-        return atlas;
+
+        Texture2D finalTex = new Texture2D(finalSize, finalSize, TextureFormat.RGB24, false);
+        Color[] finalPixels = new Color[finalSize * finalSize];
+
+        for (int y = 0; y < finalSize; y++)
+        {
+            float v = (float)y / (finalSize - 1);
+            for (int x = 0; x < finalSize; x++)
+            {
+                float u = (float)x / (finalSize - 1);
+                finalPixels[y * finalSize + x] = atlas.GetPixelBilinear(u, v);
+            }
+        }
+
+        finalTex.SetPixels(finalPixels);
+        finalTex.Apply();
+
+        UnityEngine.Object.Destroy(atlas);
+        return finalTex;
     }
     #endregion
 
     #region HEIGHTMAP
-    private static async Task<float[,]> DownloadHeightmapAsync(TileDefinition tile, int zoom, CancellationToken token)
+    private static async Task<float[,]> DownloadHeightmapAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.HeightmapExistsAsync(tile.X, tile.Y))
         {
             return await CacheManager.LoadHeightmapAsync(tile.X, tile.Y);
         }
 
-        string url = $"https://api.maptiler.com/tiles/terrain-rgb-v2/{zoom}/{tile.X}/{tile.Y}.webp?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
+        string url = $"https://api.maptiler.com/tiles/terrain-rgb-v2/{MapTools.ZOOM_LEVEL_TOPOGRAPHIC}/{tile.X}/{tile.Y}.webp?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
         TaskCompletionSource<byte[]> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        DownloadManager.EnqueueDownload(url,
+        DownloadManager.EnqueueDownload(
+            url,
             data =>
             {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled(token);
-                    return;
-                }
+                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
                 tcs.TrySetResult(data);
             },
-            error => tcs.TrySetResult(null));
+            error => tcs.TrySetResult(null),
+            (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
+        );
 
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
             byte[] webp = await tcs.Task;
+
             if (webp == null)
-            {
+            { 
                 return null;
             }
 
@@ -199,8 +271,9 @@ internal static class MapTilerAPIHelper
             int h = MapTools.TILE_RESOLUTION;
             Error err;
             byte[] raw = WebPDecoder.LoadRGBAFromWebP(webp, ref w, ref h, false, out err);
-            if (err != Error.Success || raw == null)
-            {
+
+            if (err != Error.Success || raw == null) 
+            { 
                 return null;
             }
 
@@ -223,24 +296,28 @@ internal static class MapTilerAPIHelper
             }
 
             await CacheManager.SaveHeightmapAsync(map, tile.X, tile.Y);
+
             return map;
         }
     }
     #endregion
 
     #region BUILDINGS
-    private static async Task<List<BuildingData>> DownloadBuildingsAsync(TileDefinition tile, int zoom, CancellationToken token)
+    private static async Task<List<BuildingData>> DownloadBuildingsAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
+        int zoom = MapTools.ZOOM_LEVEL_BUILDING;
         List<BuildingData> all = new();
         HashSet<(int, int)> coords = MapTools.GetTilesFromZoomLevel(tile, zoom);
 
+        int i = 0;
         foreach ((int x, int y) in coords)
         {
             token.ThrowIfCancellationRequested();
-            List<BuildingData> buildings = await DownloadAndParseOsmTileAsync(x, y, zoom, token);
+            List<BuildingData> buildings = await DownloadAndParseOsmTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
+            i++;
 
             if (buildings != null)
-            {
+            { 
                 all.AddRange(buildings);
             }
         }
@@ -248,7 +325,7 @@ internal static class MapTilerAPIHelper
         return all;
     }
 
-    private static async Task<List<BuildingData>> DownloadAndParseOsmTileAsync(int x, int y, int zoom, CancellationToken token)
+    private static async Task<List<BuildingData>> DownloadAndParseOsmTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.BuildingTileDataExistsAsync(zoom, x, y))
         {
@@ -258,30 +335,29 @@ internal static class MapTilerAPIHelper
         string url = $"https://api.maptiler.com/tiles/v3-openmaptiles/{zoom}/{x}/{y}.pbf?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
         TaskCompletionSource<byte[]> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        DownloadManager.EnqueueDownload(url,
+        DownloadManager.EnqueueDownload(
+            url,
             data =>
             {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled(token);
-                    return;
-                }
+                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
                 tcs.TrySetResult(data);
             },
-            error => tcs.TrySetResult(null));
+            error => tcs.TrySetResult(null),
+            (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
+        );
 
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
             byte[] pbf = await tcs.Task;
+
             if (pbf == null)
-            {
+            { 
                 return null;
             }
 
             VectorTileReader reader = new VectorTileReader(pbf);
-            List<BuildingData> results = new List<BuildingData>();
+            List<BuildingData> results = new();
 
-            //Buildings
             if (reader.LayerNames().Contains("building"))
             {
                 VectorTileLayer layer = reader.GetLayer("building");
@@ -296,7 +372,8 @@ internal static class MapTilerAPIHelper
                     float extrude = renderHeight - renderMinHeight;
 
                     List<List<Point2d<int>>> rawGeometry = feat.Geometry<int>();
-                    List<List<SerializablePoint2D>> convertedGeometry = rawGeometry.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
+                    List<List<SerializablePoint2D>> convertedGeometry =
+                        rawGeometry.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
 
                     results.Add(new BuildingData
                     {
@@ -308,7 +385,7 @@ internal static class MapTilerAPIHelper
             }
 
             if (results.Count > 0)
-            {
+            { 
                 await CacheManager.SaveBuildingTileDataAsync(results, zoom, x, y);
             }
 
@@ -318,7 +395,7 @@ internal static class MapTilerAPIHelper
     #endregion
 
     #region GEODATA
-    private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token)
+    private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
         string lang = GetPreferredLanguage();
 
@@ -348,22 +425,11 @@ internal static class MapTilerAPIHelper
             url,
             data =>
             {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled(token);
-                    return;
-                }
-                tcs.TrySetResult(System.Text.Encoding.UTF8.GetString(data));
+                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
+                tcs.TrySetResult(Encoding.UTF8.GetString(data));
             },
-            error =>
-            {
-                if (token.IsCancellationRequested)
-                {
-                    tcs.TrySetCanceled(token);
-                    return;
-                }
-                tcs.TrySetResult(null);
-            }
+            error => tcs.TrySetResult(null),
+            (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
         );
 
         using (token.Register(() => tcs.TrySetCanceled(token)))
@@ -374,12 +440,12 @@ internal static class MapTilerAPIHelper
                 json = await tcs.Task.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
-            {
-                return null;
+            { 
+                return null; 
             }
 
             if (string.IsNullOrEmpty(json))
-            {
+            { 
                 return null;
             }
 
@@ -406,17 +472,14 @@ internal static class MapTilerAPIHelper
     private static FeatureCollection FilterByBoundingBox(FeatureCollection collection, GPSBoundingBox bbox)
     {
         if (collection == null || collection.features == null)
-        {
-            return collection;
+        { 
+            return collection; 
         }
 
         collection.features = collection.features
             .Where(f =>
             {
-                if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2)
-                {
-                    return false;
-                }
+                if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2) { return false; }
 
                 double lon = f.geometry.coordinates[0];
                 double lat = f.geometry.coordinates[1];
@@ -450,7 +513,7 @@ internal static class MapTilerAPIHelper
                 return "de";
             case SystemLanguage.Italian:
                 return "it";
-            case SystemLanguage.Spanish:
+            case SystemLanguage.Spanish: 
                 return "es";
             case SystemLanguage.Japanese:
                 return "ja";
@@ -458,7 +521,7 @@ internal static class MapTilerAPIHelper
             case SystemLanguage.ChineseTraditional:
             case SystemLanguage.Chinese:
                 return "zh";
-            case SystemLanguage.Portuguese:
+            case SystemLanguage.Portuguese: 
                 return "pt";
             case SystemLanguage.Russian:
                 return "ru";

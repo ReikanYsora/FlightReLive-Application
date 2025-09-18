@@ -103,7 +103,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
 
             //Merge satellite texture
-            Color[] globalPixels = new Color[totalTexW * totalTexH];
+            Color32[] globalPixels = new Color32[totalTexW * totalTexH];
 
             foreach (TileDefinition tile in tiles)
             {
@@ -111,8 +111,11 @@ namespace FlightReLive.Core.ProceduralTerrain
                 int localY = (maxY - tile.Y) * (texTileH - 1);
 
                 Texture2D temp = tile.SatelliteTexture;
+                temp.filterMode = FilterMode.Trilinear;
+                temp.Apply(false, false);
 
-                Color[] srcPixels = temp.GetPixels();
+                Color32[] srcPixels = temp.GetPixels32();
+
                 for (int y = 0; y < texTileH; y++)
                 {
                     int destRow = localY + y;
@@ -122,6 +125,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                         int destCol = localX + x;
                         int dstIndex = destRow * totalTexW + destCol;
                         int srcIndex = y * texTileW + x;
+
                         globalPixels[dstIndex] = srcPixels[srcIndex];
                     }
                 }
@@ -129,8 +133,8 @@ namespace FlightReLive.Core.ProceduralTerrain
                 GameObject.Destroy(temp);
             }
 
-            Texture2D globalSatellite = new Texture2D(totalTexW, totalTexH, TextureFormat.RGB24, false);
-            globalSatellite.SetPixels(globalPixels);
+            Texture2D globalSatellite = new Texture2D(totalTexW, totalTexH, TextureFormat.RGB24, false, false);
+            globalSatellite.SetPixels32(globalPixels);            
             globalSatellite.Apply();
 
             //Process terrain
@@ -222,13 +226,6 @@ namespace FlightReLive.Core.ProceduralTerrain
             terrain.terrainData.SetAlphamaps(0, 0, maps);
 
         }
-        /// <summary>
-        /// Unload a loaded tile
-        /// </summary>
-        internal void UnloadTile(TileDefinition tile)
-        {
-            tile.SatelliteTexture = null;
-        }
 
         /// <summary>
         /// Unload all tiles
@@ -273,33 +270,6 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             return dst;
         }
-
-        private Texture2D GenerateMaskMap(float[,] heightmap)
-        {
-            int w = heightmap.GetLength(1);
-            int h = heightmap.GetLength(0);
-            Texture2D mask = new Texture2D(w, h, TextureFormat.RGBA32, false);
-
-            Color[] pixels = new Color[w * h];
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float hVal = heightmap[y, x]; // déjà entre 0–1
-                    pixels[y * w + x] = new Color(
-                        0f,        // Metallic
-                        1f,        // AO
-                        1f,        // DetailMask
-                        1f - hVal  // Smoothness (=> rugosité plus forte en altitude)
-                    );
-                }
-            }
-
-            mask.SetPixels(pixels);
-            mask.Apply();
-            return mask;
-        }
-
         #endregion
     }
 }

@@ -2,9 +2,9 @@
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Rendering;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Workspace;
 using FlightReLive.Core.WorldUI;
 using FlightReLive.UI.FlightCharts;
@@ -15,9 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace FlightReLive.Core.Loading
 {
@@ -25,16 +23,19 @@ namespace FlightReLive.Core.Loading
     {
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
-        private int _totalTilesToLoad;
-        private int _currentTilesLoaded;
         private string _currentLoadingText;
-        private float _displayedProgress;
+        private float _tileProgress;
+        private int _tilesProcessed;
+        private int _tilesTotal;
         #endregion
 
         #region PROPERTIES
         internal static LoadingManager Instance { get; private set; }
+
         internal bool IsLoading { get; private set; }
+
         internal FlightFile CurrentFlightFile { get; private set; }
+
         internal FlightData CurrentFlightData { get; private set; }
         #endregion
 
@@ -52,11 +53,12 @@ namespace FlightReLive.Core.Loading
                 Destroy(gameObject);
                 return;
             }
+
             Instance = this;
 
-            _displayedProgress = 0;
-            _currentTilesLoaded = 0;
-            _totalTilesToLoad = 0;
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = 0;
         }
 
         private void Start()
@@ -71,10 +73,6 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
-        /// <summary>
-        /// Start loading the flight scene asynchronously.
-        /// Supports cancellation via CancelLoading().
-        /// </summary>
         private async void StartLoadingScene(FlightFile flightFile)
         {
             CancelLoading();
@@ -85,9 +83,9 @@ namespace FlightReLive.Core.Loading
             CurrentFlightFile = flightFile;
             CurrentFlightData = flightData;
 
-            _totalTilesToLoad = flightData.MapDefinition.TileDefinitions.Count;
-            _displayedProgress = 0;
-            _currentTilesLoaded = 0;
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = flightData.MapDefinition.TileDefinitions.Count;
             _currentLoadingText = "Preparing resources...";
 
             DisplayLoading();
@@ -96,7 +94,6 @@ namespace FlightReLive.Core.Loading
 
             try
             {
-                //Check MapTiler API Key
                 string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
 
                 if (string.IsNullOrWhiteSpace(apiKey))
@@ -106,6 +103,7 @@ namespace FlightReLive.Core.Loading
                 }
 
                 bool isValid = await MapTilerAPIHelper.IsMapTilerKeyValidAsync(apiKey, token);
+
                 if (!isValid)
                 {
                     NotifyError("Invalid MapTiler API key.");
@@ -114,7 +112,6 @@ namespace FlightReLive.Core.Loading
 
                 token.ThrowIfCancellationRequested();
 
-                // Charger les tuiles par priorité croissante
                 List<int> priorities = flightData.MapDefinition.TileDefinitions
                     .Select(t => t.Priority)
                     .Distinct()
@@ -124,50 +121,42 @@ namespace FlightReLive.Core.Loading
                 foreach (int priority in priorities)
                 {
                     List<TileDefinition> tiles = flightData.MapDefinition.TileDefinitions.Where(t => t.Priority == priority).ToList();
+                    List<TileDefinition> loadedTiles = new List<TileDefinition>();
+
+                    foreach (TileDefinition tile in tiles)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        _tileProgress = 0f;
+                        _currentLoadingText = $"Downloading tile {tile.X},{tile.Y} (priority {priority})...";
+
+                        TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, token, (phase, progress) =>
+                        {
+                            _tileProgress = (phase + progress) / 4f;
+                        });
+
+                        if (loaded != null)
+                        {
+                            flightData.AddTile(loaded);
+                            loadedTiles.Add(loaded);
+                        }
+
+                        _tilesProcessed++;
+                    }
 
                     if (priority == 0)
                     {
-                        //For the priority 0 tiles, we need to dowload all resource before call submodules (we need to initialize SceneCenterGPS, Altitude et TileLookup to ensure altitude processing is correct
-                        List<TileDefinition> loadedTiles = new List<TileDefinition>();
-
-                        foreach (TileDefinition tile in tiles)
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            _currentLoadingText = $"Downloading resources...";
-                            _currentTilesLoaded++;
-                            TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, SettingsManager.GetSatelliteTileZoom(), MapTools.ZOOM_LEVEL_TOPOGRAPHIC, MapTools.ZOOM_LEVEL_BUILDING, token);
-
-                            if (loaded != null)
-                            {
-                                flightData.AddTile(loaded);
-                                loadedTiles.Add(loaded);
-                            }
-                        }
-
                         flightData.BuildTileLookup();
                         flightData.InitializeAltitude();
-
-                        foreach (TileDefinition tile in loadedTiles)
-                        {
-                            BuildingManager.Instance.LoadTile(tile, flightData);
-                            WorldUIManager.Instance.LoadTile(tile, flightData);
-                        }
                     }
-                    else
-                    {
-                        foreach (TileDefinition tile in tiles)
-                        {
-                            token.ThrowIfCancellationRequested();
 
-                            _currentLoadingText = $"Downloading resources...";
-                            _currentTilesLoaded++;
-                            await LoadTile(tile.X, tile.Y, token);
-                        }
+                    foreach (TileDefinition t in loadedTiles)
+                    {
+                        BuildingManager.Instance.LoadTile(t, flightData);
+                        WorldUIManager.Instance.LoadTile(t, flightData);
                     }
                 }
 
-                //Load "one-shot" modules
                 ProceduralTerrainManager.Instance.GenerateTerrain(flightData);
                 VideoPlayerManager.Instance.LoadFlightVideo(flightData);
                 SunManager.Instance.LoadFlightRendering(flightData);
@@ -188,87 +177,6 @@ namespace FlightReLive.Core.Loading
             {
                 IsLoading = false;
             }
-        }
-
-        private void NotifyError(string message)
-        {
-            Fugui.Notify("Resource loading error", message, StateType.Danger);
-            IsLoading = false;
-        }
-
-        /// <summary>
-        /// Load a specific tile asynchronously, with cancellation support.
-        /// </summary>
-        public async Task LoadTile(int x, int y, CancellationToken token = default)
-        {
-            if (CurrentFlightData == null)
-            {
-                return;
-            }
-
-            TileDefinition tile = CurrentFlightData.MapDefinition.TileDefinitions.FirstOrDefault(t => t.X == x && t.Y == y);
-
-            if (tile == null)
-            {
-                Debug.LogWarning($"Tile {x},{y} not found in FlightData.");
-                return;
-            }
-
-            int satZoom = SettingsManager.GetSatelliteTileZoom();
-            int topoZoom = MapTools.ZOOM_LEVEL_TOPOGRAPHIC;
-            int buildingZoom = MapTools.ZOOM_LEVEL_BUILDING;
-
-            token.ThrowIfCancellationRequested();
-            tile = await MapTilerAPIHelper.DownloadTileAsync(tile, satZoom, topoZoom, buildingZoom, token);
-            token.ThrowIfCancellationRequested();
-
-            if (tile != null)
-            {
-                CurrentFlightData.AddTile(tile);
-
-                BuildingManager.Instance.LoadTile(tile, CurrentFlightData);
-                WorldUIManager.Instance.LoadTile(tile, CurrentFlightData);
-            }
-        }
-
-
-        public void UnloadTile(int x, int y)
-        {
-            if (CurrentFlightData == null)
-            {
-                return;
-            }
-
-            TileDefinition tile = CurrentFlightData.MapDefinition.TileDefinitions.FirstOrDefault(t => t.X == x && t.Y == y);
-
-            if (tile == null)
-            {
-                return;
-            }
-
-            ProceduralTerrainManager.Instance.UnloadTile(tile);
-            BuildingManager.Instance.UnloadTile(tile);
-            WorldUIManager.Instance.UnloadTile(tile);
-
-            tile.SatelliteTexture = null;
-            tile.HeightMap = null;
-            tile.Buildings = null;
-        }
-
-        private void UnloadFlightDataInModules()
-        {
-            FlightChartsManager.Instance.Unload();
-            VideoPlayerManager.Instance.Unload();
-            ProceduralTerrainManager.Instance.Unload();
-            PathManager.Instance.Unload();
-            SunManager.Instance.Unload();
-            WorldUIManager.Instance.Unload();
-            BuildingManager.Instance.Unload();
-
-            CurrentFlightData?.Dispose();
-            CurrentFlightData = null;
-
-            OnFlightUnloaded?.Invoke();
         }
 
         internal static FlightData ConvertFileToFlight(FlightFile file)
@@ -334,8 +242,27 @@ namespace FlightReLive.Core.Loading
             {
                 for (int y = minTileY; y <= maxTileY; y++)
                 {
-                    int dx = Math.Max(0, Math.Max(originalMinTileX - x, x - originalMaxTileX));
-                    int dy = Math.Max(0, Math.Max(originalMinTileY - y, y - originalMaxTileY));
+                    int dx = 0;
+                    if (x < originalMinTileX)
+                    {
+                        dx = originalMinTileX - x;
+                    }
+                    else if (x > originalMaxTileX)
+                    {
+                        dx = x - originalMaxTileX;
+                    }
+
+                    int dy = 0;
+                    if (y < originalMinTileY)
+                    {
+                        dy = originalMinTileY - y;
+                    }
+                    else if (y > originalMaxTileY)
+                    {
+                        dy = y - originalMaxTileY;
+                    }
+
+                    //Define tile priority based on distance from original tile
                     int priority = Math.Max(dx, dy);
 
                     TileDefinition tileDefinition = new TileDefinition
@@ -356,14 +283,31 @@ namespace FlightReLive.Core.Loading
             return flightData;
         }
 
-        /// <summary>
-        /// Cancel the current loading process if one is running.
-        /// </summary>
+        private void NotifyError(string message)
+        {
+            Fugui.Notify("Resource loading error", message, StateType.Danger);
+            IsLoading = false;
+        }
+
+        private void UnloadFlightDataInModules()
+        {
+            FlightChartsManager.Instance.Unload();
+            VideoPlayerManager.Instance.Unload();
+            ProceduralTerrainManager.Instance.Unload();
+            PathManager.Instance.Unload();
+            SunManager.Instance.Unload();
+            WorldUIManager.Instance.Unload();
+            BuildingManager.Instance.Unload();
+            CurrentFlightData?.Dispose();
+            CurrentFlightData = null;
+            OnFlightUnloaded?.Invoke();
+        }
+
         private void CancelLoading()
         {
-            _displayedProgress = 0;
-            _totalTilesToLoad = 0;
-            _currentTilesLoaded = 0;
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = 0;
 
             if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
@@ -392,17 +336,18 @@ namespace FlightReLive.Core.Loading
         {
             float scale = Fugui.CurrentContext.Scale;
 
-            Fugui.ShowModal("  ", (layout) =>
+            Fugui.ShowModal("Loading", (layout) =>
             {
                 float paddingX = 10f;
-                float targetProgress = (float)_currentTilesLoaded / (float)_totalTilesToLoad;
-                _displayedProgress = Mathf.MoveTowards(_displayedProgress, targetProgress, Time.deltaTime * 0.25f);
+                float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
                 float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
                 Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
+
                 layout.CenterNextItemHV(_currentLoadingText);
                 layout.Text(_currentLoadingText);
+
                 layout.CenterNextItemH(availableX);
-                layout.ProgressBar("Global", _displayedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
+                layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
             },
             FuModalSize.Medium,
             new FuModalButton("Cancel loading", () => CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));

@@ -40,7 +40,6 @@ namespace FlightReLive.Core.Settings
 
         #region EVENTS
         public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
-        public static event Action<QualityPreset> OnMapQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -54,7 +53,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<string> OnWorkspacePathChanged;
         public static event Action<float> OnWorkspaceZoomChanged;
         public static event Action<string> OnMapTilerApiKeyChanged;
-        public static event Action<SatelliteTileQualityPreset> OnSatelliteTileQualityPresetChanged;
         public static event Action<float> OnGlobalScaleChanged;
         public static event Action<float> OnPathWidthChanged;
         public static event Action<Color> OnPathRemainingColor1Changed;
@@ -80,8 +78,6 @@ namespace FlightReLive.Core.Settings
         #region METHODS
         internal static void LoadHardwareQualityPreset() =>
             CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
-        internal static void LoadMapQualityPreset() =>
-             CurrentSettings.MapQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.MapQualityPreset), (int)QualityPreset.Quality);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -130,9 +126,6 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadMapTilerApiKey() =>
             CurrentSettings.MapTilerAPIKey = PlayerPrefs.GetString(nameof(Settings.MapTilerAPIKey), "");
-
-        internal static void LoadSatelliteTileQualityPreset() =>
-            CurrentSettings.SatelliteTileQualityPreset = (SatelliteTileQualityPreset)PlayerPrefs.GetInt(nameof(Settings.SatelliteTileQualityPreset), (int)SatelliteTileQualityPreset.High);
 
         internal static void LoadGlobalScale() =>
             CurrentSettings.GlobalScale = PlayerPrefs.GetFloat(nameof(Settings.GlobalScale), 1f);
@@ -255,14 +248,6 @@ namespace FlightReLive.Core.Settings
             OnHardwareQualityPresetChanged?.Invoke(value);
         }
 
-        internal static void SaveMapQualityPreset(QualityPreset value)
-        {
-            CurrentSettings.MapQualityPreset = value;
-            PlayerPrefs.SetInt(nameof(Settings.MapQualityPreset), (int)value);
-            PlayerPrefs.Save();
-            OnMapQualityPresetChanged?.Invoke(value);
-        }
-
         internal static void SaveApplicationTargetFPS(int value)
         {
             CurrentSettings.ApplicationTargetFPS = value;
@@ -365,14 +350,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetString(nameof(Settings.MapTilerAPIKey), value);
             PlayerPrefs.Save();
             OnMapTilerApiKeyChanged?.Invoke(value);
-        }
-
-        internal static void SaveSatelliteTileQualityPreset(SatelliteTileQualityPreset value)
-        {
-            CurrentSettings.SatelliteTileQualityPreset = value;
-            PlayerPrefs.SetInt(nameof(Settings.SatelliteTileQualityPreset), (int)value);
-            PlayerPrefs.Save();
-            OnSatelliteTileQualityPresetChanged?.Invoke(value);
         }
 
         internal static void SaveGlobalScale(float value)
@@ -554,7 +531,6 @@ namespace FlightReLive.Core.Settings
 
             LoadCurrentVersion();
             LoadHardwareQualityPreset();
-            LoadMapQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -569,7 +545,6 @@ namespace FlightReLive.Core.Settings
             LoadWorkspacePath();
             LoadWorkspaceZoom();
             LoadMapTilerApiKey();
-            LoadSatelliteTileQualityPreset();
             LoadPathWidth();
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
@@ -595,7 +570,6 @@ namespace FlightReLive.Core.Settings
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
-            SaveMapQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -613,7 +587,6 @@ namespace FlightReLive.Core.Settings
             SaveWorkspacePath(Application.persistentDataPath);
             SaveWorkspaceZoom(1f);
             SaveMapTilerApiKey("");
-            SaveSatelliteTileQualityPreset(SatelliteTileQualityPreset.High);
             SavePathWidth(0.15f);
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
@@ -811,57 +784,6 @@ namespace FlightReLive.Core.Settings
                     return metersPerSecond * 1.94384f;
             }
         }
-
-        private static string FormatSatellitePresetLabel(SatelliteTileQualityPreset preset)
-        {
-            switch (preset)
-            {
-                case SatelliteTileQualityPreset.VeryLow:
-                    return "Very Low";
-                case SatelliteTileQualityPreset.Low:
-                    return "Low";
-                case SatelliteTileQualityPreset.Normal:
-                    return "Normal";
-                case SatelliteTileQualityPreset.High:
-                    return "High";
-                case SatelliteTileQualityPreset.VeryHigh:
-                    return "Very High";
-                case SatelliteTileQualityPreset.Extreme:
-                    return "Extreme";
-                default:
-                    return preset.ToString();
-            }
-        }
-
-        internal static int GetSatelliteTileZoom()
-        {
-            int satelliteZoomLevel;
-
-            switch (CurrentSettings.SatelliteTileQualityPreset)
-            {
-                case SatelliteTileQualityPreset.VeryLow:
-                    satelliteZoomLevel = 14;
-                    break;
-                case SatelliteTileQualityPreset.Low:
-                    satelliteZoomLevel = 15;
-                    break;
-                default:
-                case SatelliteTileQualityPreset.Normal:
-                    satelliteZoomLevel = 16;
-                    break;
-                case SatelliteTileQualityPreset.High:
-                    satelliteZoomLevel = 17;
-                    break;
-                case SatelliteTileQualityPreset.VeryHigh:
-                    satelliteZoomLevel = 18;
-                    break;
-                case SatelliteTileQualityPreset.Extreme:
-                    satelliteZoomLevel = 19;
-                    break;
-            }
-
-            return satelliteZoomLevel;
-        }
         #endregion
 
         #region UI
@@ -898,33 +820,6 @@ namespace FlightReLive.Core.Settings
                                 if (ImGui.Selectable(label))
                                 {
                                     SaveHardwareQualityPreset(preset);
-                                }
-                            }
-                        });
-                    }
-
-                    using (FuGrid mapQualityGrid = new FuGrid("mapQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        if (isLoading)
-                        {
-                            mapQualityGrid.DisableNextElements();
-                        }
-
-                        mapQualityGrid.SetNextElementToolTipWithLabel("This parameter allows you to set the resolution of the topography.\nChanging this parameter affects the amount of RAM/VRAM that will be used to display the topography.\nThe higher the quality setting, the longer it will take to load the scene.\nThis setting does not affect the quality/quantity of images needed to load the scene, only the 3D mesh.\nThe change will only be applied the next time a flight is loaded.");
-
-                        QualityPreset currentPreset = CurrentSettings.MapQualityPreset;
-                        string comboLabel = currentPreset.ToString();
-
-                        mapQualityGrid.Combobox("MapQualityPreset##MapQualityCombobox", comboLabel, () =>
-                        {
-                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
-                            {
-                                bool isSelected = preset == currentPreset;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveMapQualityPreset(preset);
                                 }
                             }
                         });
@@ -1103,33 +998,6 @@ namespace FlightReLive.Core.Settings
                         }
                         apiGrid.NextColumn();
                         apiGrid.TextURL("Follow this link to create a MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
-                    }
-
-                    using (FuGrid satelliteTileQualityPresetGrid = new FuGrid("satelliteTileQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        if (isLoading)
-                        {
-                            satelliteTileQualityPresetGrid.DisableNextElements();
-                        }
-
-                        satelliteTileQualityPresetGrid.SetNextElementToolTipWithLabel("This parameter determines the zoom level of satellite images.\nThe higher the zoom level, the more tiles need to be downloaded to reproduce the scene, but the more accurate the final image will be.\nThis has a significant impact on your MapTiler account usage.\nTo cover the same area:\n- Very low: 1 tile\n- Low: 4 tiles\n- Normal: 16 tiles\n- High: 64 tiles\n- Very high: 256 tiles\n- Extreme: 1024 tiles");
-
-                        SatelliteTileQualityPreset satelliteQualityPreset = CurrentSettings.SatelliteTileQualityPreset;
-                        string comboLabel = FormatSatellitePresetLabel(satelliteQualityPreset);
-
-                        satelliteTileQualityPresetGrid.Combobox("SatelliteTileQualityPreset##SatelliteTileQualityCombobox", comboLabel, () =>
-                        {
-                            foreach (SatelliteTileQualityPreset preset in Enum.GetValues(typeof(SatelliteTileQualityPreset)))
-                            {
-                                bool isSelected = preset == satelliteQualityPreset;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {FormatSatellitePresetLabel(preset)}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveSatelliteTileQualityPreset(preset);
-                                }
-                            }
-                        });
                     }
 
                     Fugui.PopFont();

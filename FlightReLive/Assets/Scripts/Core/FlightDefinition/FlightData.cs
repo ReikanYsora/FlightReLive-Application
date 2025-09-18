@@ -1,5 +1,5 @@
 ﻿using FlightReLive.Core.Pipeline;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -251,7 +251,6 @@ namespace FlightReLive.Core.FlightDefinition
                     tileDefinition.HeightMap = null;
                     tileDefinition.GeoData = null;
                     tileDefinition.Buildings = null;
-                    tileDefinition.MeshData = null;
                 }
             }
 

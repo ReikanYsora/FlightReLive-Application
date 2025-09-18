@@ -4,7 +4,7 @@ using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Rendering;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Workspace;
 using FlightReLive.Core.WorldUI;
 using FlightReLive.UI.FlightCharts;
@@ -134,7 +134,7 @@ namespace FlightReLive.Core.Loading
                         {
                             token.ThrowIfCancellationRequested();
 
-                            _currentLoadingText = $"Creating {tile.X}-{tile.Y} tile...";
+                            _currentLoadingText = $"Downloading resources...";
                             _currentTilesLoaded++;
                             TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, SettingsManager.GetSatelliteTileZoom(), MapTools.ZOOM_LEVEL_TOPOGRAPHIC, MapTools.ZOOM_LEVEL_BUILDING, token);
 
@@ -150,7 +150,6 @@ namespace FlightReLive.Core.Loading
 
                         foreach (TileDefinition tile in loadedTiles)
                         {
-                            TerrainManager.Instance.LoadTile(tile, flightData);
                             BuildingManager.Instance.LoadTile(tile, flightData);
                             WorldUIManager.Instance.LoadTile(tile, flightData);
                         }
@@ -161,7 +160,7 @@ namespace FlightReLive.Core.Loading
                         {
                             token.ThrowIfCancellationRequested();
 
-                            _currentLoadingText = $"Creating {tile.X}-{tile.Y} tile...";
+                            _currentLoadingText = $"Downloading resources...";
                             _currentTilesLoaded++;
                             await LoadTile(tile.X, tile.Y, token);
                         }
@@ -169,6 +168,7 @@ namespace FlightReLive.Core.Loading
                 }
 
                 //Load "one-shot" modules
+                ProceduralTerrainManager.Instance.GenerateTerrain(flightData);
                 VideoPlayerManager.Instance.LoadFlightVideo(flightData);
                 SunManager.Instance.LoadFlightRendering(flightData);
                 FlightChartsManager.Instance.Load(flightData);
@@ -226,7 +226,6 @@ namespace FlightReLive.Core.Loading
             {
                 CurrentFlightData.AddTile(tile);
 
-                TerrainManager.Instance.LoadTile(tile, CurrentFlightData);
                 BuildingManager.Instance.LoadTile(tile, CurrentFlightData);
                 WorldUIManager.Instance.LoadTile(tile, CurrentFlightData);
             }
@@ -247,21 +246,20 @@ namespace FlightReLive.Core.Loading
                 return;
             }
 
-            TerrainManager.Instance.UnloadTile(tile);
+            ProceduralTerrainManager.Instance.UnloadTile(tile);
             BuildingManager.Instance.UnloadTile(tile);
             WorldUIManager.Instance.UnloadTile(tile);
 
             tile.SatelliteTexture = null;
             tile.HeightMap = null;
             tile.Buildings = null;
-            tile.MeshData = null;
         }
 
         private void UnloadFlightDataInModules()
         {
             FlightChartsManager.Instance.Unload();
             VideoPlayerManager.Instance.Unload();
-            TerrainManager.Instance.Unload();
+            ProceduralTerrainManager.Instance.Unload();
             PathManager.Instance.Unload();
             SunManager.Instance.Unload();
             WorldUIManager.Instance.Unload();

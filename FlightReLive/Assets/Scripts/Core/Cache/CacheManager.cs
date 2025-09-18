@@ -100,7 +100,7 @@ namespace FlightReLive.Core.Cache
             }
         }
 
-        internal static async Task<Texture2D> LoadSatelliteTileTextureAsync(int zoom, int tileX, int tileY)
+        internal static async Task<Texture2D> LoadSatelliteTileAsync(int zoom, int tileX, int tileY)
         {
             if (!await SatelliteTileExistsAsync(zoom, tileX, tileY))
             {

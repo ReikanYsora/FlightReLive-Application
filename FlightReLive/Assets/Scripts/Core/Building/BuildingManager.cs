@@ -1,7 +1,7 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using Fu.Framework;
 using LibTessDotNet;
 using System.Collections.Generic;

@@ -5,7 +5,7 @@ using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -53,7 +53,7 @@ internal static class MapTilerAPIHelper
         try
         {
             token.ThrowIfCancellationRequested();
-            tile.SatelliteTexture = await DownloadSatelliteAtlasAsync(tile, satelliteZoom, token);
+            tile.SatelliteTexture = await DownloadSatelliteAsync(tile, satelliteZoom, token);
 
             token.ThrowIfCancellationRequested();
             tile.HeightMap = await DownloadHeightmapAsync(tile, topographicZoom, token);
@@ -80,7 +80,7 @@ internal static class MapTilerAPIHelper
     #endregion
 
     #region SATELLITE
-    private static async Task<Texture2D> DownloadSatelliteAtlasAsync(TileDefinition tile, int zoom, CancellationToken token)
+    private static async Task<Texture2D> DownloadSatelliteAsync(TileDefinition tile, int zoom, CancellationToken token)
     {
         HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, zoom);
         Dictionary<(int, int), Texture2D> downloaded = new();
@@ -88,11 +88,11 @@ internal static class MapTilerAPIHelper
         foreach ((int x, int y) in coords)
         {
             token.ThrowIfCancellationRequested();
-            Texture2D tex = await DownloadSingleSatelliteTileAsync(x, y, zoom, token);
+            Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, zoom, token);
 
-            if (tex != null)
+            if (texture != null)
             {
-                downloaded[(x, y)] = tex;
+                downloaded[(x, y)] = texture;
             }
         }
 
@@ -108,7 +108,7 @@ internal static class MapTilerAPIHelper
     {
         if (await CacheManager.SatelliteTileExistsAsync(zoom, x, y))
         {
-            return await CacheManager.LoadSatelliteTileTextureAsync(zoom, x, y);
+            return await CacheManager.LoadSatelliteTileAsync(zoom, x, y);
         }
 
         string url = $"https://api.maptiler.com/tiles/satellite-v2/{zoom}/{x}/{y}.png?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";

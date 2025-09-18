@@ -1,7 +1,7 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.WorldUI;
 using FlightReLive.UI.VideoPlayer;
 using Fu;

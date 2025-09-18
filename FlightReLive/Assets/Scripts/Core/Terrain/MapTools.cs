@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace FlightReLive.Core.Terrain
+namespace FlightReLive.Core.ProceduralTerrain
 {
     public static class MapTools
     {

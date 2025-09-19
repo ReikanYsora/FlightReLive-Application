@@ -5,8 +5,7 @@ using System.Threading;
 namespace FlightReLive.Core
 {
     /// <summary>
-    /// High-performance dispatcher ensuring that actions from any thread
-    /// are executed safely in Unity's main thread.
+    /// High-performance dispatcher ensuring that actions from any thread are executed safely in Unity's main thread.
     /// - Double-buffered queues for minimal locking
     /// - Atomic counter to avoid unnecessary locks
     /// - Zero allocations during runtime (except if queues grow beyond initial capacity)
@@ -15,7 +14,6 @@ namespace FlightReLive.Core
     public static class UnityMainThreadDispatcher
     {
         #region ATTRIBUTES
-
         /// <summary>
         /// Queue used by background threads to enqueue actions.
         /// </summary>
@@ -35,11 +33,9 @@ namespace FlightReLive.Core
         /// Atomic counter of pending actions (faster check than locking).
         /// </summary>
         private static int _pendingCount = 0;
-
         #endregion
 
         #region METHODS
-
         /// <summary>
         /// Add an action that will be executed in the Unity main thread.
         /// This method is thread-safe and optimized for minimal contention.
@@ -65,13 +61,13 @@ namespace FlightReLive.Core
         /// </summary>
         public static void ManageThreads()
         {
-            // Quick check: skip lock if nothing to execute
+            //Quick check: skip lock if nothing to execute
             if (Volatile.Read(ref _pendingCount) == 0)
             {
                 return;
             }
 
-            // Swap queues under lock
+            //Swap queues under lock
             lock (_lock)
             {
                 if (_actionsWrite.Count > 0)
@@ -82,7 +78,7 @@ namespace FlightReLive.Core
                 }
             }
 
-            // Execute without holding the lock
+            //Execute without holding the lock
             while (_actionsRead.Count > 0)
             {
                 Action action = _actionsRead.Dequeue();
@@ -94,7 +90,7 @@ namespace FlightReLive.Core
                 }
                 catch (Exception ex)
                 {
-                    // Log exceptions to avoid breaking the dispatcher loop
+                    //Log exceptions to avoid breaking the dispatcher loop
                     UnityEngine.Debug.LogError($"UnityMainThreadDispatcher: Exception in dispatched action: {ex}");
                 }
             }

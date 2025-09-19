@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
@@ -21,6 +22,8 @@ namespace FlightReLive.Core.Capture
         [SerializeField] private string _filePrefix = "video_";
         [SerializeField] private string _logoFileName = "logo.png";
 
+        private RTHandle _captureHandle;
+        private CaptureCustomPass _capturePass;
         private RenderTexture _captureRT;
         private Process _ffmpegProcess;
         private string _outputPath;
@@ -58,7 +61,9 @@ namespace FlightReLive.Core.Capture
 
         #region PROPERTIES
         internal static CaptureManager Instance { get; private set; }
+
         internal bool IsCapturing { get; private set; }
+
         public string ElapsedTime => _captureElapsedTime;
         #endregion
 
@@ -81,19 +86,21 @@ namespace FlightReLive.Core.Capture
             SettingsManager.OnCaptureEncoderChanged += OnCaptureEncoderChanged;
             SettingsManager.OnCaptureFramerateChanged += OnCaptureFramerateChanged;
 
-            // Init resolution
+            //Init resolution
             OnCaptureResolutionChanged(SettingsManager.CurrentSettings.CaptureResolution);
         }
 
         private void Update()
         {
             if (!IsCapturing || _captureRT == null)
+            {
                 return;
+            }
 
-            // Async readback du RT
-            AsyncGPUReadback.Request(_captureRT, 0, TextureFormat.RGB24, OnFrameReadback);
+            //HDRP async GPU readback en RGBA32
+            AsyncGPUReadback.Request(_captureRT, 0, TextureFormat.RGBA32, OnFrameReadback);
 
-            // Update timer
+            //Update timer
             TimeSpan elapsed = DateTime.Now - _captureStartTime;
             _captureElapsedTime = string.Format("{0:00}:{1:00}:{2:00}", elapsed.Hours, elapsed.Minutes, elapsed.Seconds);
         }
@@ -105,24 +112,27 @@ namespace FlightReLive.Core.Capture
             SettingsManager.OnCaptureFramerateChanged -= OnCaptureFramerateChanged;
 
             if (IsCapturing)
+            {
                 StopCapture();
+            }
         }
         #endregion
 
         #region METHODS
         internal void StartCapture()
         {
-            // Crée le RenderTexture de capture
-            _captureRT = new RenderTexture(_width, _height, 0,
-                UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SFloat)
+            //Create output rendertexture
+            _captureRT = new RenderTexture(_width, _height, 0, GraphicsFormat.R8G8B8A8_UNorm)
             {
-                depthStencilFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.D32_SFloat_S8_UInt,
                 enableRandomWrite = false,
                 useDynamicScale = false
             };
             _captureRT.Create();
 
-            // Attache le RT à une CustomPass HDRP
+            //Create RTHandle
+            _captureHandle = RTHandles.Alloc(_captureRT);
+
+            // Injecte dans CustomPass HDRP
             CustomPassVolume volume = FindFirstObjectByType<CustomPassVolume>();
             if (volume == null)
             {
@@ -132,24 +142,31 @@ namespace FlightReLive.Core.Capture
                 volume.injectionPoint = CustomPassInjectionPoint.AfterPostProcess;
             }
 
-            CaptureCustomPass capturePass = null;
-            foreach (var pass in volume.customPasses)
+            //Get custom pass
+            foreach (CustomPass pass in volume.customPasses)
             {
-                capturePass = pass as CaptureCustomPass;
-                if (capturePass != null) break;
+                _capturePass = pass as CaptureCustomPass;
+                if (_capturePass != null)
+                {
+                    break;
+                }
             }
-            if (capturePass == null)
+            if (_capturePass == null)
             {
-                capturePass = new CaptureCustomPass { name = "Capture HDRP Pass" };
-                volume.customPasses.Add(capturePass);
+                _capturePass = new CaptureCustomPass { name = "Capture HDRP Pass" };
+                volume.customPasses.Add(_capturePass);
             }
-            capturePass.TargetTexture = _captureRT;
 
-            // Prépare la sortie
+            _capturePass.TargetTexture = _captureRT;
+            _capturePass.TargetHandle = _captureHandle;
+
+            //Prepare output path
             PrepareOutputPath();
 
             if (IsCapturing)
+            {
                 return;
+            }
 
             string ffmpegPath = GetPlatformFFmpegPath();
             string logoPath = Path.Combine(Application.streamingAssetsPath, "Images", _logoFileName).Replace("\\", "/");
@@ -160,25 +177,36 @@ namespace FlightReLive.Core.Capture
                 return;
             }
 
-            string ffmpegInput = $"-y -fflags +genpts -use_wallclock_as_timestamps 1 -f rawvideo -pixel_format rgb24 -video_size {_width}x{_height} -i -";
+            int framerateValue = _framerate == 0 ? 30 : 60;
+
+            string ffmpegInput = $"-y -fflags +genpts -use_wallclock_as_timestamps 1 -f rawvideo -pixel_format rgba -video_size {_width}x{_height} -framerate {framerateValue} -i -";
             string ffmpegFilter = "";
             string encoderArgs;
 
             switch (_encoder)
             {
                 default:
-                case 0: encoderArgs = "-c:v libx264 -preset ultrafast -b:v 10M"; break;
-                case 1: encoderArgs = "-c:v h264_nvenc -preset p1 -b:v 10M"; break;
-                case 2: encoderArgs = "-c:v av1_nvenc -preset p5 -cq 30"; break;
+                case 0:
+                    encoderArgs = "-c:v libx264 -preset ultrafast -b:v 10M";
+                    break;
+                case 1:
+                    encoderArgs = "-c:v h264_nvenc -preset p1 -b:v 10M";
+                    break;
+                case 2:
+                    encoderArgs = "-c:v av1_nvenc -preset p5 -cq 30";
+                    break;
             }
 
-            int framerateValue = _framerate == 0 ? 30 : 60;
             string ffmpegOutput = $"-r {framerateValue} -an {encoderArgs} -pix_fmt yuv420p -movflags +faststart \"{_outputPath}\"";
 
             if (File.Exists(logoPath) && SettingsManager.CurrentSettings.CaptureEncodedLogo)
             {
                 ffmpegInput += $" -i \"{logoPath}\"";
-                ffmpegFilter = "-filter_complex \"[1:v]scale=256:256[logo];[0:v][logo]overlay=10:H-h-10\"";
+                ffmpegFilter = "-filter_complex \"[0:v]vflip,eq=gamma=1.5[vid];[1:v]scale=256:256[logo];[vid][logo]overlay=10:H-h-10\"";
+            }
+            else
+            {
+                ffmpegFilter = "-vf \"vflip,eq=gamma=1.5\"";
             }
 
             string args = $"{ffmpegInput} {ffmpegFilter} {ffmpegOutput}";
@@ -193,7 +221,7 @@ namespace FlightReLive.Core.Capture
             _ffmpegProcess.StartInfo.RedirectStandardOutput = true;
             _ffmpegProcess.Start();
 
-            // Thread d’écriture
+            //Write thread
             _writerRunning = true;
             _writerThread = new Thread(() =>
             {
@@ -238,7 +266,9 @@ namespace FlightReLive.Core.Capture
         private void OnFrameReadback(AsyncGPUReadbackRequest request)
         {
             if (request.hasError || !IsCapturing || _ffmpegProcess == null)
+            {
                 return;
+            }
 
             byte[] frameBytes = request.GetData<byte>().ToArray();
             lock (_frameQueue)
@@ -265,12 +295,30 @@ namespace FlightReLive.Core.Capture
                 _ffmpegProcess?.StandardInput?.Close();
                 _ffmpegProcess?.WaitForExit(1000);
                 _ffmpegProcess?.Dispose();
+                _ffmpegProcess = null;
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.LogError($"Erreur à la fermeture de FFmpeg : {e.Message}");
+                UnityEngine.Debug.LogError($"Stop FFmpeg process error : {e.Message}");
             }
 
+            //Disable HDRP pass before release resources
+            CustomPassVolume volume = FindFirstObjectByType<CustomPassVolume>();
+
+            if (volume != null && _capturePass != null)
+            {
+                volume.customPasses.Remove(_capturePass);
+                _capturePass.enabled = false;
+            }
+
+            //Release RTHandle
+            if (_capturePass?.TargetHandle != null)
+            {
+                RTHandles.Release(_capturePass.TargetHandle);
+                _capturePass.TargetHandle = null;
+            }
+
+            //Release the renderTexture
             if (_captureRT != null)
             {
                 _captureRT.Release();
@@ -291,7 +339,9 @@ namespace FlightReLive.Core.Capture
             string folderPath = Path.Combine(defaultPath, SettingsManager.CurrentSettings.CaptureOutputPath);
 
             if (!Directory.Exists(folderPath))
+            {
                 Directory.CreateDirectory(folderPath);
+            }
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             _outputPath = Path.Combine(folderPath, $"{_filePrefix}{timestamp}.mp4");
@@ -314,16 +364,35 @@ namespace FlightReLive.Core.Capture
         {
             switch (resolution)
             {
-                case 0: _width = 1280; _height = 720; break;
+                case 0:
+                    _width = 1280;
+                    _height = 720;
+                    break;
                 default:
-                case 1: _width = 1920; _height = 1080; break;
-                case 2: _width = 2560; _height = 1440; break;
-                case 3: _width = 3840; _height = 2160; break;
+                case 1:
+                    _width = 1920;
+                    _height = 1080;
+                    break;
+                case 2:
+                    _width = 2560;
+                    _height = 1440;
+                    break;
+                case 3:
+                    _width = 3840;
+                    _height = 2160;
+                    break;
             }
         }
 
-        private void OnCaptureEncoderChanged(int obj) => _encoder = SettingsManager.CurrentSettings.CaptureEncoder;
-        private void OnCaptureFramerateChanged(int obj) => _framerate = SettingsManager.CurrentSettings.CaptureFramerate;
+        private void OnCaptureEncoderChanged(int obj)
+        {
+            _encoder = SettingsManager.CurrentSettings.CaptureEncoder;
+        }
+
+        private void OnCaptureFramerateChanged(int obj)
+        {
+            _framerate = SettingsManager.CurrentSettings.CaptureFramerate;
+        }
         #endregion
 
         #region UI
@@ -331,7 +400,10 @@ namespace FlightReLive.Core.Capture
         {
             using (FuGrid grid = new FuGrid("gridCaptureSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                if (IsCapturing) grid.DisableNextElements();
+                if (IsCapturing)
+                {
+                    grid.DisableNextElements();
+                }
 
                 grid.SetMinimumLineHeight(22f);
 
@@ -344,7 +416,9 @@ namespace FlightReLive.Core.Capture
                     {
                         string display = $"{(res.Key == currentResolutionId ? FlightReLiveIcons.Check : " ")} {res.Value}";
                         if (ImGui.Selectable(display))
+                        {
                             SettingsManager.SaveCaptureResolution(res.Key);
+                        }
                     }
                 });
 
@@ -357,7 +431,9 @@ namespace FlightReLive.Core.Capture
                     {
                         string display = $"{(fr.Key == currentFramerateId ? FlightReLiveIcons.Check : " ")} {fr.Value}";
                         if (ImGui.Selectable(display))
+                        {
                             SettingsManager.SaveCaptureFramerate(fr.Key);
+                        }
                     }
                 });
 
@@ -369,8 +445,11 @@ namespace FlightReLive.Core.Capture
                     foreach (var enc in _encoders)
                     {
                         string display = $"{(enc.Key == currentEncoderId ? FlightReLiveIcons.Check : " ")} {enc.Value}";
+
                         if (ImGui.Selectable(display))
+                        {
                             SettingsManager.SaveCaptureEncoder(enc.Key);
+                        }
                     }
                 });
 
@@ -381,18 +460,24 @@ namespace FlightReLive.Core.Capture
                 // Logo
                 bool encodedLogo = SettingsManager.CurrentSettings.CaptureEncodedLogo;
                 if (grid.Toggle("App Logo", ref encodedLogo))
+                {
                     SettingsManager.SaveCaptureEncodedLogo(encodedLogo);
+                }
 
                 // Background
                 bool captureReplaceBackground = SettingsManager.CurrentSettings.CaptureReplaceBackground;
                 if (grid.Toggle("Replace background", ref captureReplaceBackground))
+                {
                     SettingsManager.SaveCaptureReplaceBackground(captureReplaceBackground);
+                }
 
                 if (captureReplaceBackground)
                 {
                     Vector4 captureBackgroundColor = (Vector4)SettingsManager.CurrentSettings.CameraCaptureBackgroundColor;
                     if (grid.ColorPicker("Capture background", ref captureBackgroundColor))
+                    {
                         SettingsManager.SaveCameraCaptureBackgroundColor(captureBackgroundColor);
+                    }
                 }
             }
         }

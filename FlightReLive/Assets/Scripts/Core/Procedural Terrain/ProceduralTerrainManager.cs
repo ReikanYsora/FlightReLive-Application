@@ -324,7 +324,6 @@ namespace FlightReLive.Core.ProceduralTerrain
             //Cleanup
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
             {
-                tile.HeightMap = null;
                 tile.SatelliteTexture = null;
             }
 

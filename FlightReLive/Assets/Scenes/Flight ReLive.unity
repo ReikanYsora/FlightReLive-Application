@@ -279,7 +279,7 @@ Camera:
   m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
-  m_OcclusionCulling: 1
+  m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
 --- !u!114 &255147440
@@ -295,18 +295,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.HighDefinition.Runtime::UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData
   clearColorMode: 1
-  backgroundColorHDR: {r: 0.025, g: 0.07, b: 0.19, a: 0}
+  backgroundColorHDR: {r: 0.01886791, g: 0.01886791, b: 0.01886791, a: 0}
   clearDepth: 1
   volumeLayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 4294967295
   volumeAnchorOverride: {fileID: 0}
   antialiasing: 0
   SMAAQuality: 2
   dithering: 0
   stopNaNs: 0
   taaSharpenStrength: 0.5
-  TAAQuality: 1
+  TAAQuality: 2
   taaSharpenMode: 0
   taaRingingReduction: 0
   taaHistorySharpening: 0.35
@@ -1217,12 +1217,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23c1ce4fb46143f46bc5cb5224c934f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.HighDefinition.Runtime::UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData
-  clearColorMode: 0
+  clearColorMode: 1
   backgroundColorHDR: {r: 0.009433985, g: 0.009433985, b: 0.009433985, a: 1}
   clearDepth: 1
   volumeLayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 4294967295
   volumeAnchorOverride: {fileID: 0}
   antialiasing: 2
   SMAAQuality: 2
@@ -2773,6 +2773,7 @@ MonoBehaviour:
   _mainCanvas: {fileID: 1721477100}
   _mainCamera: {fileID: 796242730}
   _gpsPrefab: {fileID: 245362082703216664, guid: 4743d8e731bdeef4082a091545bac382, type: 3}
+  _maxVisibleDistance: 100
 --- !u!1 &1652794176
 GameObject:
   m_ObjectHideFlags: 0
@@ -3705,7 +3706,7 @@ GameObject:
   - component: {fileID: 2125856383}
   - component: {fileID: 2125856382}
   m_Layer: 0
-  m_Name: HDRP Renderer
+  m_Name: HDRP Custom Passes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3727,17 +3728,30 @@ MonoBehaviour:
   fadeRadius: 0
   priority: 0
   customPasses:
-  - rid: 901995757815201890
+  - rid: 901995788566528067
+  - rid: 901995788566528063
+  - rid: 901995788566528068
   injectionPoint: 3
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
   references:
     version: 2
     RefIds:
-    - rid: 901995757815201890
+    - rid: 901995788566528063
+      type: {class: CaptureCustomPass, ns: FlightReLive.Core.Capture, asm: Assembly-CSharp}
+      data:
+        m_Name: Capture
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        TargetTexture: {fileID: 0}
+    - rid: 901995788566528067
       type: {class: FuguiHDRPCustomPass, ns: Fu, asm: Fugui}
       data:
-        m_Name: Custom Pass
+        m_Name: Fugui
         enabled: 1
         targetColorBuffer: 0
         targetDepthBuffer: 0
@@ -3746,6 +3760,19 @@ MonoBehaviour:
         m_Version: 0
         FuguiShader: {fileID: 4800000, guid: b27657a013856af41bdb687983ef0e57, type: 3}
         CameraLayer: 5
+    - rid: 901995788566528068
+      type: {class: WorldUICustomPass, ns: FlightReLive.Core.WorldUI, asm: Assembly-CSharp}
+      data:
+        m_Name: WorldUI
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        uiLayer:
+          serializedVersion: 2
+          m_Bits: 264
 --- !u!4 &2125856383
 Transform:
   m_ObjectHideFlags: 0

@@ -21,6 +21,9 @@ namespace FlightReLive.Core.WorldUI
         [Header("3D Icons prefabs")]
         [SerializeField] private GameObject _gpsPrefab;
 
+        [Header("Visibility")]
+        [SerializeField] private float _maxVisibleDistance = 100f;
+
         private readonly List<POIEntity> _allPOIs = new List<POIEntity>();
         private readonly Dictionary<(int, int), List<POIEntity>> _tileToPOIs = new Dictionary<(int, int), List<POIEntity>>();
         #endregion
@@ -46,6 +49,11 @@ namespace FlightReLive.Core.WorldUI
             SettingsManager.OnWorldIconScaleChanged += OnWorldIconScaleChanged;
             SettingsManager.OnWorldIconHeightChanged += On3DIconHeightChanged;
             SettingsManager.On3DIconVisibilityChanged += On3DIconVisibilityChanged;
+        }
+        
+        private void LateUpdate()
+        {
+            UpdatePOIVisibility();
         }
 
         private void OnDestroy()
@@ -146,6 +154,31 @@ namespace FlightReLive.Core.WorldUI
             tile.GeoData = null;
             GC.Collect();
         }
+
+        /// <summary>
+        /// Updates visibility of POIs based on distance to camera.
+        /// </summary>
+        internal void UpdatePOIVisibility()
+        {
+            if (_mainCamera == null)
+            {
+                return;
+            }
+
+            Vector3 camPos = _mainCamera.transform.position;
+
+            foreach (POIEntity poi in _allPOIs)
+            {
+                float distance = Vector3.Distance(camPos, poi.transform.position);
+                bool shouldBeVisible = distance <= _maxVisibleDistance;
+
+                if (poi.gameObject.activeSelf != shouldBeVisible)
+                {
+                    poi.gameObject.SetActive(shouldBeVisible);
+                }
+            }
+        }
+
         #endregion
 
         #region CALLBACKS

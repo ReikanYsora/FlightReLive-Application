@@ -2,7 +2,7 @@
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.ProceduralTerrain;
-using FlightReLive.Core.WorldUI;
+using FlightReLive.Core.POI;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
@@ -182,7 +182,7 @@ namespace FlightReLive.Core.Paths
         #endregion
 
         #region METHODS
-        internal void LoadFlightPath(FlightData flightData)
+        internal void Load(FlightData flightData)
         {
             if (flightData == null || flightData.Points == null || flightData.Points.Count < 2)
             {
@@ -227,7 +227,7 @@ namespace FlightReLive.Core.Paths
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                WorldUIManager.Instance.Unload();
+                POIManager.Instance.Unload();
                 _interpolatedToFlightPoint.Clear();
                 _progressionPathFilter.sharedMesh = null;
                 _progressionPathCollider.enabled = false;

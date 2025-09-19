@@ -463,22 +463,6 @@ namespace FlightReLive.Core.Capture
                 {
                     SettingsManager.SaveCaptureEncodedLogo(encodedLogo);
                 }
-
-                // Background
-                bool captureReplaceBackground = SettingsManager.CurrentSettings.CaptureReplaceBackground;
-                if (grid.Toggle("Replace background", ref captureReplaceBackground))
-                {
-                    SettingsManager.SaveCaptureReplaceBackground(captureReplaceBackground);
-                }
-
-                if (captureReplaceBackground)
-                {
-                    Vector4 captureBackgroundColor = (Vector4)SettingsManager.CurrentSettings.CameraCaptureBackgroundColor;
-                    if (grid.ColorPicker("Capture background", ref captureBackgroundColor))
-                    {
-                        SettingsManager.SaveCameraCaptureBackgroundColor(captureBackgroundColor);
-                    }
-                }
             }
         }
         #endregion

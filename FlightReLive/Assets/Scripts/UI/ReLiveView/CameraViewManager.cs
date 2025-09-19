@@ -1,8 +1,7 @@
-﻿using FlightReLive.Core;
-using FlightReLive.Core.Cameras;
+﻿using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Capture;
+using FlightReLive.Core.Environment;
 using FlightReLive.Core.Paths;
-using FlightReLive.Core.Scene;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -171,13 +170,7 @@ namespace FlightReLive.UI.ReLiveView
         private void DrawPostProcessingSettings(float popupButtonWidth, FuLayout layout)
         {
             ImGui.Dummy(Vector2.zero);
-            Fugui.PushDefaultFont();
-            layout.FramedText("Post-Processing");
-            layout.Separator();
-
-            ApplicationManager.Instance.DrawPostProcessingSettings(layout);
-
-            Fugui.PopFont();
+            EnvironmentManager.Instance.DrawPostProcessingSettings(layout);
             ImGui.Dummy(Vector2.zero);
         }
 
@@ -201,7 +194,7 @@ namespace FlightReLive.UI.ReLiveView
             layout.FramedText("Scene Settings");
             layout.Separator();
 
-            SceneManager.Instance.DrawSceneSettings(layout);
+            EnvironmentManager.Instance.DrawSceneSettings(layout);
 
             Fugui.PopFont();
             ImGui.Dummy(Vector2.zero);

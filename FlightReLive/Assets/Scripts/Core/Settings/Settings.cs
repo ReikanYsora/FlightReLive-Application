@@ -22,26 +22,25 @@ namespace FlightReLive.Core.Settings
         public string MapTilerAPIKey;
         public float GlobalScale;
         public Color CameraBackgroundColor;
-        public Color CameraCaptureBackgroundColor;
         public float PathWidth;
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
-        public float WorldIconScale;
-        public float WorldIconHeight;
-        public bool Icon3DVisibility;
+        public float POIScale;
+        public float POIHeight;
+        public float POIVisibilityDistance;
+        public bool POIVisibility;
         public int CaptureResolution;
         public int CaptureEncoder;
         public int CaptureFramerate;
         public bool CaptureEncodedLogo;
         public string CaptureOutputPath;
-        public bool CaptureReplaceBackground;
         public float VignettingIntensity;
-        public bool DepthOfFieldEnabled;
-        public float DepthOfFieldStart;
-        public float DepthOfFieldEnd;
         public string CurrentVersion;
-        public float GlobalIntensity;
+        public float SunIntensity;
+        public float PostExposureIntensity;
+        public float ContrastIntensity;
+        public float SaturationIntensity;
         #endregion
     }
 }

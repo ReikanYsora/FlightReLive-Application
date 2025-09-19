@@ -1,35 +1,33 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace FlightReLive.Core.WorldUI
+namespace FlightReLive.Core.POI
 {
     /// <summary>
     /// Manager responsible for handling 3D world-space UI icons (POIs).
     /// Supports tile-by-tile loading/unloading for dynamic streaming.
     /// </summary>
-    public class WorldUIManager : MonoBehaviour
+    [RequireComponent(typeof(POIPool))]
+    public class POIManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [SerializeField] private Canvas _mainCanvas;
         [SerializeField] private Camera _mainCamera;
-
-        [Header("3D Icons prefabs")]
-        [SerializeField] private GameObject _gpsPrefab;
+        private POIPool _poiPool;
 
         [Header("Visibility")]
-        [SerializeField] private float _maxVisibleDistance = 100f;
+        private float _maxVisibleDistance;
 
         private readonly List<POIEntity> _allPOIs = new List<POIEntity>();
         private readonly Dictionary<(int, int), List<POIEntity>> _tileToPOIs = new Dictionary<(int, int), List<POIEntity>>();
         #endregion
 
         #region PROPERTIES
-        public static WorldUIManager Instance { get; private set; }
+        public static POIManager Instance { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -42,15 +40,18 @@ namespace FlightReLive.Core.WorldUI
             }
 
             Instance = this;
+            _poiPool = GetComponent<POIPool>();
         }
 
         private void Start()
         {
-            SettingsManager.OnWorldIconScaleChanged += OnWorldIconScaleChanged;
-            SettingsManager.OnWorldIconHeightChanged += On3DIconHeightChanged;
-            SettingsManager.On3DIconVisibilityChanged += On3DIconVisibilityChanged;
+            _maxVisibleDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
+            SettingsManager.OnPOIScaleChanged += OnPOIScaleChanged;
+            SettingsManager.OnPOIHeightChanged += OnPOIHeightChanged;
+            SettingsManager.OnPOIVisibilityDistanceChanged += OnPOIVisibilityDistanceChanged;
+            SettingsManager.OnPOIVisibilityChanged += OnPOIVisibilityChanged;
         }
-        
+
         private void LateUpdate()
         {
             UpdatePOIVisibility();
@@ -58,47 +59,14 @@ namespace FlightReLive.Core.WorldUI
 
         private void OnDestroy()
         {
-            SettingsManager.OnWorldIconScaleChanged -= OnWorldIconScaleChanged;
-            SettingsManager.OnWorldIconHeightChanged -= On3DIconHeightChanged;
-            SettingsManager.On3DIconVisibilityChanged -= On3DIconVisibilityChanged;
+            SettingsManager.OnPOIScaleChanged -= OnPOIScaleChanged;
+            SettingsManager.OnPOIHeightChanged -= OnPOIHeightChanged;
+            SettingsManager.OnPOIVisibilityDistanceChanged -= OnPOIVisibilityDistanceChanged;
+            SettingsManager.OnPOIVisibilityChanged -= OnPOIVisibilityChanged;
         }
         #endregion
 
         #region METHODS
-
-        /// <summary>
-        /// Unloads all POIs from the scene.
-        /// </summary>
-        internal void Unload()
-        {
-            foreach (POIEntity poi in _allPOIs)
-            {
-                Destroy(poi.gameObject);
-            }
-
-            _allPOIs.Clear();
-            _tileToPOIs.Clear();
-        }
-
-        /// <summary>
-        /// Unloads only POIs from a specific tile.
-        /// </summary>
-        internal void UnloadTile(TileDefinition tile)
-        {
-            (int, int) key = (tile.X, tile.Y);
-
-            if (_tileToPOIs.TryGetValue(key, out List<POIEntity> pois))
-            {
-                foreach (POIEntity poi in pois)
-                {
-                    Destroy(poi.gameObject);
-                    _allPOIs.Remove(poi);
-                }
-
-                _tileToPOIs.Remove(key);
-            }
-        }
-
         /// <summary>
         /// Loads all POIs from a specific tile.
         /// </summary>
@@ -140,10 +108,10 @@ namespace FlightReLive.Core.WorldUI
                 Vector3 gpsVector3 = new Vector3((float)gpsData.Latitude, altitude, (float)gpsData.Longitude);
                 Vector3 worldPos = flightData.ConvertGPSPositionToWorld(gpsVector3);
 
-                GameObject poiGO = GameObject.Instantiate(_gpsPrefab, _mainCanvas.transform);
+                GameObject poiGO = _poiPool.Get();
                 poiGO.transform.position = worldPos;
                 POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
-                poiEntity.Inialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.WorldIconHeight);
+                poiEntity.Inialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.POIHeight);
                 _allPOIs.Add(poiEntity);
                 createdForTile.Add(poiEntity);
             }
@@ -152,7 +120,6 @@ namespace FlightReLive.Core.WorldUI
 
             //Cleanup
             tile.GeoData = null;
-            GC.Collect();
         }
 
         /// <summary>
@@ -179,10 +146,23 @@ namespace FlightReLive.Core.WorldUI
             }
         }
 
+        /// <summary>
+        /// Unloads all POIs from the scene.
+        /// </summary>
+        internal void Unload()
+        {
+            foreach (POIEntity poi in _allPOIs)
+            {
+                _poiPool.Return(poi.gameObject);
+            }
+
+            _allPOIs.Clear();
+            _tileToPOIs.Clear();
+        }
         #endregion
 
         #region CALLBACKS
-        private void OnWorldIconScaleChanged(float value)
+        private void OnPOIScaleChanged(float value)
         {
             foreach (POIEntity poi in _allPOIs)
             {
@@ -190,19 +170,24 @@ namespace FlightReLive.Core.WorldUI
             }
         }
 
-        private void On3DIconVisibilityChanged(bool visibility)
-        {
-            foreach (POIEntity poi in _allPOIs)
-            {
-                poi.gameObject.SetActive(visibility);
-            }
-        }
-
-        private void On3DIconHeightChanged(float height)
+        private void OnPOIHeightChanged(float height)
         {
             foreach (POIEntity poi in _allPOIs)
             {
                 poi.ManualElevation = height;
+            }
+        }
+
+        private void OnPOIVisibilityDistanceChanged(float distance)
+        {
+            _maxVisibleDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
+        }
+
+        private void OnPOIVisibilityChanged(bool visibility)
+        {
+            foreach (POIEntity poi in _allPOIs)
+            {
+                poi.gameObject.SetActive(visibility);
             }
         }
         #endregion
@@ -210,28 +195,34 @@ namespace FlightReLive.Core.WorldUI
         #region UI
         internal void DisplayWorldUISettings(FuGrid grid)
         {
-            bool icon3DEnabled = SettingsManager.CurrentSettings.Icon3DVisibility;
+            bool poiVisibility = SettingsManager.CurrentSettings.POIVisibility;
 
-            if (grid.Toggle("Show 3D Icons", ref icon3DEnabled))
+            if (grid.Toggle("Show POI", ref poiVisibility))
             {
-                SettingsManager.Save3DIconVisibility(icon3DEnabled);
+                SettingsManager.SavePOIVisibility(poiVisibility);
             }
 
-            if (!icon3DEnabled)
+            if (!poiVisibility)
             {
                 grid.DisableNextElements();
             }
 
-            float worldUiScale = SettingsManager.CurrentSettings.WorldIconScale;
-            if (grid.Slider("3D Icons", ref worldUiScale, 0.5f, 1f, 0.01f))
+            float poiScale = SettingsManager.CurrentSettings.POIScale;
+            if (grid.Slider("POI scale", ref poiScale, 0.5f, 1f, 0.01f, format: "%.01f"))
             {
-                SettingsManager.SaveWorldIconScale(worldUiScale);
+                SettingsManager.SavePOIScale(poiScale);
             }
 
-            float worldIconHeight = SettingsManager.CurrentSettings.WorldIconHeight;
-            if (grid.Slider("3D Icons Height", ref worldIconHeight, 0f, 10f, 0.1f))
+            float poiHeight = SettingsManager.CurrentSettings.POIHeight;
+            if (grid.Slider("POI height", ref poiHeight, 0f, 10f, 0.1f, format: "%.1f"))
             {
-                SettingsManager.SaveWorldIconHeight(worldIconHeight);
+                SettingsManager.SavePOIHeight(poiHeight);
+            }
+
+            float poiVisibilityDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
+            if (grid.Slider("POI distance", ref poiVisibilityDistance, 100f, 2000f, 0.1f, format: "%.1f"))
+            {
+                SettingsManager.SavePOIVisibilityDistance(poiVisibilityDistance);
             }
         }
         #endregion

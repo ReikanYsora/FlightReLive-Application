@@ -2,7 +2,7 @@ using FlightReLive.Core.Settings;
 using TMPro;
 using UnityEngine;
 
-namespace FlightReLive.Core.WorldUI
+namespace FlightReLive.Core.POI
 {
     public class POIEntity : MonoBehaviour
     {
@@ -66,14 +66,14 @@ namespace FlightReLive.Core.WorldUI
             _lineRenderer.material = _lineMaterial;
             _lineRenderer.textureMode = LineTextureMode.Tile;
             _lineRenderer.alignment = LineAlignment.TransformZ;
-            _lineRenderer.startWidth = 0.1f;
-            _lineRenderer.endWidth = 0.1f;
+            _lineRenderer.startWidth = 0.2f;
+            _lineRenderer.endWidth = 0.2f;
             _lineRenderer.numCapVertices = 0;
             _lineRenderer.numCornerVertices = 0;
             _lineRenderer.positionCount = 2;
             _parentOrigin = parentPosition;
-            ScaleFactor = SettingsManager.CurrentSettings.WorldIconScale / 100f;
-            gameObject.SetActive(SettingsManager.CurrentSettings.Icon3DVisibility);
+            ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
+            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
             ManualElevation = -1;
         }
 
@@ -85,15 +85,15 @@ namespace FlightReLive.Core.WorldUI
             _lineRenderer.material = _lineMaterial;
             _lineRenderer.textureMode = LineTextureMode.Tile;
             _lineRenderer.alignment = LineAlignment.TransformZ;
-            _lineRenderer.startWidth = 0.1f;
-            _lineRenderer.endWidth = 0.1f;
+            _lineRenderer.startWidth = 0.2f;
+            _lineRenderer.endWidth = 0.2f;
             _lineRenderer.numCapVertices = 0;
             _lineRenderer.numCornerVertices = 0;
             _lineRenderer.positionCount = 2;
             _parentOrigin = parentPosition;
-            ScaleFactor = SettingsManager.CurrentSettings.WorldIconScale / 100f;
+            ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
             _randomOffset = Random.Range(0, _randomElevationRange);
-            gameObject.SetActive(SettingsManager.CurrentSettings.Icon3DVisibility);
+            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
             ManualElevation = height;
         }
 
@@ -105,10 +105,10 @@ namespace FlightReLive.Core.WorldUI
             }
 
             float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
-            float t = Mathf.InverseLerp(_maxVisibleDistance, _minVisibleDistance, distance); // 0 = loin, 1 = proche
+            float t = Mathf.InverseLerp(_maxVisibleDistance, _minVisibleDistance, distance); // 0 = far, 1 = near
             float alpha = Mathf.Clamp01(t);
 
-            // LineRenderer
+            //LineRenderer
             if (_lineRenderer != null && _lineRenderer.material.HasProperty("_Color"))
             {
                 Color color = _lineRenderer.material.color;
@@ -116,7 +116,7 @@ namespace FlightReLive.Core.WorldUI
                 _lineRenderer.material.color = color;
             }
 
-            // Image
+            //Image
             if (_image != null)
             {
                 Renderer iconRenderer = _image.GetComponent<Renderer>();
@@ -128,7 +128,7 @@ namespace FlightReLive.Core.WorldUI
                 }
             }
 
-            // Text
+            //Text
             if (_text != null)
             {
                 Color textColor = _text.color;
@@ -180,7 +180,7 @@ namespace FlightReLive.Core.WorldUI
 
             if (_text != null)
             {
-                // Utiliser l'échelle réelle dans le monde
+                //Use world scale
                 float scaleFactor = _image.lossyScale.y;
                 Vector3 textOffset = imageUpDir * (_textYOffsetFromPoint * scaleFactor);
                 _text.transform.position = imagePosition + textOffset;
@@ -203,7 +203,7 @@ namespace FlightReLive.Core.WorldUI
             _lineRenderer.SetPosition(0, start);
             _lineRenderer.SetPosition(1, end);
 
-            // Adapter l'épaisseur au scale
+            //Adapte witdh from scale
             float scale = _image.localScale.x;
             _lineRenderer.startWidth = scale / 5f;
             _lineRenderer.endWidth = scale / 5f;

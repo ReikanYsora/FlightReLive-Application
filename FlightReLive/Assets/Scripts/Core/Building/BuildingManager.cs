@@ -22,7 +22,7 @@ namespace FlightReLive.Core.Building
         #region CONSTANTS
         private const float MIN_BUILDING_HEIGHT = 2.5f;
         private const float MAX_BUILDING_HEIGHT = 4f;
-        private const float BOTTOM_EXTRUSION = 1f;
+        private const float BOTTOM_EXTRUSION = 3f;
         #endregion
 
         #region ATTRIBUTES
@@ -90,25 +90,6 @@ namespace FlightReLive.Core.Building
 
             _buildings.Clear();
             _tileToBuildings.Clear();
-        }
-
-        /// <summary>
-        /// Unloads only the buildings from a specific tile.
-        /// </summary>
-        internal void UnloadTile(TileDefinition tile)
-        {
-            (int, int) key = (tile.X, tile.Y);
-
-            if (_tileToBuildings.TryGetValue(key, out List<GameObject> buildings))
-            {
-                foreach (GameObject building in buildings)
-                {
-                    _buildingPool.Return(building);
-                    _buildings.Remove(building);
-                }
-
-                _tileToBuildings.Remove(key);
-            }
         }
 
         /// <summary>
@@ -180,18 +161,23 @@ namespace FlightReLive.Core.Building
         {
             List<Vector2> contour = new List<Vector2>();
             const ulong extent = 4096;
-
-            GPSBoundingBox bbox = MapTools.GetBoundingBoxFromTileXY(tileX, tileY);
+            int zoom = MapTools.ZOOM_LEVEL_BUILDING;
 
             for (int i = 0; i < ring.Count; i++)
             {
                 Point2d<int> point = ring[i];
 
-                float normalizedX = point.X / (float)extent;
-                float normalizedY = point.Y / (float)extent;
+                //Pixel center offset
+                float normalizedX = (point.X + 0.5f) / extent;
+                float normalizedY = (point.Y + 0.5f) / extent;
 
-                double lat = bbox.MaxLatitude - normalizedY * (bbox.MaxLatitude - bbox.MinLatitude);
-                double lon = bbox.MinLongitude + normalizedX * (bbox.MaxLongitude - bbox.MinLongitude);
+                //Mercator inverse
+                double mercX = (tileX + normalizedX) / Math.Pow(2, zoom);
+                double mercY = (tileY + normalizedY) / Math.Pow(2, zoom);
+
+                double lon = mercX * 360.0 - 180.0;
+                double n = Math.PI - 2.0 * Math.PI * mercY;
+                double lat = Math.Atan(Math.Sinh(n)) * (180.0 / Math.PI);
 
                 Vector3 gps = new Vector3((float)lat, 0f, (float)lon);
                 Vector3 worldPos = flight.ConvertGPSPositionToWorld(gps);
@@ -208,7 +194,7 @@ namespace FlightReLive.Core.Building
         private FlightGPSData ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY)
         {
             const ulong extent = 4096;
-            GPSBoundingBox bbox = MapTools.GetBoundingBoxFromTileXY(tileX, tileY);
+            int zoom = MapTools.ZOOM_LEVEL_BUILDING;
 
             double sumLat = 0.0;
             double sumLon = 0.0;
@@ -217,11 +203,15 @@ namespace FlightReLive.Core.Building
             {
                 Point2d<int> point = ring[i];
 
-                float normalizedX = point.X / (float)extent;
-                float normalizedY = point.Y / (float)extent;
+                float normalizedX = (point.X + 0.5f) / extent;
+                float normalizedY = (point.Y + 0.5f) / extent;
 
-                double lat = bbox.MaxLatitude - normalizedY * (bbox.MaxLatitude - bbox.MinLatitude);
-                double lon = bbox.MinLongitude + normalizedX * (bbox.MaxLongitude - bbox.MinLongitude);
+                double mercX = (tileX + normalizedX) / Math.Pow(2, zoom);
+                double mercY = (tileY + normalizedY) / Math.Pow(2, zoom);
+
+                double lon = mercX * 360.0 - 180.0;
+                double n = Math.PI - 2.0 * Math.PI * mercY;
+                double lat = Math.Atan(Math.Sinh(n)) * (180.0 / Math.PI);
 
                 sumLat += lat;
                 sumLon += lon;
@@ -232,6 +222,7 @@ namespace FlightReLive.Core.Building
 
             return new FlightGPSData(avgLat, avgLon);
         }
+
 
         /// <summary>
         /// Extrudes a 2D contour into a 3D building mesh (roof + walls).

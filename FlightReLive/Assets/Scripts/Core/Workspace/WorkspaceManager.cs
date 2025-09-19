@@ -124,7 +124,7 @@ namespace FlightReLive.Core.Workspace
 
             string[] videoFiles = Directory.GetFiles(workspacePath, "*.mp4");
 
-            int cpuCores = Environment.ProcessorCount;
+            int cpuCores = System.Environment.ProcessorCount;
             int fileCount = videoFiles.Length;
             int maxConcurrency = Math.Clamp(fileCount >= cpuCores ? cpuCores : fileCount, 2, 16);
             SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrency);

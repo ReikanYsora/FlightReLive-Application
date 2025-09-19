@@ -1,11 +1,11 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace FlightReLive.Core.ProceduralTerrain
@@ -36,18 +36,34 @@ namespace FlightReLive.Core.ProceduralTerrain
         #endregion
 
         #region JOB STRUCTS
-
         [BurstCompile]
-        private struct MinMaxHeightJob : IJobParallelFor
+        private struct MinMaxHeightJob : IJob
         {
             [ReadOnly] public NativeArray<float> heights;
-            [NativeDisableParallelForRestriction] public NativeArray<float> minMax; // [0] = min, [1] = max
+            public NativeArray<float> minMax;
 
-            public void Execute(int index)
+            public void Execute()
             {
-                float h = heights[index];
-                if (h < minMax[0]) minMax[0] = h;
-                if (h > minMax[1]) minMax[1] = h;
+                float min = float.MaxValue;
+                float max = float.MinValue;
+
+                for (int i = 0; i < heights.Length; i++)
+                {
+                    float h = heights[i];
+
+                    if (h < min)
+                    {
+                        min = h;
+                    }
+
+                    if (h > max)
+                    {
+                        max = h;
+                    }
+                }
+
+                minMax[0] = min;
+                minMax[1] = max;
             }
         }
 
@@ -80,34 +96,52 @@ namespace FlightReLive.Core.ProceduralTerrain
         }
 
         [BurstCompile]
-        private struct TileCopyJob : IJobParallelFor
+        private struct ResampleHeightmapJob : IJobParallelForBatch
         {
-            [ReadOnly] public NativeArray<Color32> srcPixels;
-            [WriteOnly] public NativeArray<Color32> globalPixels;
+            [ReadOnly] public NativeArray<float> src;
+            public int srcW;
+            public int srcH;
+            public int newW;
+            public int newH;
 
-            public int texTileW;
-            public int texTileH;
-            public int totalTexW;
-            public int localX;
-            public int localY;
+            [WriteOnly] public NativeArray<float> dst;
 
-            public void Execute(int index)
+            public void Execute(int startIndex, int count)
             {
-                int x = index % texTileW;
-                int y = index / texTileW;
+                float scaleX = (srcW - 1f) / (newW - 1f);
+                float scaleY = (srcH - 1f) / (newH - 1f);
 
-                int destRow = localY + y;
-                int destCol = localX + x;
-                int dstIndex = destRow * totalTexW + destCol;
-                int srcIndex = y * texTileW + x;
+                for (int i = startIndex; i < startIndex + count; i++)
+                {
+                    int x = i % newW;
+                    int y = i / newW;
 
-                globalPixels[dstIndex] = srcPixels[srcIndex];
+                    float gx = x * scaleX;
+                    float gy = y * scaleY;
+
+                    int x0 = (int)gx;
+                    int x1 = math.min(x0 + 1, srcW - 1);
+                    int y0 = (int)gy;
+                    int y1 = math.min(y0 + 1, srcH - 1);
+
+                    float tx = gx - x0;
+                    float ty = gy - y0;
+
+                    float a = src[y0 * srcW + x0];
+                    float b = src[y0 * srcW + x1];
+                    float c = src[y1 * srcW + x0];
+                    float d = src[y1 * srcW + x1];
+
+                    float ab = math.lerp(a, b, tx);
+                    float cd = math.lerp(c, d, tx);
+                    dst[i] = math.lerp(ab, cd, ty);
+                }
             }
         }
         #endregion
 
         #region METHODS
-        internal void GenerateTerrain(FlightData flightData)
+        internal void Load(FlightData flightData)
         {
             List<TileDefinition> tiles = flightData.MapDefinition.GetSortedTiles();
 
@@ -133,22 +167,24 @@ namespace FlightReLive.Core.ProceduralTerrain
             int totalTexW = tilesX * (texTileW - 1) + 1;
             int totalTexH = tilesY * (texTileH - 1) + 1;
 
-            //Get min / max altitude
-            List<float> allHeights = new List<float>();
+            //Fill height array
+            int totalSamples = tiles.Count * resTile * resTile;
+            NativeArray<float> heightArray = new NativeArray<float>(totalSamples, Allocator.TempJob);
+            int index = 0;
+
             foreach (var tile in tiles)
             {
                 float[,] src = tile.HeightMap;
-
                 for (int y = 0; y < resTile; y++)
                 {
                     for (int x = 0; x < resTile; x++)
                     {
-                        allHeights.Add(src[x, y]);
+                        heightArray[index++] = src[x, y];
                     }
                 }
             }
 
-            NativeArray<float> heightArray = new NativeArray<float>(allHeights.ToArray(), Allocator.TempJob);
+            //Min/max scan
             NativeArray<float> minMax = new NativeArray<float>(2, Allocator.TempJob);
             minMax[0] = float.MaxValue;
             minMax[1] = float.MinValue;
@@ -159,7 +195,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 minMax = minMax
             };
 
-            JobHandle minMaxHandle = minMaxJob.Schedule(heightArray.Length, 64);
+            JobHandle minMaxHandle = minMaxJob.Schedule();
             minMaxHandle.Complete();
 
             float minHVal = minMax[0];
@@ -171,7 +207,6 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             //Merge heightmaps
             NativeArray<float> mergedFlat = new NativeArray<float>(totalW * totalH, Allocator.TempJob);
-
             foreach (var tile in tiles)
             {
                 int localX = (tile.X - minX) * (resTile - 1);
@@ -179,6 +214,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 float[,] src = tile.HeightMap;
 
                 NativeArray<float> tileFlat = new NativeArray<float>(resTile * resTile, Allocator.TempJob);
+
                 for (int y = 0; y < resTile; y++)
                 {
                     for (int x = 0; x < resTile; x++)
@@ -205,8 +241,9 @@ namespace FlightReLive.Core.ProceduralTerrain
                 tileFlat.Dispose();
             }
 
-            //Convert NativeArray<float> to float[,]
+            //Convert to float[,]
             float[,] merged = new float[totalH, totalW];
+
             for (int y = 0; y < totalH; y++)
             {
                 for (int x = 0; x < totalW; x++)
@@ -218,43 +255,52 @@ namespace FlightReLive.Core.ProceduralTerrain
             mergedFlat.Dispose();
 
             //Merge satellite texture
-            Color32[] globalPixels = new Color32[totalTexW * totalTexH];
-            foreach (TileDefinition tile in tiles)
-            {
-                int localX = (tile.X - minX) * (texTileW - 1);
-                int localY = (maxY - tile.Y) * (texTileH - 1);
+            Texture2D globalSatellite = CombineSatelliteTiles(tiles, texTileW, texTileH);
 
-                Texture2D temp = tile.SatelliteTexture;
-                temp.filterMode = FilterMode.Trilinear;
-                temp.Apply(false, false);
-
-                Color32[] srcPixels = temp.GetPixels32();
-                for (int y = 0; y < texTileH; y++)
-                {
-                    int destRow = localY + y;
-                    for (int x = 0; x < texTileW; x++)
-                    {
-                        int destCol = localX + x;
-                        int dstIndex = destRow * totalTexW + destCol;
-                        int srcIndex = y * texTileW + x;
-                        globalPixels[dstIndex] = srcPixels[srcIndex];
-                    }
-                }
-
-                GameObject.Destroy(temp);
-            }
-
-            Texture2D globalSatellite = new Texture2D(totalTexW, totalTexH, TextureFormat.RGB24, false, false);
-            globalSatellite.SetPixels32(globalPixels);
-            globalSatellite.Apply();
-
-            //Terrain
+            //Terrain setup
             int longest = Mathf.Max(totalW, totalH);
             int terrainRes = Mathf.NextPowerOfTwo(longest - 1) + 1;
 
             if (terrainRes != totalW || terrainRes != totalH)
             {
-                merged = ResampleHeightsBilinear(merged, totalW, totalH, terrainRes, terrainRes);
+                var swResample = System.Diagnostics.Stopwatch.StartNew();
+
+                NativeArray<float> srcFlat = new NativeArray<float>(totalW * totalH, Allocator.TempJob);
+                for (int y = 0; y < totalH; y++)
+                {
+                    for (int x = 0; x < totalW; x++)
+                    {
+                        srcFlat[y * totalW + x] = merged[y, x];
+                    }
+                }
+
+                NativeArray<float> dstFlat = new NativeArray<float>(terrainRes * terrainRes, Allocator.TempJob);
+
+                ResampleHeightmapJob job = new ResampleHeightmapJob
+                {
+                    src = srcFlat,
+                    srcW = totalW,
+                    srcH = totalH,
+                    newW = terrainRes,
+                    newH = terrainRes,
+                    dst = dstFlat
+                };
+
+                JobHandle handle = job.ScheduleBatch(dstFlat.Length, 128);
+                handle.Complete();
+
+                float[,] resampled = new float[terrainRes, terrainRes];
+                for (int y = 0; y < terrainRes; y++)
+                {
+                    for (int x = 0; x < terrainRes; x++)
+                    {
+                        resampled[y, x] = dstFlat[y * terrainRes + x];
+                    }
+                }
+
+                srcFlat.Dispose();
+                dstFlat.Dispose();
+                merged = resampled;
                 totalW = totalH = terrainRes;
             }
 
@@ -268,13 +314,14 @@ namespace FlightReLive.Core.ProceduralTerrain
                 heightmapResolution = totalW,
                 size = new Vector3(sizeX, sizeY, sizeZ)
             };
-            terrainData.SetHeights(0, 0, merged);
+            terrainData.SetHeightsDelayLOD(0, 0, merged);
 
             _terrain = Terrain.CreateTerrainGameObject(terrainData);
             Terrain terrain = _terrain.GetComponent<Terrain>();
-            _terrain.name = "GlobalTerrain";
+            _terrain.name = "Prodecural Terrain";
             _terrain.transform.SetParent(transform, false);
 
+            //Positioning
             float centerTileX = (minX + maxX) / 2.0f;
             float centerTileY = (minY + maxY) / 2.0f;
 
@@ -288,12 +335,11 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             float offsetY = minHVal * flightData.GlobalScale;
             _terrain.transform.localPosition = new Vector3(offsetX, offsetY, -offsetZ);
-            Texture2D neutralMask = GenerateNeutralMaskMap(globalSatellite.width, globalSatellite.height);
 
+            //Layers
             TerrainLayer satelliteLayer = new TerrainLayer
             {
                 diffuseTexture = globalSatellite,
-                maskMapTexture = neutralMask,
                 tileSize = new Vector2(terrainData.size.x, terrainData.size.z)
             };
 
@@ -302,32 +348,33 @@ namespace FlightReLive.Core.ProceduralTerrain
                 diffuseTexture = Texture2D.blackTexture,
                 normalMapTexture = _detailNormalMap,
                 maskMapTexture = _detailMaskMap,
-                tileSize = new Vector2(1000f, 1000f)
+                tileSize = new Vector2(100f, 100f)
             };
 
             terrain.terrainData.terrainLayers = new TerrainLayer[] { satelliteLayer, detailLayer };
 
+            //Alphamaps
             int alphaRes = terrain.terrainData.alphamapResolution;
             float[,,] maps = new float[alphaRes, alphaRes, 2];
+            float[] weights = new float[] { 0.80f, 0.20f };
 
             for (int y = 0; y < alphaRes; y++)
             {
                 for (int x = 0; x < alphaRes; x++)
                 {
-                    maps[y, x, 0] = 0.80f;
-                    maps[y, x, 1] = 0.20f;
+                    maps[y, x, 0] = weights[0];
+                    maps[y, x, 1] = weights[1];
                 }
             }
 
             terrain.terrainData.SetAlphamaps(0, 0, maps);
+            terrainData.SyncHeightmap();
 
             //Cleanup
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
             {
                 tile.SatelliteTexture = null;
             }
-
-            GC.Collect();
         }
 
         internal void Unload()
@@ -338,52 +385,46 @@ namespace FlightReLive.Core.ProceduralTerrain
             });
         }
 
-        private Texture2D GenerateNeutralMaskMap(int width, int height)
+        private static Texture2D CombineSatelliteTiles(List<TileDefinition> tiles, int texTileW, int texTileH)
         {
-            Texture2D maskMap = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
-            Color32[] pixels = new Color32[width * height];
+            int minX = tiles.Min(t => t.X);
+            int maxX = tiles.Max(t => t.X);
+            int minY = tiles.Min(t => t.Y);
+            int maxY = tiles.Max(t => t.Y);
 
-            for (int i = 0; i < pixels.Length; i++)
+            int tileCountX = maxX - minX + 1;
+            int tileCountY = maxY - minY + 1;
+
+            int totalTexW = tileCountX * texTileW;
+            int totalTexH = tileCountY * texTileH;
+
+            RenderTexture atlasRT = new RenderTexture(totalTexW, totalTexH, 0, RenderTextureFormat.ARGB32);
+            atlasRT.Create();
+
+            foreach (TileDefinition tile in tiles)
             {
-                pixels[i] = new Color32(0, 255, 255, 0);
+                int localX = (tile.X - minX) * texTileW;
+                int localY = (maxY - tile.Y) * texTileH;
+
+                Texture2D src = tile.SatelliteTexture;
+                src.filterMode = FilterMode.Trilinear;
+                src.Apply(false, false);
+
+                RenderTexture tempRT = RenderTexture.GetTemporary(texTileW, texTileH, 0, RenderTextureFormat.ARGB32);
+                Graphics.Blit(src, tempRT);
+                Graphics.CopyTexture(tempRT, 0, 0, 0, 0, texTileW, texTileH, atlasRT, 0, 0, localX, localY);
+                RenderTexture.ReleaseTemporary(tempRT);
             }
 
-            maskMap.SetPixels32(pixels);
-            maskMap.Apply();
+            Texture2D finalTex = new Texture2D(totalTexW, totalTexH, TextureFormat.RGB24, false);
+            RenderTexture.active = atlasRT;
+            finalTex.ReadPixels(new Rect(0, 0, totalTexW, totalTexH), 0, 0);
+            finalTex.Apply();
 
-            return maskMap;
-        }
+            RenderTexture.active = null;
+            atlasRT.Release();
 
-        private static float[,] ResampleHeightsBilinear(float[,] src, int srcW, int srcH, int newW, int newH)
-        {
-            float[,] dst = new float[newH, newW];
-
-            for (int y = 0; y < newH; y++)
-            {
-                float gy = (y / (float)(newH - 1)) * (srcH - 1);
-                int y0 = Mathf.FloorToInt(gy);
-                int y1 = Mathf.Min(y0 + 1, srcH - 1);
-                float ty = gy - y0;
-
-                for (int x = 0; x < newW; x++)
-                {
-                    float gx = (x / (float)(newW - 1)) * (srcW - 1);
-                    int x0 = Mathf.FloorToInt(gx);
-                    int x1 = Mathf.Min(x0 + 1, srcW - 1);
-                    float tx = gx - x0;
-
-                    float a = src[y0, x0];
-                    float b = src[y0, x1];
-                    float c = src[y1, x0];
-                    float d = src[y1, x1];
-
-                    float ab = Mathf.Lerp(a, b, tx);
-                    float cd = Mathf.Lerp(c, d, tx);
-                    dst[y, x] = Mathf.Lerp(ab, cd, ty);
-                }
-            }
-
-            return dst;
+            return finalTex;
         }
         #endregion
     }

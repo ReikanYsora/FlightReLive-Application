@@ -1,17 +1,24 @@
-﻿using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Building;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.POI;
+using FlightReLive.UI.VideoPlayer;
 using Fu.Framework;
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
-namespace FlightReLive.Core.Rendering
+namespace FlightReLive.Core.Environment
 {
-    public class SunManager : MonoBehaviour
+    public class EnvironmentManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const float BASE_LIGHT_LUX = 10000f;
+        #endregion
+
         #region ATTRIBUTES
-        [Header("Scene refs")]
+        [Header("Light & Camera")]
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _mainCamera;
 
@@ -24,13 +31,13 @@ namespace FlightReLive.Core.Rendering
         private PhysicallyBasedSky _sky;
         private Fog _fog;
         private VolumetricClouds _clouds;
-        private DepthOfField _dof;
         private ContactShadows _contactShadows;
         private ColorAdjustments _colorAdjustments;
+        private Vignette _vignette;
         #endregion
 
         #region PROPERTIES
-        internal static SunManager Instance { get; private set; }
+        internal static EnvironmentManager Instance { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -55,20 +62,28 @@ namespace FlightReLive.Core.Rendering
 
         private void Start()
         {
-            SettingsManager.OnGlobalIntensityChanged += OnGlobalIntensityChanged;
+            SettingsManager.OnSunIntensityChanged += OnGlobalIntensityChanged;
+            SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
+            SettingsManager.OnPostExposureIntensityChanged += OnPostExposureIntensityChanged;
+            SettingsManager.OnContrastIntensityChanged += OnContrastIntensityChanged;
+            SettingsManager.OnSaturationIntensityChanged += OnSaturationIntensityChanged;
         }
 
         private void OnDestroy()
         {
-            SettingsManager.OnGlobalIntensityChanged -= OnGlobalIntensityChanged;
+            SettingsManager.OnSunIntensityChanged -= OnGlobalIntensityChanged;
+            SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
+            SettingsManager.OnPostExposureIntensityChanged -= OnPostExposureIntensityChanged;
+            SettingsManager.OnContrastIntensityChanged -= OnContrastIntensityChanged;
+            SettingsManager.OnSaturationIntensityChanged -= OnSaturationIntensityChanged;
         }
         #endregion
 
         #region METHODS
         /// <summary>
-        /// Configure and show HDRP sky/fog/clouds, orient the sun, and ensure camera renders the sky.
+        /// Configure and show HDRP sky/fog/clouds, orient the sun, and ensure camera renders the sky and all environment settings
         /// </summary>
-        internal void LoadFlightRendering(FlightData flightData)
+        internal void Load(FlightData flightData)
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
@@ -80,6 +95,16 @@ namespace FlightReLive.Core.Rendering
                     ConfigureSceneRendering(flightDateUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
                 }
             });
+        }
+
+        /// <summary>
+        /// Configure scene rendering (sun, volume profile)
+        /// </summary>
+        private void ConfigureSceneRendering(DateTime utcTime, double latitude, double longitude)
+        {
+            SunPosition sun = CalculateSunPosition(utcTime, latitude, longitude);
+            CreateVolumeProfile(utcTime, sun);
+            OrientMainLight(sun);
         }
 
         private void UninitializedVolumeProfile()
@@ -114,9 +139,9 @@ namespace FlightReLive.Core.Rendering
             _sky = null;
             _fog = null;
             _clouds = null;
-            _dof = null;
             _contactShadows = null;
             _colorAdjustments = null;
+            _vignette = null;
             RenderSettings.sun = null;
         }
 
@@ -129,23 +154,6 @@ namespace FlightReLive.Core.Rendering
             {
                 UninitializedVolumeProfile();
             });
-        }
-
-        /// <summary>
-        /// Configure scene rendering (sun, volume profile)
-        /// </summary>
-        public void ConfigureSceneRendering(DateTime utcTime, double latitude, double longitude)
-        {
-            SunPosition sun = CalculateSunPosition(utcTime, latitude, longitude);
-            CreateVolumeProfile(utcTime, sun);
-            OrientMainLight(sun);
-        }
-
-        public struct SunPosition
-        {
-            public float Elevation;
-            public float Azimuth;
-            public float AzimuthPhysical;
         }
 
         public static SunPosition CalculateSunPosition(DateTime utcTime, double latitude, double longitude)
@@ -189,9 +197,9 @@ namespace FlightReLive.Core.Rendering
                 _sky = _globalVolumeProfile.Add<PhysicallyBasedSky>(true);
                 _fog = _globalVolumeProfile.Add<Fog>(true);
                 _clouds = _globalVolumeProfile.Add<VolumetricClouds>(true);
-                _dof = _globalVolumeProfile.Add<DepthOfField>(true);
                 _contactShadows = _globalVolumeProfile.Add<ContactShadows>(true);
                 _colorAdjustments = _globalVolumeProfile.Add<ColorAdjustments>(true);
+                _vignette = _globalVolumeProfile.Add<Vignette>(true);
             }
 
             if (_mainCamera != null)
@@ -266,6 +274,7 @@ namespace FlightReLive.Core.Rendering
                 float horizonFog = Mathf.Clamp01(Mathf.InverseLerp(45f, 0f, sun.Elevation));
 
                 _fog.active = true;
+                _fog.enabled.Override(true);
                 _fog.enableVolumetricFog.Override(true);
                 _fog.meanFreePath.Override(5000f);
                 _fog.baseHeight.Override(0f);
@@ -273,7 +282,6 @@ namespace FlightReLive.Core.Rendering
                 _fog.maxFogDistance.Override(5000f);
                 _fog.colorMode.Override(FogColorMode.SkyColor);
                 _fog.tint.Override(fogTint);
-                _fog.enableVolumetricFog.Override(true);
                 _fog.albedo.Override(fogTint);
                 _fog.globalLightProbeDimmer.Override(1f);
                 _fog.volumetricFogBudget = 64f;
@@ -312,6 +320,7 @@ namespace FlightReLive.Core.Rendering
                 _clouds.cloudControl.Override(VolumetricClouds.CloudControl.Simple);
                 _clouds.cloudSimpleMode.Override(VolumetricClouds.CloudSimpleMode.Performance);
                 _clouds.cloudPreset = VolumetricClouds.CloudPresets.Sparse;
+                _clouds.shadows.Override(true);
                 _clouds.shapeFactor.Override(0.95f);
                 _clouds.shapeScale.Override(5f);
                 _clouds.erosionScale.Override(107f);
@@ -320,15 +329,6 @@ namespace FlightReLive.Core.Rendering
                 _clouds.ambientLightProbeDimmer.Override(1f);
                 _clouds.sunLightDimmer.Override(1f);
                 _clouds.scatteringTint.Override(scatterTint);
-            }
-
-            if (_dof != null)
-            {
-                _dof.focusMode.Override(DepthOfFieldMode.Manual);
-                _dof.nearFocusStart.overrideState = false;
-                _dof.nearFocusEnd.overrideState = false;
-                _dof.farFocusStart.Override(500f);
-                _dof.farFocusEnd.Override(5000f);
             }
 
             if (_contactShadows != null)
@@ -340,13 +340,33 @@ namespace FlightReLive.Core.Rendering
                 _contactShadows.distanceScaleFactor.Override(0.65f);
                 _contactShadows.minDistance.Override(0f);
                 _contactShadows.maxDistance.Override(1500f);
+                _contactShadows.fadeInDistance.overrideState = false;
+                _contactShadows.fadeDistance.overrideState = false;
                 _contactShadows.opacity.Override(0.9f);
+                _contactShadows.rayBias.overrideState = false;
+                _contactShadows.thicknessScale.overrideState = false;
+                _contactShadows.sampleCount = 10;
             }
 
             if (_colorAdjustments != null)
             {
-                _colorAdjustments.contrast.Override(40f);
-                _colorAdjustments.saturation.Override(1.1f);
+                _colorAdjustments.postExposure.Override(SettingsManager.CurrentSettings.PostExposureIntensity);
+                _colorAdjustments.contrast.Override(SettingsManager.CurrentSettings.ContrastIntensity);
+                _colorAdjustments.colorFilter.overrideState = false;
+                _colorAdjustments.hueShift.overrideState = false;
+                _colorAdjustments.saturation.Override(SettingsManager.CurrentSettings.SaturationIntensity);
+            }
+
+            if (_vignette != null)
+            {
+                _vignette.active = true;
+                _vignette.mode.Override(VignetteMode.Procedural);
+                _vignette.color.overrideState = false;
+                _vignette.center.overrideState = false;
+                _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
+                _vignette.smoothness.overrideState = false;
+                _vignette.roundness.overrideState = false;
+                _vignette.rounded.overrideState = false;
             }
 
             _globalVolume.enabled = true;
@@ -368,7 +388,7 @@ namespace FlightReLive.Core.Rendering
             float elevationRad = Mathf.Deg2Rad * sun.Elevation;
             Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
             _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
-            _mainLight.intensity = SettingsManager.CurrentSettings.GlobalIntensity * 100000f;
+            _mainLight.intensity = SettingsManager.CurrentSettings.SunIntensity * BASE_LIGHT_LUX;
             RenderSettings.sun = _mainLight;
         }
         #endregion
@@ -381,18 +401,117 @@ namespace FlightReLive.Core.Rendering
                 return;
             }
 
-            _mainLight.intensity = SettingsManager.CurrentSettings.GlobalIntensity * 10000f;
+            _mainLight.intensity = SettingsManager.CurrentSettings.SunIntensity * BASE_LIGHT_LUX;
+        }
+
+        private void OnPostExposureIntensityChanged(float postExposure)
+        {
+            if (_colorAdjustments != null)
+            {
+                _colorAdjustments.postExposure.Override(SettingsManager.CurrentSettings.PostExposureIntensity);
+            }
+        }
+
+        private void OnContrastIntensityChanged(float contrast)
+        {
+            if (_colorAdjustments != null)
+            {
+                _colorAdjustments.contrast.Override(SettingsManager.CurrentSettings.ContrastIntensity);
+            }
+        }
+
+        private void OnSaturationIntensityChanged(float saturation)
+        {
+            if (_colorAdjustments != null)
+            {
+                _colorAdjustments.saturation.Override(SettingsManager.CurrentSettings.SaturationIntensity);
+            }
+        }
+
+        private void OnVignettingIntensityChanged(float intensity)
+        {
+            if (_vignette != null)
+            {
+                _vignette.intensity.Override(intensity);
+                _vignette.active = true;
+            }
         }
         #endregion
 
         #region UI
-        internal void DisplaySunSettings(FuGrid gridLight)
+        internal void DrawPostProcessingSettings(FuLayout layout)
         {
-            float globalIntensity = SettingsManager.CurrentSettings.GlobalIntensity;
+            layout.Separator();
+            layout.FramedText("Lights & Shadows");
+            layout.Separator();
 
-            if (gridLight.Slider("Global intensity", ref globalIntensity, 0.6f, 1f, 0.01f))
+            using (FuGrid gridSunIntensity = new FuGrid("gridSunIntensitySettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                SettingsManager.SaveGlobalIntensity(globalIntensity);
+                float sunIntensity = SettingsManager.CurrentSettings.SunIntensity;
+
+                if (gridSunIntensity.Slider("Sun intensity", ref sunIntensity, 0.6f, 1f, 0.01f))
+                {
+                    SettingsManager.SaveSunIntensity(sunIntensity);
+                }
+            }
+
+            layout.Separator();
+            layout.FramedText("Vignetting");
+            layout.Separator();
+
+            using (FuGrid gridVignetting = new FuGrid("gridVignettingSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            {                
+                float vignettingIntensity = SettingsManager.CurrentSettings.VignettingIntensity;
+                if (gridVignetting.Slider("Vignetting", ref vignettingIntensity, 0f, 1f, 0.01f))
+                {
+                    SettingsManager.SaveVignettingIntensity(vignettingIntensity);
+                }
+            }
+
+            layout.Separator();
+            layout.FramedText("Color adjustments");
+            layout.Separator();
+
+            using (FuGrid gridColorAdjustment = new FuGrid("gridColorAdjustmentSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            {
+                float postExposure = SettingsManager.CurrentSettings.PostExposureIntensity;
+                if (gridColorAdjustment.Slider("Post-exposure", ref postExposure, 0f, 3f, 0.01f))
+                {
+                    SettingsManager.SavePostExposureIntensity(postExposure);
+                }
+
+                float contrast = SettingsManager.CurrentSettings.ContrastIntensity;
+                if (gridColorAdjustment.Slider("Contrast", ref contrast, 0f, 50f, 0.1f, format: "%.1f"))
+                {
+                    SettingsManager.SaveContrastIntensity(contrast);
+                }
+
+                float saturation = SettingsManager.CurrentSettings.SaturationIntensity;
+                if (gridColorAdjustment.Slider("Saturation", ref saturation, -2f, 2f, 0.01f, format: "%.01f"))
+                {
+                    SettingsManager.SaveSaturationIntensity(saturation);
+                }
+            }
+        }
+
+        internal void DrawSceneSettings(FuLayout layout)
+        {
+            layout.Separator();
+            layout.FramedText("POI");
+            layout.Separator();
+
+            using (FuGrid gridPOI = new FuGrid("gridPOISettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            {
+                POIManager.Instance.DisplayWorldUISettings(gridPOI);
+            }
+
+            layout.Separator();
+            layout.FramedText("Buildings");
+            layout.Separator();
+
+            using (FuGrid gridBuilding = new FuGrid("gridBuildingSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            {
+                BuildingManager.Instance.DisplayBuildingsSettings(gridBuilding);
             }
         }
         #endregion

@@ -46,6 +46,8 @@ namespace FlightReLive.Core.FlightDefinition
         internal TimeSpan Length { get; set; }
 
         internal float GlobalScale => GLOBAL_SCALE;
+
+        internal static float StaticGlobalScale => GLOBAL_SCALE;
         #endregion
 
         #region METHODS

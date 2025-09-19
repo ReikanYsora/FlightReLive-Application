@@ -169,7 +169,7 @@ namespace FlightReLive.UI.VideoPlayer
         #endregion
 
         #region METHODS
-        internal void LoadFlightVideo(FlightData flightData)
+        internal void Load(FlightData flightData)
         {
             if (flightData == null || _videoPlayer == null || !File.Exists(flightData.VideoPath))
             {
@@ -300,7 +300,7 @@ namespace FlightReLive.UI.VideoPlayer
                     float verticalOffset = (size.y - textSize.y) / 2f;
                     Fugui.MoveY(verticalOffset);
 
-                    layout.CenterNextItemHV(currentFlightData.Name);
+                    layout.CenterNextItemH(currentFlightData.Name);
                     layout.Text(currentFlightData.Name);
                     Fugui.PopFont();
                 }

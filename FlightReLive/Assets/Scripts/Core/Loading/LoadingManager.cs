@@ -1,12 +1,12 @@
 ﻿using FlightReLive.Core.Building;
+using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
-using FlightReLive.Core.Rendering;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Workspace;
-using FlightReLive.Core.WorldUI;
+using FlightReLive.Core.POI;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
@@ -75,6 +75,7 @@ namespace FlightReLive.Core.Loading
         #region METHODS
         private async void StartLoadingScene(FlightFile flightFile)
         {
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
             CancelLoading();
             _cancellationTokenSource = new CancellationTokenSource();
             CancellationToken token = _cancellationTokenSource.Token;
@@ -152,20 +153,22 @@ namespace FlightReLive.Core.Loading
 
                     foreach (TileDefinition t in loadedTiles)
                     {
-                        BuildingManager.Instance.LoadTile(t, flightData);
-                        WorldUIManager.Instance.LoadTile(t, flightData);
+                        if (t.Priority < 2)
+                        {
+                            BuildingManager.Instance.LoadTile(t, flightData);
+                            POIManager.Instance.LoadTile(t, flightData);
+                        }
                     }
                 }
 
-                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-                sw.Start();
-                ProceduralTerrainManager.Instance.GenerateTerrain(flightData);
-                VideoPlayerManager.Instance.LoadFlightVideo(flightData);
-                SunManager.Instance.LoadFlightRendering(flightData);
-                FlightChartsManager.Instance.Load(flightData);
-                PathManager.Instance.LoadFlightPath(flightData);
+                sw.Restart();
+                ProceduralTerrainManager.Instance.Load(flightData);
                 sw.Stop();
-                Debug.Log("Time : " + sw.ElapsedMilliseconds);
+                Debug.Log("ProceduralTerrainManager : " + sw.ElapsedMilliseconds);
+                VideoPlayerManager.Instance.Load(flightData);
+                EnvironmentManager.Instance.Load(flightData);
+                FlightChartsManager.Instance.Load(flightData);
+                PathManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
 
@@ -209,7 +212,7 @@ namespace FlightReLive.Core.Loading
             flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
 
-            int padding = 2;
+            int padding = 1;
 
             IEnumerable<(double Latitude, double Longitude)> allPoints;
             if (file.HasTakeOffPosition)
@@ -298,8 +301,8 @@ namespace FlightReLive.Core.Loading
             VideoPlayerManager.Instance.Unload();
             ProceduralTerrainManager.Instance.Unload();
             PathManager.Instance.Unload();
-            SunManager.Instance.Unload();
-            WorldUIManager.Instance.Unload();
+            EnvironmentManager.Instance.Unload();
+            POIManager.Instance.Unload();
             BuildingManager.Instance.Unload();
             CurrentFlightData?.Dispose();
             CurrentFlightData = null;
@@ -339,7 +342,7 @@ namespace FlightReLive.Core.Loading
         {
             float scale = Fugui.CurrentContext.Scale;
 
-            Fugui.ShowModal("Loading", (layout) =>
+            Fugui.ShowModal("  ", (layout) =>
             {
                 float paddingX = 10f;
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;

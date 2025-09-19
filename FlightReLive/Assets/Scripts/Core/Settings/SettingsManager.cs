@@ -57,22 +57,21 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnPathWidthChanged;
         public static event Action<Color> OnPathRemainingColor1Changed;
         public static event Action<Color> OnPathRemainingColor2Changed;
-        public static event Action<float> OnWorldIconScaleChanged;
-        public static event Action<float> OnWorldIconHeightChanged;
+        public static event Action<bool> OnPOIVisibilityChanged;
+        public static event Action<float> OnPOIScaleChanged;
+        public static event Action<float> OnPOIHeightChanged;
+        public static event Action<float> OnPOIVisibilityDistanceChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
-        public static event Action<bool> On3DIconVisibilityChanged;
-        public static event Action<Color> OnCameraCaptureBackgroundColorChanged;
         public static event Action<int> OnCaptureResolutionChanged;
         public static event Action<int> OnCaptureEncoderChanged;
         public static event Action<int> OnCaptureFramerateChanged;
         public static event Action<bool> OnCaptureEncodedLogoChanged;
         public static event Action<string> OnCaptureOutputPathChanged;
-        public static event Action<bool> OnCaptureReplaceBackgroundChanged;
         public static event Action<float> OnVignettingIntensityChanged;
-        public static event Action<bool> OnDepthOfFieldEnabledChanged;
-        public static event Action<float> OnDepthOfFieldStartChanged;
-        public static event Action<float> OnDepthOfFieldEndChanged;
-        public static event Action<float> OnGlobalIntensityChanged;
+        public static event Action<float> OnSunIntensityChanged;
+        public static event Action<float> OnPostExposureIntensityChanged;
+        public static event Action<float> OnContrastIntensityChanged;
+        public static event Action<float> OnSaturationIntensityChanged;
         #endregion
 
         #region METHODS
@@ -170,17 +169,20 @@ namespace FlightReLive.Core.Settings
             }
         }
 
-        internal static void LoadWorldIconScale() =>
-            CurrentSettings.WorldIconScale = PlayerPrefs.GetFloat(nameof(Settings.WorldIconScale), 0.5f);
+        internal static void LoadPOIVisibility() =>
+            CurrentSettings.POIVisibility = PlayerPrefs.GetInt(nameof(Settings.POIVisibility), 1) == 1;
 
-        internal static void LoadWorldIconHeight() =>
-            CurrentSettings.WorldIconHeight = PlayerPrefs.GetFloat(nameof(Settings.WorldIconHeight), 5f);
+        internal static void LoadPOIScale() =>
+            CurrentSettings.POIScale = PlayerPrefs.GetFloat(nameof(Settings.POIScale), 0.5f);
 
+        internal static void LoadPOIHeight() =>
+            CurrentSettings.POIHeight = PlayerPrefs.GetFloat(nameof(Settings.POIHeight), 5f);
+
+        internal static void LoadPOIVisibilityDistance() =>
+            CurrentSettings.POIVisibilityDistance = PlayerPrefs.GetFloat(nameof(Settings.POIVisibilityDistance), 200f);
+        
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
-
-        internal static void LoadIcon3DVisibility() =>
-            CurrentSettings.Icon3DVisibility = PlayerPrefs.GetInt(nameof(Settings.Icon3DVisibility), 1) == 1;
 
         internal static void LoadCaptureResolution() =>
             CurrentSettings.CaptureResolution = PlayerPrefs.GetInt(nameof(Settings.CaptureResolution), 1);
@@ -194,33 +196,11 @@ namespace FlightReLive.Core.Settings
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
 
-        internal static void LoadCameraCaptureBackgroundColor()
-        {
-            string colorString = PlayerPrefs.GetString(nameof(Settings.CameraCaptureBackgroundColor), "0,0.694,0.251,1");
-            string[] rgba = colorString.Split(',');
-
-            if (rgba.Length == 4 &&
-                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
-                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
-                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
-                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
-            {
-                CurrentSettings.CameraCaptureBackgroundColor = new Color(r, g, b, a);
-            }
-            else
-            {
-                CurrentSettings.CameraCaptureBackgroundColor = new Color(0f, 0.694f, 0.251f, 1f);
-            }
-        }
-
         internal static void LoadCaptureOutputPath() =>
             CurrentSettings.CaptureOutputPath = PlayerPrefs.GetString(
             nameof(Settings.CaptureOutputPath),
             Path.Combine(Application.persistentDataPath, "Captures")
         );
-
-        internal static void LoadCaptureReplaceBackground() =>
-            CurrentSettings.CaptureReplaceBackground = PlayerPrefs.GetInt(nameof(Settings.CaptureReplaceBackground), 0) == 1;
 
         internal static void LoadCaptureEncodedLogo() =>
             CurrentSettings.CaptureEncodedLogo = PlayerPrefs.GetInt(nameof(Settings.CaptureEncodedLogo), 1) == 1;
@@ -228,17 +208,17 @@ namespace FlightReLive.Core.Settings
         internal static void LoadVignettingIntensity() =>
             CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), 0.3f);
 
-        internal static void LoadDepthOfFieldEnabled() =>
-            CurrentSettings.DepthOfFieldEnabled = PlayerPrefs.GetInt(nameof(Settings.DepthOfFieldEnabled), 0) == 1;
+        internal static void LoadSunIntensity() =>
+            CurrentSettings.SunIntensity = PlayerPrefs.GetFloat(nameof(Settings.SunIntensity), 0.8f);
 
-        internal static void LoadDepthOfFieldStart() =>
-            CurrentSettings.DepthOfFieldStart = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldStart), 200f);
+        internal static void LoadPostExposureIntensity() =>
+            CurrentSettings.PostExposureIntensity = PlayerPrefs.GetFloat(nameof(Settings.PostExposureIntensity), 0);
 
-        internal static void LoadDepthOfFieldEnd() =>
-            CurrentSettings.DepthOfFieldEnd = PlayerPrefs.GetFloat(nameof(Settings.DepthOfFieldEnd), 400f);
+        internal static void LoadContrastIntensity() =>
+            CurrentSettings.ContrastIntensity = PlayerPrefs.GetFloat(nameof(Settings.ContrastIntensity), 40);
 
-        internal static void LoadGLobalIntensity() =>
-            CurrentSettings.GlobalIntensity = PlayerPrefs.GetFloat(nameof(Settings.GlobalIntensity), 0.8f);
+        internal static void LoadSaturationIntensity() =>
+            CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 1.1f);
 
         internal static void SaveHardwareQualityPreset(QualityPreset value)
         {
@@ -393,36 +373,44 @@ namespace FlightReLive.Core.Settings
             OnPathRemainingColor2Changed?.Invoke(color);
         }
 
-        internal static void SaveWorldIconScale(float value)
+        internal static void SavePOIScale(float value)
         {
-            CurrentSettings.WorldIconScale = value;
-            PlayerPrefs.SetFloat(nameof(Settings.WorldIconScale), value);
+            CurrentSettings.POIScale = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIScale), value);
             PlayerPrefs.Save();
-            OnWorldIconScaleChanged?.Invoke(value);
+            OnPOIScaleChanged?.Invoke(value);
         }
 
-        internal static void SaveWorldIconHeight(float value)
+        internal static void SavePOIVisibility(bool value)
         {
-            CurrentSettings.WorldIconHeight = value;
-            PlayerPrefs.SetFloat(nameof(Settings.WorldIconHeight), value);
+            CurrentSettings.POIVisibility = value;
+            PlayerPrefs.SetInt(nameof(Settings.POIVisibility), value ? 1 : 0);
             PlayerPrefs.Save();
-            OnWorldIconHeightChanged?.Invoke(value);
+            OnPOIVisibilityChanged?.Invoke(value);
         }
 
+        internal static void SavePOIHeight(float value)
+        {
+            CurrentSettings.POIHeight = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIHeight), value);
+            PlayerPrefs.Save();
+            OnPOIHeightChanged?.Invoke(value);
+        }
+
+        internal static void SavePOIVisibilityDistance(float value)
+        {
+            CurrentSettings.POIVisibilityDistance = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIVisibilityDistance), value);
+            PlayerPrefs.Save();
+            OnPOIVisibilityDistanceChanged?.Invoke(value);
+        }
+        
         internal static void SaveBuildingVisibility(bool value)
         {
             CurrentSettings.BuildingVisibility = value;
             PlayerPrefs.SetInt(nameof(Settings.BuildingVisibility), value ? 1 : 0);
             PlayerPrefs.Save();
             OnBuildingVisibilityChanged?.Invoke(value);
-        }
-
-        internal static void Save3DIconVisibility(bool value)
-        {
-            CurrentSettings.Icon3DVisibility = value;
-            PlayerPrefs.SetInt(nameof(Settings.Icon3DVisibility), value ? 1 : 0);
-            PlayerPrefs.Save();
-            On3DIconVisibilityChanged?.Invoke(value);
         }
 
         internal static void SaveCaptureResolution(int value)
@@ -457,23 +445,6 @@ namespace FlightReLive.Core.Settings
             OnCaptureOutputPathChanged?.Invoke(value);
         }
 
-        internal static void SaveCameraCaptureBackgroundColor(Color color)
-        {
-            CurrentSettings.CameraCaptureBackgroundColor = color;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.CameraCaptureBackgroundColor), colorString);
-            PlayerPrefs.Save();
-            OnCameraCaptureBackgroundColorChanged?.Invoke(color);
-        }
-
-        internal static void SaveCaptureReplaceBackground(bool value)
-        {
-            CurrentSettings.CaptureReplaceBackground = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureReplaceBackground), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnCaptureReplaceBackgroundChanged?.Invoke(value);
-        }
-
         internal static void SaveCaptureEncodedLogo(bool value)
         {
             CurrentSettings.CaptureEncodedLogo = value;
@@ -490,36 +461,36 @@ namespace FlightReLive.Core.Settings
             OnVignettingIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveDepthOfFieldEnabled(bool value)
+        internal static void SaveSunIntensity(float value)
         {
-            CurrentSettings.DepthOfFieldEnabled = value;
-            PlayerPrefs.SetInt(nameof(Settings.DepthOfFieldEnabled), value ? 1 : 0);
+            CurrentSettings.SunIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.SunIntensity), value);
             PlayerPrefs.Save();
-            OnDepthOfFieldEnabledChanged?.Invoke(value);
+            OnSunIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveDepthOfFieldStart(float value)
+        internal static void SavePostExposureIntensity(float value)
         {
-            CurrentSettings.DepthOfFieldStart = value;
-            PlayerPrefs.SetFloat(nameof(Settings.DepthOfFieldStart), value);
+            CurrentSettings.PostExposureIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.PostExposureIntensity), value);
             PlayerPrefs.Save();
-            OnDepthOfFieldStartChanged?.Invoke(value);
+            OnPostExposureIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveDepthOfFieldEnd(float value)
+        internal static void SaveContrastIntensity(float value)
         {
-            CurrentSettings.DepthOfFieldEnd = value;
-            PlayerPrefs.SetFloat(nameof(Settings.DepthOfFieldEnd), value);
+            CurrentSettings.ContrastIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ContrastIntensity), value);
             PlayerPrefs.Save();
-            OnDepthOfFieldEndChanged?.Invoke(value);
+            OnContrastIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveGlobalIntensity(float value)
+        internal static void SaveSaturationIntensity(float value)
         {
-            CurrentSettings.GlobalIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.GlobalIntensity), value);
+            CurrentSettings.SaturationIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.SaturationIntensity), value);
             PlayerPrefs.Save();
-            OnGlobalIntensityChanged?.Invoke(value);
+            OnSaturationIntensityChanged?.Invoke(value);
         }
 
         internal static void LoadAll()
@@ -548,22 +519,21 @@ namespace FlightReLive.Core.Settings
             LoadPathWidth();
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
-            LoadWorldIconScale();
-            LoadWorldIconHeight();
-            LoadIcon3DVisibility();
+            LoadPOIVisibility();
+            LoadPOIScale();
+            LoadPOIHeight();
+            LoadPOIVisibilityDistance();
             LoadBuildingVisibility();
             LoadCaptureResolution();
             LoadCaptureEncoder();
             LoadCaptureFramerate();
             LoadCaptureOutputPath();
-            LoadCameraCaptureBackgroundColor();
-            LoadCaptureReplaceBackground();
             LoadCaptureEncodedLogo();
             LoadVignettingIntensity();
-            LoadDepthOfFieldEnabled();
-            LoadDepthOfFieldStart();
-            LoadDepthOfFieldEnd();
-            LoadGLobalIntensity();
+            LoadSunIntensity();
+            LoadPostExposureIntensity();
+            LoadContrastIntensity();
+            LoadSaturationIntensity();
         }
 
         internal static void LoadDefaultSettings()
@@ -590,22 +560,21 @@ namespace FlightReLive.Core.Settings
             SavePathWidth(0.15f);
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
-            SaveWorldIconScale(0.5f);
-            SaveWorldIconHeight(5f);
+            SavePOIVisibility(true);
+            SavePOIScale(0.5f);
+            SavePOIHeight(5f);
+            SavePOIVisibilityDistance(200f);
             SaveBuildingVisibility(true);
-            Save3DIconVisibility(true);
             SaveCaptureResolution(1);
             SaveCaptureEncoder(0);
             SaveCaptureFramerate(1);
             SaveCaptureOutputPath(Path.Combine(Application.persistentDataPath, "Captures"));
-            SaveCameraCaptureBackgroundColor(new Color(0f, 0.694f, 0.251f, 1f));
-            SaveCaptureReplaceBackground(false);
             SaveCaptureEncodedLogo(true);
             SaveVignettingIntensity(0.3f);
-            SaveDepthOfFieldEnabled(true);
-            SaveDepthOfFieldStart(200f);
-            SaveDepthOfFieldEnd(400f);
-            SaveGlobalIntensity(0.8f);
+            SaveSunIntensity(0.8f);
+            SavePostExposureIntensity(0f);
+            SaveContrastIntensity(40f);
+            SaveSaturationIntensity(1.1f);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();

@@ -7,24 +7,14 @@ using ImGuiNET;
 using System;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace FlightReLive.Core
 {
     public class ApplicationManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [Header("Camera Settings")]
-        [SerializeField] private Camera _camera;
-
         [Header("Welcome")]
         [SerializeField] private Texture2D _welcome;
-
-        [Header("PostProcess Settings")]
-        [SerializeField] private Volume _volume;
-        //private DepthOfField _depthOfField;
-        //private Vignette _vignette;
         #endregion
 
         #region PROPERTIES
@@ -72,10 +62,6 @@ namespace FlightReLive.Core
             //Register events
             SettingsManager.OnHardwareQualityPresetChanged += OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
-            SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
-            SettingsManager.OnDepthOfFieldEnabledChanged += OnDepthOfFieldEnabledChanged;
-            SettingsManager.OnDepthOfFieldStartChanged += OnDepthOfFieldStartChanged;
-            SettingsManager.OnDepthOfFieldEndChanged += OnDepthOfFieldEndChanged;
             SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
 
             //Check if welcome panel need do be displayed
@@ -114,10 +100,6 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnHardwareQualityPresetChanged -= OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
-            SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
-            SettingsManager.OnDepthOfFieldEnabledChanged -= OnDepthOfFieldEnabledChanged;
-            SettingsManager.OnDepthOfFieldStartChanged -= OnDepthOfFieldStartChanged;
-            SettingsManager.OnDepthOfFieldEndChanged -= OnDepthOfFieldEndChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
         }
         #endregion
@@ -266,16 +248,6 @@ namespace FlightReLive.Core
                 QualitySettings.SetQualityLevel(index, true);
             }
         }
-
-        internal void DisablePostProcessing()
-        {
-            //_camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
-        }
-
-        internal void EnablePostProcessing()
-        {
-           // _camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
-        }
         #endregion
 
         #region UI
@@ -347,78 +319,6 @@ namespace FlightReLive.Core
         private void OnGlobalScaleChanged(float scale)
         {
             ApplySavedGlobalScale();
-        }
-
-        internal void DrawPostProcessingSettings(FuLayout layout)
-        {
-            using (FuGrid grid = new FuGrid("gridPostProcessSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
-            {
-                float vignettingIntensity = SettingsManager.CurrentSettings.VignettingIntensity;
-                if (grid.Slider("Vignetting", ref vignettingIntensity, 0f, 1f, 0.01f))
-                {
-                    SettingsManager.SaveVignettingIntensity(vignettingIntensity);
-                }
-
-                bool depthOfFieldEnabled = SettingsManager.CurrentSettings.DepthOfFieldEnabled;
-
-                if (grid.Toggle("Depth of Field", ref depthOfFieldEnabled))
-                {
-                    SettingsManager.SaveDepthOfFieldEnabled(depthOfFieldEnabled);
-                }
-
-                if (!depthOfFieldEnabled)
-                {
-                    grid.DisableNextElements();
-                }
-
-                float depthOfFieldStart = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                float depthOfFieldEnd = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-                if (grid.Range("DoF limits", ref depthOfFieldStart, ref depthOfFieldEnd, 10f, 1500f, 1f))
-                {
-                    SettingsManager.SaveDepthOfFieldStart(depthOfFieldStart);
-                    SettingsManager.SaveDepthOfFieldEnd(depthOfFieldEnd);
-                }
-            }
-        }
-
-        private void OnVignettingIntensityChanged(float intensity)
-        {
-            //if (_vignette != null)
-            //{
-            //    _vignette.intensity.value = intensity;
-            //    _vignette.active = true;
-            //}
-        }
-
-        private void OnDepthOfFieldEnabledChanged(bool enabled)
-        {
-            //if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
-            //{
-            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-            //}
-            //else
-            //{
-            //    _depthOfField.mode.value = DepthOfFieldMode.Off;
-            //}
-        }
-
-        private void OnDepthOfFieldStartChanged(float start)
-        {
-            //if (_depthOfField != null)
-            //{
-            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-            //    _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
-            //}
-        }
-
-        private void OnDepthOfFieldEndChanged(float end)
-        {
-            //if (_depthOfField != null)
-            //{
-            //    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-            //    _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-
-            //}
         }
 
         private void OnApplicationTargetFPSChanged(int value)

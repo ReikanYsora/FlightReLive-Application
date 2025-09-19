@@ -23,7 +23,7 @@ internal static class MapTilerAPIHelper
 {
     #region CONSTANTS
     private const int TILE_SIZE = 512;
-    private const int SATELLITE_TILE_SUPER_SAMPLING_SIZE = 2048;
+    private const int SATELLITE_TILE_SUPER_SAMPLING_SIZE = 4096;
     #endregion
 
     #region ATTRIBUTES
@@ -164,9 +164,6 @@ internal static class MapTilerAPIHelper
         }
     }
 
-    /// <summary>
-    /// Combine multiple MapTiler subtiles into a single atlas
-    /// </summary>
     private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles, int finalSize = 1024)
     {
         int minX = tiles.Keys.Min(k => k.Item1);
@@ -174,9 +171,14 @@ internal static class MapTilerAPIHelper
         int minY = tiles.Keys.Min(k => k.Item2);
         int maxY = tiles.Keys.Max(k => k.Item2);
 
-        int width = (maxX - minX + 1) * TILE_SIZE;
-        int height = (maxY - minY + 1) * TILE_SIZE;
-        Texture2D atlas = new Texture2D(width, height);
+        int tileCountX = maxX - minX + 1;
+        int tileCountY = maxY - minY + 1;
+
+        int atlasWidth = tileCountX * TILE_SIZE;
+        int atlasHeight = tileCountY * TILE_SIZE;
+
+        RenderTexture atlasRT = new RenderTexture(atlasWidth, atlasHeight, 0, RenderTextureFormat.ARGB32);
+        atlasRT.Create();
 
         foreach (var kv in tiles)
         {
@@ -185,53 +187,28 @@ internal static class MapTilerAPIHelper
 
             Texture2D src = kv.Value;
 
-            // Si la subtile n’est pas exactement TILE_SIZE, on la rescale en TILE_SIZE
-            if (src.width != TILE_SIZE || src.height != TILE_SIZE)
-            {
-                Texture2D resized = new Texture2D(TILE_SIZE, TILE_SIZE);
-                Color[] scaledPixels = new Color[TILE_SIZE * TILE_SIZE];
+            RenderTexture tempRT = RenderTexture.GetTemporary(TILE_SIZE, TILE_SIZE, 0, RenderTextureFormat.ARGB32);
+            Graphics.Blit(src, tempRT); // GPU rescale
 
-                for (int y = 0; y < TILE_SIZE; y++)
-                {
-                    float v = (float)y / (TILE_SIZE - 1);
-                    for (int x = 0; x < TILE_SIZE; x++)
-                    {
-                        float u = (float)x / (TILE_SIZE - 1);
-                        scaledPixels[y * TILE_SIZE + x] = src.GetPixelBilinear(u, v);
-                    }
-                }
+            // Copy into atlas at correct offset
+            Graphics.CopyTexture(tempRT, 0, 0, 0, 0, TILE_SIZE, TILE_SIZE, atlasRT, 0, 0, offsetX, offsetY);
 
-                resized.SetPixels(scaledPixels);
-                resized.Apply();
-
-                atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, resized.GetPixels());
-                UnityEngine.Object.Destroy(resized);
-            }
-            else
-            {
-                atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, src.GetPixels());
-            }
+            RenderTexture.ReleaseTemporary(tempRT);
         }
 
-        atlas.Apply();
+        // Downscale to final texture
+        RenderTexture finalRT = new RenderTexture(finalSize, finalSize, 0, RenderTextureFormat.ARGB32);
+        Graphics.Blit(atlasRT, finalRT); // Bilinear GPU
 
         Texture2D finalTex = new Texture2D(finalSize, finalSize, TextureFormat.RGB24, false);
-        Color[] finalPixels = new Color[finalSize * finalSize];
-
-        for (int y = 0; y < finalSize; y++)
-        {
-            float v = (float)y / (finalSize - 1);
-            for (int x = 0; x < finalSize; x++)
-            {
-                float u = (float)x / (finalSize - 1);
-                finalPixels[y * finalSize + x] = atlas.GetPixelBilinear(u, v);
-            }
-        }
-
-        finalTex.SetPixels(finalPixels);
+        RenderTexture.active = finalRT;
+        finalTex.ReadPixels(new Rect(0, 0, finalSize, finalSize), 0, 0);
         finalTex.Apply();
 
-        UnityEngine.Object.Destroy(atlas);
+        RenderTexture.active = null;
+        atlasRT.Release();
+        finalRT.Release();
+
         return finalTex;
     }
     #endregion
@@ -372,8 +349,7 @@ internal static class MapTilerAPIHelper
                     float extrude = renderHeight - renderMinHeight;
 
                     List<List<Point2d<int>>> rawGeometry = feat.Geometry<int>();
-                    List<List<SerializablePoint2D>> convertedGeometry =
-                        rawGeometry.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
+                    List<List<SerializablePoint2D>> convertedGeometry = rawGeometry.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
 
                     results.Add(new BuildingData
                     {

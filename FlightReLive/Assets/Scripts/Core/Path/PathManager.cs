@@ -144,6 +144,7 @@ namespace FlightReLive.Core.Paths
             Vector3 position = GetWorldPositionAtUVProgress(_currentProgress);
             Vector3 nextPosition = GetWorldPositionAtUVProgress(_currentProgress + 0.001f);
             Vector3 direction = (nextPosition - position).normalized;
+            Vector3 flatDirection = new Vector3(direction.x, 0f, direction.z).normalized;
             Quaternion targetRotation;
 
             if (direction != Vector3.zero)
@@ -154,6 +155,15 @@ namespace FlightReLive.Core.Paths
             else
             {
                 targetRotation = transform.rotation;
+            }
+
+            if (flatDirection != Vector3.zero)
+            {
+                targetRotation = Quaternion.LookRotation(flatDirection, Vector3.up);
+            }
+            else
+            {
+                targetRotation = _droneAnchorTransform.rotation;
             }
 
             _droneAnchorTransform.position = position;

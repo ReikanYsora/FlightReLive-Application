@@ -87,8 +87,6 @@ namespace FlightReLive.UI.ReLiveView
                     Fugui.MoveX(30f);
                     layout.Text(CaptureManager.Instance.ElapsedTime, FuTextStyle.Danger);
                     ImGui.SameLine();
-
-                    Fugui.Layouts.OnDockLayoutReloaded += FuDockingLayoutManager_OnDockLayoutReloaded;
                 }
 
                 //3DView settings menus
@@ -121,11 +119,6 @@ namespace FlightReLive.UI.ReLiveView
                     Fugui.MoveY(-4f);
                     layout.SetNextElementToolTip("Open scene settings");
                     PopupButton(FlightReLiveIcons.AltitudeRelative, () => DrawSceneSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
-                    //layout.SameLine();
-
-                    //Fugui.MoveY(-4f);
-                    //layout.SetNextElementToolTip("Open heightmap display settings");
-                    //PopupButton(FlightReLiveIcons.HeightMap, () => DrawHeightSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
 
                     Fugui.PopFont();
                 }
@@ -147,11 +140,6 @@ namespace FlightReLive.UI.ReLiveView
                 Vector2 popupPos = new Vector2(ImGui.GetItemRectMax().x - popupSize.x, ImGui.GetItemRectMax().y + (4f * scale));
                 Fugui.DrawPopup("PopUp" + text, popupSize, popupPos);
             }
-        }
-
-        private void FuDockingLayoutManager_OnDockLayoutReloaded()
-        {
-            Debug.Log("TEST");
         }
 
         private void DrawCaptureModeSettings(float popupButtonWidth, FuLayout layout)
@@ -204,7 +192,7 @@ namespace FlightReLive.UI.ReLiveView
         #region CALLBACKS
         public override void OnWindowCreated(FuWindow window)
         {
-            EmbeddedCameraManager.Instance.CameraWindow = CameraWindow;
+            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
             PathManager.Instance.Camera = CameraWindow;
             window.HeaderHeight = TOP_BAR_HEIGHT;
             window.HeaderUI = DrawCameraWindowSettingBar;

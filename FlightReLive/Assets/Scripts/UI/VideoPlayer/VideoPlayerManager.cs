@@ -107,11 +107,26 @@ namespace FlightReLive.UI.VideoPlayer
                 return _videoPlayer.Texture;
             }
         }
+
+        internal UnityEngine.Video.VideoPlayer Player
+        {
+            get
+            {
+                if (_videoPlayer == null)
+                {
+                    return null;
+                }
+
+                return _videoPlayer.Player;
+            }
+        }
+
         #endregion
 
         #region EVENTS
         internal event Action<float, int, FlightDataPoint> OnProgressChanged;
         internal event Action<FlightData> OnVideoLoaded;
+        internal event Action OnVideoUnloaded;
         #endregion
 
         #region UNITY METHODS
@@ -193,6 +208,7 @@ namespace FlightReLive.UI.VideoPlayer
                 }
 
                 _videoPlayer.Stop();
+                OnVideoUnloaded?.Invoke();
             });
         }
 

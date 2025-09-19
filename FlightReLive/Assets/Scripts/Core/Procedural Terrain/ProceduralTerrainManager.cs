@@ -12,6 +12,11 @@ namespace FlightReLive.Core.ProceduralTerrain
 {
     public class ProceduralTerrainManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const float PoolPadding = 50f;
+        private const float PoolHeightPadding = 20f;
+        #endregion
+
         #region ATTRIBUTES
         private GameObject _terrain;
         [SerializeField] private Texture2D _detailNormalMap;

@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace FlightReLive.Core.Cameras
 {
-    public class EmbeddedCameraManager : MonoBehaviour
+    public class ExternalCameraManipulator : MonoBehaviour
     {
         #region PLATFORM FACTORS
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
@@ -55,7 +55,7 @@ namespace FlightReLive.Core.Cameras
 
         public FuCameraWindow CameraWindow { internal set; get; }
 
-        public static EmbeddedCameraManager Instance { get; private set; }
+        public static ExternalCameraManipulator Instance { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -124,7 +124,7 @@ namespace FlightReLive.Core.Cameras
         {
             if (CameraWindow.IsHoveredContent)
             {
-                float scrollValue = Mouse.current?.scroll.y.ReadValue() ?? 0f;
+                float scrollValue = CameraWindow.Mouse.Wheel.y;
 
                 if (Mathf.Abs(scrollValue) > 0.01f)
                 {
@@ -139,7 +139,7 @@ namespace FlightReLive.Core.Cameras
 
         private void HandleRotationInput()
         {
-            if (Mouse.current?.rightButton.isPressed == true)
+            if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right) == true)
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();
                 _targetX += delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;

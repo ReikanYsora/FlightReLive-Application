@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 5f5ee3b0cb034b13987823b95768369d
+timeCreated: 1753554812
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Resources/TND_Blit.shader
+  uploadId: 789972

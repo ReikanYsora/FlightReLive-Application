@@ -119,6 +119,18 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &18477237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9edf45eed8e04d59a349f446ca3ce54f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.HDRP.DLSS::TND.Upscaling.HDRP.DLSS.DLSSUpscalerSettings
 --- !u!1 &137108791
 GameObject:
   m_ObjectHideFlags: 0
@@ -130,6 +142,7 @@ GameObject:
   - component: {fileID: 137108792}
   - component: {fileID: 137108794}
   - component: {fileID: 137108793}
+  - component: {fileID: 137108795}
   m_Layer: 0
   m_Name: POVCamera
   m_TagString: Untagged
@@ -171,7 +184,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   volumeAnchorOverride: {fileID: 0}
-  antialiasing: 1
+  antialiasing: 0
   SMAAQuality: 2
   dithering: 0
   stopNaNs: 0
@@ -197,7 +210,7 @@ MonoBehaviour:
   flipYMode: 0
   xrRendering: 1
   fullscreenPassthrough: 0
-  allowDynamicResolution: 0
+  allowDynamicResolution: 1
   customRenderingSettings: 0
   invertFaceCulling: 0
   probeLayerMask:
@@ -210,7 +223,7 @@ MonoBehaviour:
   deepLearningSuperSamplingUseCustomQualitySettings: 0
   deepLearningSuperSamplingQuality: 0
   deepLearningSuperSamplingUseCustomAttributes: 0
-  deepLearningSuperSamplingUseOptimalSettings: 1
+  deepLearningSuperSamplingUseOptimalSettings: 0
   deepLearningSuperSamplingSharpening: 0
   allowFidelityFX2SuperResolution: 1
   fidelityFX2SuperResolutionUseCustomQualitySettings: 0
@@ -337,11 +350,43 @@ Camera:
   m_TargetEye: 3
   m_HDR: 0
   m_AllowMSAA: 0
-  m_AllowDynamicResolution: 0
+  m_AllowDynamicResolution: 1
   m_ForceIntoRT: 0
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &137108795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 137108791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3512c15998c9c9e4ea8c10df21268ea7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.Framework.Runtime.HDRP::TND.Upscaling.Framework.TNDUpscaler
+  upscalerChain:
+  - TND.Upscaling.FSR3.FSR3UpscalerPlugin
+  qualityMode: 5
+  enableSharpening: 1
+  sharpness: 0.5
+  upscalerSettings:
+  - identifier: TND.Upscaling.FSR3.FSR3UpscalerPlugin
+    settings: {fileID: 385839167}
+  - identifier: TND.Upscaling.HDRP.DLSS.DLSSUpscalerPlugin
+    settings: {fileID: 18477237}
+  autoGenerateReactiveMask: 1
+  autoReactiveSettings:
+    scale: 0.9
+    cutoffThreshold: 0.05
+    binaryValue: 0.5
+    flags: 13
+  enableCustomReactiveMask: 0
+  customReactiveMaskLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &251700240
 GameObject:
   m_ObjectHideFlags: 0
@@ -785,6 +830,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bcdb7fabd80845048eb761d9db002cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Loading.LoadingManager
+--- !u!114 &385839167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2986732e975f4adc95ee2b0d5011ccf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.FSR3::TND.Upscaling.FSR3.FSR3UpscalerSettings
+  transparencyAndCompositionMask: {fileID: 0}
+  enableDebugView: 0
+  advancedParameters:
+    velocityFactor: 1
+    reactivenessScale: 1
+    shadingChangeScale: 1
+    accumulationAddedPerFrame: 0.33333334
+    minDisocclusionAccumulation: -0.33333334
 --- !u!1 &686105526
 GameObject:
   m_ObjectHideFlags: 0
@@ -849,7 +914,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1630641273}
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &739676618
@@ -864,6 +930,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0b379570607945438ebc9f25b66153d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.ProceduralTerrain.TerrainManager
+  _terrain: {fileID: 1630641274}
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0
@@ -875,6 +942,7 @@ GameObject:
   - component: {fileID: 796242733}
   - component: {fileID: 796242730}
   - component: {fileID: 796242734}
+  - component: {fileID: 796242735}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: Untagged
@@ -967,7 +1035,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   volumeAnchorOverride: {fileID: 0}
-  antialiasing: 2
+  antialiasing: 0
   SMAAQuality: 2
   dithering: 1
   stopNaNs: 0
@@ -1006,7 +1074,7 @@ MonoBehaviour:
   deepLearningSuperSamplingUseCustomQualitySettings: 0
   deepLearningSuperSamplingQuality: 0
   deepLearningSuperSamplingUseCustomAttributes: 0
-  deepLearningSuperSamplingUseOptimalSettings: 1
+  deepLearningSuperSamplingUseOptimalSettings: 0
   deepLearningSuperSamplingSharpening: 0
   allowFidelityFX2SuperResolution: 1
   fidelityFX2SuperResolutionUseCustomQualitySettings: 0
@@ -1087,6 +1155,38 @@ MonoBehaviour:
       enableFptlForForwardOpaque: 0
       enableBigTilePrepass: 0
       isFptlEnabled: 0
+--- !u!114 &796242735
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 796242729}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3512c15998c9c9e4ea8c10df21268ea7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.Framework.Runtime.HDRP::TND.Upscaling.Framework.TNDUpscaler
+  upscalerChain:
+  - TND.Upscaling.FSR3.FSR3UpscalerPlugin
+  qualityMode: 2
+  enableSharpening: 1
+  sharpness: 0.1
+  upscalerSettings:
+  - identifier: TND.Upscaling.FSR3.FSR3UpscalerPlugin
+    settings: {fileID: 1447166174}
+  - identifier: TND.Upscaling.HDRP.DLSS.DLSSUpscalerPlugin
+    settings: {fileID: 1759033079}
+  autoGenerateReactiveMask: 1
+  autoReactiveSettings:
+    scale: 0.9
+    cutoffThreshold: 0.05
+    binaryValue: 0.5
+    flags: 13
+  enableCustomReactiveMask: 0
+  customReactiveMaskLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &954186472
 GameObject:
   m_ObjectHideFlags: 0
@@ -1650,6 +1750,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbb07aad78f22074e8d688bfa368cf94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1447166174
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2986732e975f4adc95ee2b0d5011ccf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.FSR3::TND.Upscaling.FSR3.FSR3UpscalerSettings
+  transparencyAndCompositionMask: {fileID: 0}
+  enableDebugView: 0
+  advancedParameters:
+    velocityFactor: 1
+    reactivenessScale: 1
+    shadingChangeScale: 1
+    accumulationAddedPerFrame: 0.33333334
+    minDisocclusionAccumulation: -0.33333334
 --- !u!1 &1531727481
 GameObject:
   m_ObjectHideFlags: 0
@@ -1711,6 +1831,78 @@ MonoBehaviour:
   _mainCanvas: {fileID: 1721477100}
   _poiPrefab: {fileID: 245362082703216664, guid: 4743d8e731bdeef4082a091545bac382, type: 3}
   _initialSize: 100
+--- !u!1 &1630641272
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1630641273}
+  - component: {fileID: 1630641274}
+  m_Layer: 0
+  m_Name: Procedural Terrain
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!4 &1630641273
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1630641272}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 739676617}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!218 &1630641274
+Terrain:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1630641272}
+  m_Enabled: 1
+  serializedVersion: 6
+  m_TerrainData: {fileID: 15600000, guid: 958466f8389139d46a58b81b42b68895, type: 2}
+  m_TreeDistance: 5000
+  m_TreeBillboardDistance: 50
+  m_TreeCrossFadeLength: 5
+  m_TreeMaximumFullLODCount: 50
+  m_DetailObjectDistance: 80
+  m_DetailObjectDensity: 1
+  m_HeightmapPixelError: 5
+  m_SplatMapDistance: 1000
+  m_HeightmapMinimumLODSimplification: 0
+  m_HeightmapMaximumLOD: 0
+  m_ShadowCastingMode: 2
+  m_DrawHeightmap: 1
+  m_DrawInstanced: 0
+  m_DrawTreesAndFoliage: 1
+  m_StaticShadowCaster: 0
+  m_IgnoreQualitySettings: 0
+  m_ReflectionProbeUsage: 1
+  m_MaterialTemplate: {fileID: 2100000, guid: 22ff8771d87ef27429e670136399094b, type: 2}
+  m_BakeLightProbesForTrees: 1
+  m_PreserveTreePrototypeLayers: 0
+  m_DeringLightProbesForTrees: 1
+  m_ReceiveGI: 1
+  m_ScaleInLightmap: 0.0256
+  m_LightmapParameters: {fileID: 15203, guid: 0000000000000000f000000000000000, type: 0}
+  m_GroupingID: 0
+  m_RenderingLayerMask: 1
+  m_AllowAutoConnect: 1
+  m_EnableHeightmapRayTracing: 1
+  m_EnableTreesAndDetailsRayTracing: 0
+  m_TreeMotionVectorModeOverride: 3
 --- !u!1 &1721477096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1788,6 +1980,18 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &1759033079
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9edf45eed8e04d59a349f446ca3ce54f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TND.Upscaling.HDRP.DLSS::TND.Upscaling.HDRP.DLSS.DLSSUpscalerSettings
 --- !u!1 &1896134858
 GameObject:
   m_ObjectHideFlags: 0
@@ -1841,6 +2045,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _welcome: {fileID: 2800000, guid: 69e09da936753794e94bb0b7cde884c2, type: 3}
+  _mainCameraUpscaler: {fileID: 796242735}
+  _povCameraUpscaler: {fileID: 137108795}
 --- !u!1 &2116168535
 GameObject:
   m_ObjectHideFlags: 0
@@ -2150,7 +2356,7 @@ MonoBehaviour:
   _forceCreateAloneOnAwake: 0
   _camera: {fileID: 796242730}
   _msaa: 1
-  _superSampling: 2
+  _superSampling: 1
 --- !u!114 &2932005272595287973
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2209,7 +2415,7 @@ MonoBehaviour:
   _forceCreateAloneOnAwake: 0
   _camera: {fileID: 137108794}
   _msaa: 1
-  _superSampling: 2
+  _superSampling: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f64c82fe18813734e875f14b8abea31b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Editor/BIRP/TNDUpscalerEditor_BIRP.cs
+  uploadId: 789972

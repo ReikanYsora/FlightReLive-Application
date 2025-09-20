@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 86bc2e466cc29b441b4faa16c36fa166
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Runtime/URP/Shaders/UpsampleDepth.shader
+  uploadId: 789972

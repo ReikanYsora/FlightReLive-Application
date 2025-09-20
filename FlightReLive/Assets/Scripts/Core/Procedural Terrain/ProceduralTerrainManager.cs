@@ -15,7 +15,7 @@ namespace FlightReLive.Core.ProceduralTerrain
     public class ProceduralTerrainManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        private GameObject _terrain;
+        [SerializeField] private Terrain _terrain;
         #endregion
 
         #region PROPERTIES
@@ -32,6 +32,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
 
             Instance = this;
+            _terrain.gameObject.SetActive(false);
         }
         #endregion
 
@@ -306,14 +307,8 @@ namespace FlightReLive.Core.ProceduralTerrain
                 size = new Vector3(sizeX, sizeY, sizeZ)
             };
             terrainData.SetHeightsDelayLOD(0, 0, merged);
-
+            _terrain.terrainData = terrainData;
             terrainData.SyncHeightmap();
-
-            //Instantiate terrain object
-            _terrain = Terrain.CreateTerrainGameObject(terrainData);
-            Terrain terrain = _terrain.GetComponent<Terrain>();
-            _terrain.name = "Procedural Terrain";
-            _terrain.transform.SetParent(transform, false);
 
             // Position terrain in world space
             float centerTileX = (minX + maxX) / 2.0f;
@@ -343,9 +338,9 @@ namespace FlightReLive.Core.ProceduralTerrain
             };
 
             //Apply single layer
-            terrain.terrainData.terrainLayers = new TerrainLayer[] { terrainLayer };
+            _terrain.terrainData.terrainLayers = new TerrainLayer[] { terrainLayer };
 
-            int alphaRes = terrain.terrainData.alphamapResolution;
+            int alphaRes = _terrain.terrainData.alphamapResolution;
             float[,,] maps = new float[alphaRes, alphaRes, 1];
             for (int y = 0; y < alphaRes; y++)
             {
@@ -354,20 +349,30 @@ namespace FlightReLive.Core.ProceduralTerrain
                     maps[y, x, 0] = 1.0f;
                 }
             }
-            terrain.terrainData.SetAlphamaps(0, 0, maps);
+            _terrain.terrainData.SetAlphamaps(0, 0, maps);
 
             //Cleanup satellite textures to free memory
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
             {
                 tile.SatelliteTexture = null;
             }
+
+            //Enable terrain
+            _terrain.drawHeightmap = true;
+            _terrain.drawTreesAndFoliage = true;
+            _terrain.enabled = true;
+            _terrain.gameObject.SetActive(true);
         }
 
         internal void Unload()
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                GameObject.Destroy(_terrain);
+                _terrain.gameObject.SetActive(false);
+                _terrain.drawHeightmap = false;
+                _terrain.drawTreesAndFoliage = false;
+                _terrain.enabled = false;
+                _terrain.terrainData = new TerrainData();
             });
         }
 

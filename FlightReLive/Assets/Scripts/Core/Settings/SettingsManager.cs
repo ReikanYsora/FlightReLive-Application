@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Settings
@@ -39,6 +40,14 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region EVENTS
+        public static event Action<UpscalerName> OnMainCameraUpscalerNameChanged;
+        public static event Action<UpscalerQuality> OnMainCameraUpscalerQualityChanged;
+        public static event Action<bool> OnMainCameraUpscalerSharpeningEnabledChanged;
+        public static event Action<float> OnMainCameraUpscalerSharpenessChanged;
+        public static event Action<UpscalerName> OnPOVCameraUpscalerNameChanged;
+        public static event Action<UpscalerQuality> OnPOVCameraUpscalerQualityChanged;
+        public static event Action<bool> OnPOVCameraUpscalerSharpeningEnabledChanged;
+        public static event Action<float> OnPOVCameraUpscalerSharpenessChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -69,6 +78,30 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region METHODS
+        internal static void LoadMainCameraUpscalerName() =>
+            CurrentSettings.MainCameraUpscalerName = (UpscalerName)PlayerPrefs.GetInt(nameof(Settings.MainCameraUpscalerName), (int)UpscalerName.None);
+
+        internal static void LoadMainCameraUpscaleQuality() =>
+            CurrentSettings.MainCameraUpscalerQuality = (UpscalerQuality)PlayerPrefs.GetInt(nameof(Settings.MainCameraUpscalerQuality), (int)UpscalerQuality.NativeAA);
+
+        internal static void LoadMainCameraUpscalerSharpeningEnabled() =>
+            CurrentSettings.MainCameraUpscalerSharpeningEnabled = PlayerPrefs.GetInt(nameof(Settings.MainCameraUpscalerSharpeningEnabled), 0) == 1;
+
+        internal static void LoadMainCameraUpscalerSharpeness() =>
+            CurrentSettings.MainCameraUpscalerSharpeness = PlayerPrefs.GetFloat(nameof(Settings.MainCameraUpscalerSharpeness), 0.5f);
+
+        internal static void LoadPOVCameraUpscalerName() =>
+            CurrentSettings.POVCameraUpscalerName = (UpscalerName)PlayerPrefs.GetInt(nameof(Settings.POVCameraUpscalerName), (int)UpscalerName.None);
+
+        internal static void LoadPOVCameraUpscaleQuality() =>
+            CurrentSettings.POVCameraUpscalerQuality = (UpscalerQuality)PlayerPrefs.GetInt(nameof(Settings.POVCameraUpscalerQuality), (int)UpscalerQuality.NativeAA);
+
+        internal static void LoadPOVCameraUpscalerSharpeningEnabled() =>
+            CurrentSettings.POVCameraUpscalerSharpeningEnabled = PlayerPrefs.GetInt(nameof(Settings.POVCameraUpscalerSharpeningEnabled), 0) == 1;
+
+        internal static void LoadPOVCameraUpscalerSharpeness() =>
+            CurrentSettings.POVCameraUpscalerSharpeness = PlayerPrefs.GetFloat(nameof(Settings.POVCameraUpscalerSharpeness), 0.5f);
+
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
 
@@ -201,12 +234,12 @@ namespace FlightReLive.Core.Settings
             OnApplicationTargetFPSChanged?.Invoke(value);
         }
 
-        internal static void SaveApplicationIdleFPS(int value)
+        internal static void SaveMainCameraUpscalerName(UpscalerName value)
         {
-            CurrentSettings.ApplicationIdleFPS = value;
-            PlayerPrefs.SetInt(nameof(Settings.ApplicationIdleFPS), value);
+            CurrentSettings.MainCameraUpscalerName = value;
+            PlayerPrefs.SetInt(nameof(Settings.MainCameraUpscalerName), (int)value);
             PlayerPrefs.Save();
-            OnApplicationIdleFPSChanged?.Invoke(value);
+            OnMainCameraUpscalerNameChanged?.Invoke(value);
         }
 
         internal static void SaveDontAskWelcomeVersion(bool value)
@@ -215,6 +248,70 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.DontAskWelcomeVersion), value ? 1 : 0);
             PlayerPrefs.Save();
             OnDontAskWelcomeVersionChanged?.Invoke(value);
+        }
+
+        internal static void SaveMainCameraUpscalerQuality(UpscalerQuality value)
+        {
+            CurrentSettings.MainCameraUpscalerQuality = value;
+            PlayerPrefs.SetInt(nameof(Settings.MainCameraUpscalerQuality), (int)value);
+            PlayerPrefs.Save();
+            OnMainCameraUpscalerQualityChanged?.Invoke(value);
+        }
+
+        internal static void SaveMainCameraUpscalerSharpeningEnabled(bool value)
+        {
+            CurrentSettings.MainCameraUpscalerSharpeningEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.MainCameraUpscalerSharpeningEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnMainCameraUpscalerSharpeningEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SaveMainCameraUpscalerSharpeness(float value)
+        {
+            CurrentSettings.MainCameraUpscalerSharpeness = value;
+            PlayerPrefs.SetFloat(nameof(Settings.MainCameraUpscalerSharpeness), value);
+            PlayerPrefs.Save();
+            OnMainCameraUpscalerSharpenessChanged?.Invoke(value);
+        }
+
+        internal static void SavePOVCameraUpscalerName(UpscalerName value)
+        {
+            CurrentSettings.POVCameraUpscalerName = value;
+            PlayerPrefs.SetInt(nameof(Settings.POVCameraUpscalerName), (int)value);
+            PlayerPrefs.Save();
+            OnPOVCameraUpscalerNameChanged?.Invoke(value);
+        }
+
+        internal static void SavePOVCameraUpscalerQuality(UpscalerQuality value)
+        {
+            CurrentSettings.POVCameraUpscalerQuality = value;
+            PlayerPrefs.SetInt(nameof(Settings.POVCameraUpscalerQuality), (int)value);
+            PlayerPrefs.Save();
+            OnPOVCameraUpscalerQualityChanged?.Invoke(value);
+        }
+
+        internal static void SavePOVCameraUpscalerSharpeningEnabled(bool value)
+        {
+            CurrentSettings.POVCameraUpscalerSharpeningEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.POVCameraUpscalerSharpeningEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnPOVCameraUpscalerSharpeningEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SavePOVCameraUpscalerSharpeness(float value)
+        {
+            CurrentSettings.POVCameraUpscalerSharpeness = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POVCameraUpscalerSharpeness), value);
+            PlayerPrefs.Save();
+            OnPOVCameraUpscalerSharpenessChanged?.Invoke(value);
+        }
+
+        internal static void SaveApplicationIdleFPS(int value)
+        {
+            CurrentSettings.ApplicationIdleFPS = value;
+            PlayerPrefs.SetInt(nameof(Settings.ApplicationIdleFPS), value);
+            PlayerPrefs.Save();
+            OnApplicationIdleFPSChanged?.Invoke(value);
         }
 
         internal static void SaveCameraRotationSpeed(float value)
@@ -425,6 +522,14 @@ namespace FlightReLive.Core.Settings
                 LoadDefaultSettings();
             }
 
+            LoadMainCameraUpscalerName();
+            LoadMainCameraUpscaleQuality();
+            LoadMainCameraUpscalerSharpeningEnabled();
+            LoadMainCameraUpscalerSharpeness();
+            LoadPOVCameraUpscalerName();
+            LoadPOVCameraUpscaleQuality();
+            LoadPOVCameraUpscalerSharpeningEnabled();
+            LoadPOVCameraUpscalerSharpeness();
             LoadCurrentVersion();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
@@ -457,6 +562,14 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadDefaultSettings()
         {
+            SaveMainCameraUpscalerName(UpscalerName.None);
+            SaveMainCameraUpscalerQuality(UpscalerQuality.NativeAA);
+            SaveMainCameraUpscalerSharpeningEnabled(false);
+            SaveMainCameraUpscalerSharpeness(0.5f);
+            SavePOVCameraUpscalerName(UpscalerName.None);
+            SavePOVCameraUpscalerQuality(UpscalerQuality.NativeAA);
+            SavePOVCameraUpscalerSharpeningEnabled(false);
+            SavePOVCameraUpscalerSharpeness(0.5f);
             SaveCurrentVersion(Application.version);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
@@ -683,6 +796,156 @@ namespace FlightReLive.Core.Settings
 
                 layout.Collapsable("Quality settings##collapsable", () =>
                 {
+                    using (FuGrid mainCameraUpscalerGrid = new FuGrid("mainCameraUpscalerGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        mainCameraUpscalerGrid.SetNextElementToolTipWithLabel("Choose your upscaling method for rendering performance and quality for the ReLive camera scene.");
+
+                        UpscalerName currentUpscaler = CurrentSettings.MainCameraUpscalerName;
+                        string upscalerLabel = GetUpscalerLabel(currentUpscaler);
+
+                        mainCameraUpscalerGrid.Combobox("ReLive camera upscaler##ReliveCameraUpscalerCombobox", upscalerLabel, () =>
+                        {
+                            UpscalerName[] allowedUpscalers = TNDUpscaler.GetSupported().ToArray();
+
+                            foreach (UpscalerName upscaler in allowedUpscalers)
+                            {
+                                bool isSelected = upscaler == currentUpscaler;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerLabel(upscaler)}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SaveMainCameraUpscalerName(upscaler);
+                                }
+                            }
+                        });
+
+                        mainCameraUpscalerGrid.SetNextElementToolTipWithLabel("Select the upscaling quality level (higher = better visuals, lower = better performance) for the ReLive camera scene.");
+
+                        UpscalerQuality currentQuality = CurrentSettings.MainCameraUpscalerQuality;
+                        string qualityLabel = GetUpscalerQualityLabel(currentQuality);
+
+                        mainCameraUpscalerGrid.Combobox("ReLive camera upscaler quality##MainCameraUpscalerQualityCombobox", qualityLabel, () =>
+                        {
+                            UpscalerQuality[] allowedQualities = new[]
+                            {
+                                UpscalerQuality.NativeAA,
+                                UpscalerQuality.UltraQuality,
+                                UpscalerQuality.Quality,
+                                UpscalerQuality.Balanced,
+                                UpscalerQuality.Performance,
+                                UpscalerQuality.UltraPerformance,
+                                UpscalerQuality.Off
+                            };
+
+                            foreach (UpscalerQuality quality in allowedQualities)
+                            {
+                                bool isSelected = quality == currentQuality;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerQualityLabel(quality)}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SaveMainCameraUpscalerQuality(quality);
+                                }
+                            }
+                        });
+
+                        mainCameraUpscalerGrid.SetNextElementToolTip("Enhances edge clarity and texture detail after upscaling. Recommended to preserve visual sharpness.");
+                        bool sharpeningEnabled = CurrentSettings.MainCameraUpscalerSharpeningEnabled;
+
+                        if (mainCameraUpscalerGrid.Toggle("ReLive camera sharpening", ref sharpeningEnabled))
+                        {
+                            SaveMainCameraUpscalerSharpeningEnabled(sharpeningEnabled);
+                        }
+
+                        if (!sharpeningEnabled)
+                        {
+                            mainCameraUpscalerGrid.DisableNextElement();
+                        }
+
+                        mainCameraUpscalerGrid.SetNextElementToolTipWithLabel("Adjust how sharp the image appears after upscaling. Higher values increase detail, but may introduce noise.");
+                        float sharpeness = CurrentSettings.MainCameraUpscalerSharpeness;
+
+                        if (mainCameraUpscalerGrid.Slider("ReLive camera sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.01f"))
+                        {
+                            SaveMainCameraUpscalerSharpeness(sharpeness);
+                        }
+                    }
+
+                    using (FuGrid povCameraUpscalerGrid = new FuGrid("povCameraUpscalerGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        povCameraUpscalerGrid.SetNextElementToolTipWithLabel("Choose your upscaling method for rendering performance and quality for the POV camera.");
+
+                        UpscalerName currentUpscaler = CurrentSettings.POVCameraUpscalerName;
+                        string upscalerLabel = GetUpscalerLabel(currentUpscaler);
+
+                        povCameraUpscalerGrid.Combobox("POV camera upscaler##POVCameraUpscalerCombobox", upscalerLabel, () =>
+                        {
+                            UpscalerName[] allowedUpscalers = TNDUpscaler.GetSupported().ToArray();
+
+                            foreach (UpscalerName upscaler in allowedUpscalers)
+                            {
+                                bool isSelected = upscaler == currentUpscaler;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerLabel(upscaler)}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SavePOVCameraUpscalerName(upscaler);
+                                }
+                            }
+                        });
+
+                        povCameraUpscalerGrid.SetNextElementToolTipWithLabel("Select the upscaling quality level (higher = better visuals, lower = better performance) for the POV camera scene.");
+
+                        UpscalerQuality currentQuality = CurrentSettings.POVCameraUpscalerQuality;
+                        string qualityLabel = GetUpscalerQualityLabel(currentQuality);
+
+                        povCameraUpscalerGrid.Combobox("POV camera upscaler quality##MainCameraUpscalerQualityCombobox", qualityLabel, () =>
+                        {
+                            UpscalerQuality[] allowedQualities = new[]
+                            {
+                                UpscalerQuality.NativeAA,
+                                UpscalerQuality.UltraQuality,
+                                UpscalerQuality.Quality,
+                                UpscalerQuality.Balanced,
+                                UpscalerQuality.Performance,
+                                UpscalerQuality.UltraPerformance,
+                                UpscalerQuality.Off
+                            };
+
+                            foreach (UpscalerQuality quality in allowedQualities)
+                            {
+                                bool isSelected = quality == currentQuality;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerQualityLabel(quality)}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SavePOVCameraUpscalerQuality(quality);
+                                }
+                            }
+                        });
+
+                        povCameraUpscalerGrid.SetNextElementToolTip("Enhances edge clarity and texture detail after upscaling. Recommended to preserve visual sharpness.");
+                        bool sharpeningEnabled = CurrentSettings.POVCameraUpscalerSharpeningEnabled;
+
+                        if (povCameraUpscalerGrid.Toggle("POV camera sharpening", ref sharpeningEnabled))
+                        {
+                            SavePOVCameraUpscalerSharpeningEnabled(sharpeningEnabled);
+                        }
+
+                        if (!sharpeningEnabled)
+                        {
+                            povCameraUpscalerGrid.DisableNextElement();
+                        }
+
+                        povCameraUpscalerGrid.SetNextElementToolTipWithLabel("Adjust how sharp the image appears after upscaling. Higher values increase detail, but may introduce noise.");
+                        float sharpeness = CurrentSettings.POVCameraUpscalerSharpeness;
+
+                        if (povCameraUpscalerGrid.Slider("POV camera sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.01f"))
+                        {
+                            SavePOVCameraUpscalerSharpeness(sharpeness);
+                        }
+                    }
+
                     using (FuGrid fpsSettings = new FuGrid("fpsSettingsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         fpsSettings.SetNextElementToolTipWithLabel("This parameter defines the refresh rate of the application while it is running.\nAdjusting this value can help balance visual fluidity and system performance.\nHigher values provide smoother animations but may increase GPU usage.\nLower values reduce resource consumption, which can be useful on less powerful machines or during background execution.\nChanges are applied immediately.");
@@ -916,6 +1179,60 @@ namespace FlightReLive.Core.Settings
 
             }, FuModalSize.Medium, new FuModalButton("Close preferences", () => { _settingsOpened = false; }, FuButtonStyle.Default, FuKeysCode.Enter));
         }
+
+        private static string GetUpscalerLabel(UpscalerName upscaler)
+        {
+            switch (upscaler)
+            {
+                case UpscalerName.None:
+                    return "No Upscaling";
+                case UpscalerName.FSR3:
+                    return "FidelityFX Super Resolution 3.1";
+                case UpscalerName.FSR4:
+                    return "FidelityFX Super Resolution 4";
+                case UpscalerName.ASR:
+                    return "ARM Accuracy Super Resolution";
+                case UpscalerName.DLSS3:
+                    return "DLSS 3.x";
+                case UpscalerName.DLSS4:
+                    return "DLSS 4.x";
+                case UpscalerName.XeSS2:
+                    return "Intel XeSS 2.x";
+                case UpscalerName.SGSR1:
+                    return "Snapdragon GSR 1";
+                case UpscalerName.SGSR2:
+                    return "Snapdragon GSR 2";
+                case UpscalerName.PSSR:
+                    return "PlayStation SSR";
+                default:
+                    return "Unknown";
+            }
+        }
+
+
+        private static string GetUpscalerQualityLabel(UpscalerQuality quality)
+        {
+            switch (quality)
+            {
+                case UpscalerQuality.NativeAA:
+                    return "Native AA (1x)";
+                case UpscalerQuality.UltraQuality:
+                    return "Ultra Quality (1.2x)";
+                case UpscalerQuality.Quality:
+                    return "Quality (1.5x)";
+                case UpscalerQuality.Balanced:
+                    return "Balanced (1.7x)";
+                case UpscalerQuality.Performance:
+                    return "Performance (2x)";
+                case UpscalerQuality.UltraPerformance:
+                    return "Ultra Performance (3x)";
+                case UpscalerQuality.Off:
+                    return "Disabled";
+                default:
+                    return "Unknown";
+            }
+        }
+
         #endregion
     }
 }

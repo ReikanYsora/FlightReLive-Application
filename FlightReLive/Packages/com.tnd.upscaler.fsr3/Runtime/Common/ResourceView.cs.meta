@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: eb9fdfac33a070740b66520d88f43ab7
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Runtime/Common/ResourceView.cs
+  uploadId: 789972

@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 9edf45eed8e04d59a349f446ca3ce54f
+timeCreated: 1739303766
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Runtime/HDRP/DLSS/DLSSUpscalerSettings.cs
+  uploadId: 789972

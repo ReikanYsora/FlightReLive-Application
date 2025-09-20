@@ -1,5 +1,21 @@
 {
   "dependencies": {
+    "com.tnd.upscaler.fsr3": {
+      "version": "file:com.tnd.upscaler.fsr3",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.tnd.upscaling": "1.0.0"
+      }
+    },
+    "com.tnd.upscaling": {
+      "version": "file:com.tnd.upscaling",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -286,6 +302,12 @@
       "dependencies": {}
     },
     "com.unity.modules.jsonserialize": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {}
+    },
+    "com.unity.modules.nvidia": {
       "version": "1.0.0",
       "depth": 0,
       "source": "builtin",

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 49c2d8567c79a2142a97169f136455f5
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Runtime/URP/TND.Upscaling.Framework.Runtime.URP.asmdef
+  uploadId: 789972

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: a30b6be93824489c8fb2be892a053126
+timeCreated: 1749894709
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Runtime/Core/Upscaling/UpscalerUtils.cs
+  uploadId: 789972

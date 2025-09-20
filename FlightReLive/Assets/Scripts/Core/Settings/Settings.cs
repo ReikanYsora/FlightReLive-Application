@@ -1,4 +1,5 @@
 using System;
+using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Settings
@@ -6,6 +7,14 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
+        public UpscalerName MainCameraUpscalerName;
+        public UpscalerQuality MainCameraUpscalerQuality;
+        public bool MainCameraUpscalerSharpeningEnabled;
+        public float MainCameraUpscalerSharpeness;
+        public UpscalerName POVCameraUpscalerName;
+        public UpscalerQuality POVCameraUpscalerQuality;
+        public bool POVCameraUpscalerSharpeningEnabled;
+        public float POVCameraUpscalerSharpeness;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;

@@ -20,9 +20,9 @@ namespace FlightReLive.Core.Building
     internal class BuildingManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const float MIN_BUILDING_HEIGHT = 2.5f;
-        private const float MAX_BUILDING_HEIGHT = 4f;
-        private const float BOTTOM_EXTRUSION = 3f;
+        private const float MIN_BUILDING_HEIGHT = 3f;
+        private const float MAX_BUILDING_HEIGHT = 6f;
+        private const float BOTTOM_EXTRUSION = 1f;
         #endregion
 
         #region ATTRIBUTES
@@ -263,17 +263,19 @@ namespace FlightReLive.Core.Building
             int v = 0;
             int t = 0;
 
-            // Roof vertices
+            //Roof vertices
+            Vector2 uvScale = new Vector2(0.1f, 0.1f);
+
             for (int i = 0; i < roofVertexCount; i++)
             {
                 Vec3 vertex = tess.Vertices[i].Position;
                 meshData.vertices[v] = new Vector3(vertex.X, topY, vertex.Y);
                 meshData.normals[v] = Vector3.up;
-                meshData.uvs[v] = Vector2.zero;
+                meshData.uvs[v] = new Vector2(vertex.X, vertex.Y) * uvScale;
                 v++;
             }
 
-            // Roof triangles (keep original winding order)
+            //Roof triangles
             for (int i = 0; i < tess.ElementCount; i++)
             {
                 int index0 = tess.Elements[i * 3 + 0];
@@ -285,7 +287,7 @@ namespace FlightReLive.Core.Building
                 meshData.triangles[t++] = index0;
             }
 
-            // Walls
+            //Walls
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 p0 = contour[i];
@@ -303,19 +305,27 @@ namespace FlightReLive.Core.Building
                 meshData.vertices[v++] = v2;
                 meshData.vertices[v++] = v3;
 
-                Vector3 normal = Vector3.Cross(v2 - v1, v0 - v1).normalized;
+                //Normals
+                Vector3 edge = v2 - v1;
+                Vector3 normal = Vector3.Cross(Vector3.up, edge).normalized;
 
                 meshData.normals[baseIndex + 0] = normal;
                 meshData.normals[baseIndex + 1] = normal;
                 meshData.normals[baseIndex + 2] = normal;
                 meshData.normals[baseIndex + 3] = normal;
 
-                meshData.uvs[baseIndex + 0] = Vector2.zero;
-                meshData.uvs[baseIndex + 1] = Vector2.zero;
-                meshData.uvs[baseIndex + 2] = Vector2.zero;
-                meshData.uvs[baseIndex + 3] = Vector2.zero;
+                //UVs
+                float wallLength = Vector2.Distance(p0, p1);
+                float wallHeight = topY - baseY;
+                float uvScaleX = 0.1f;
+                float uvScaleY = 0.1f; 
 
-                // Keep original triangle winding
+                meshData.uvs[baseIndex + 0] = new Vector2(0, 0);
+                meshData.uvs[baseIndex + 1] = new Vector2(0, wallHeight * uvScaleY);
+                meshData.uvs[baseIndex + 2] = new Vector2(wallLength * uvScaleX, wallHeight * uvScaleY);
+                meshData.uvs[baseIndex + 3] = new Vector2(wallLength * uvScaleX, 0);
+
+                //Triangles
                 meshData.triangles[t++] = baseIndex + 2;
                 meshData.triangles[t++] = baseIndex + 1;
                 meshData.triangles[t++] = baseIndex + 0;
@@ -324,6 +334,7 @@ namespace FlightReLive.Core.Building
                 meshData.triangles[t++] = baseIndex + 2;
                 meshData.triangles[t++] = baseIndex + 0;
             }
+
 
             return meshData;
         }

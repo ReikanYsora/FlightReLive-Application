@@ -59,6 +59,7 @@ namespace FlightReLive.Core
             //Register events
             SettingsManager.OnHardwareQualityPresetChanged += OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
+            SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
 
             //Check if welcome panel need do be displayed
             bool displayWelcomePanel = CheckIfDisplayWelcomePanelNeedToBeDisplayed();
@@ -77,6 +78,18 @@ namespace FlightReLive.Core
         {
             //Main thread dispatcher
             UnityMainThreadDispatcher.ManageThreads();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (hasFocus)
+            {
+                Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
+            }
+            else
+            {
+                Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationIdleFPS;
+            }
         }
 
         private void OnDestroy()
@@ -259,6 +272,11 @@ namespace FlightReLive.Core
         #endregion
 
         #region CALLBACKS
+        private void OnApplicationTargetFPSChanged(int value)
+        {
+            Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
+        }
+
         private void OnHardwareQualityPresetChanged(QualityPreset qualityPreset)
         {
             ApplyUnityQualityPreset(qualityPreset);

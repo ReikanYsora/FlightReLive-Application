@@ -7,7 +7,6 @@ namespace FlightReLive.Core.Settings
     {
         #region ATTRIBUTES
         public QualityPreset HardwareQualityPreset;
-        public QualityPreset TerrainQualityPreset;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
@@ -31,11 +30,6 @@ namespace FlightReLive.Core.Settings
         public float POIHeight;
         public float POIVisibilityDistance;
         public bool POIVisibility;
-        public int CaptureResolution;
-        public int CaptureEncoder;
-        public int CaptureFramerate;
-        public bool CaptureEncodedLogo;
-        public string CaptureOutputPath;
         public float VignettingIntensity;
         public string CurrentVersion;
         public float SunIntensity;

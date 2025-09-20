@@ -33,9 +33,9 @@ QualitySettings:
     realtimeGICPUUsage: 75
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 0.25
+    lodBias: 1
     meshLodThreshold: 1
-    maximumLODLevel: 2
+    maximumLODLevel: 0
     enableLODCrossFade: 0
     streamingMipmapsActive: 0
     streamingMipmapsAddAllCameras: 1
@@ -48,7 +48,7 @@ QualitySettings:
     asyncUploadBufferSize: 16
     asyncUploadPersistentBuffer: 1
     resolutionScalingFixedDPIFactor: 1
-    customRenderPipeline: {fileID: 11400000, guid: 076ded8f3a35f154abcac9d4ed96f254, type: 2}
+    customRenderPipeline: {fileID: 11400000, guid: fc481a1ccbc57cd4cb9aad89797543d5, type: 2}
     terrainQualityOverrides: 0
     terrainPixelError: 1
     terrainDetailDensityScale: 1
@@ -90,7 +90,7 @@ QualitySettings:
     adaptiveVsyncExtraB: 0
     lodBias: 0.5
     meshLodThreshold: 1
-    maximumLODLevel: 1
+    maximumLODLevel: 0
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
     streamingMipmapsAddAllCameras: 1
@@ -143,7 +143,7 @@ QualitySettings:
     realtimeGICPUUsage: 100
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 1
+    lodBias: 0.25
     meshLodThreshold: 1
     maximumLODLevel: 0
     enableLODCrossFade: 0
@@ -158,7 +158,7 @@ QualitySettings:
     asyncUploadBufferSize: 16
     asyncUploadPersistentBuffer: 1
     resolutionScalingFixedDPIFactor: 1
-    customRenderPipeline: {fileID: 11400000, guid: fc481a1ccbc57cd4cb9aad89797543d5, type: 2}
+    customRenderPipeline: {fileID: 11400000, guid: 076ded8f3a35f154abcac9d4ed96f254, type: 2}
     terrainQualityOverrides: 0
     terrainPixelError: 1
     terrainDetailDensityScale: 1
@@ -182,7 +182,7 @@ QualitySettings:
     PS5: 0
     Server: 0
     Stadia: 0
-    Standalone: 0
+    Standalone: 1
     WebGL: 0
     Windows Store Apps: 0
     XboxOne: 0

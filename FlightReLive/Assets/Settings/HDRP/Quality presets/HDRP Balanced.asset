@@ -30,7 +30,7 @@ MonoBehaviour:
         m_Id: With3Levels
     supportVolumetrics: 1
     supportVolumetricClouds: 1
-    supportLightLayers: 0
+    supportLightLayers: 1
     renderingLayerMaskBuffer: 0
     supportWater: 0
     waterSimulationResolution: 128
@@ -229,7 +229,7 @@ MonoBehaviour:
       ChromaticAberrationMaxSamples: 03000000060000000c000000
     lightSettings:
       useContactShadow:
-        m_Values: 000001
+        m_Values: 010100
         m_SchemaId:
           m_Id: With3Levels
     maximumLODLevel:
@@ -546,5 +546,5 @@ MonoBehaviour:
   m_ObsoleteShaderVariantLogLevel: 0
   m_ObsoleteLensAttenuation: 0
   m_ObsoleteDiffusionProfileSettingsList: []
-  m_PrefilterUseLegacyLightmaps: 0
+  m_PrefilterUseLegacyLightmaps: 1
   m_PrefilterUseLightmapBicubicSampling: 0

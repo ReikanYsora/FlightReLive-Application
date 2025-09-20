@@ -17,7 +17,7 @@ MonoBehaviour:
     supportSSR: 1
     supportSSRTransparent: 1
     supportSSAO: 1
-    supportSSGI: 1
+    supportSSGI: 0
     supportSubsurfaceScattering: 1
     subsurfaceScatteringAttenuation: 1
     sssSampleBudget:
@@ -52,11 +52,11 @@ MonoBehaviour:
     supportTransparentDepthPostpass: 1
     colorBufferFormat: 48
     supportCustomPass: 1
-    supportVariableRateShading: 1
-    customBufferFormat: 48
+    supportVariableRateShading: 0
+    customBufferFormat: 8
     supportedLitShaderMode: 3
     planarReflectionResolution:
-      m_Values: 000100000004000000080000
+      m_Values: 800000000002000000040000
       m_SchemaId:
         m_Id: With3Levels
     cubeReflectionResolution:
@@ -87,7 +87,7 @@ MonoBehaviour:
     probeVolumeBlendingMemoryBudget: 128
     supportRayTracing: 0
     supportVFXRayTracing: 0
-    supportedRayTracingMode: 3
+    supportedRayTracingMode: 2
     lightLoopSettings:
       cookieAtlasSize: 2048
       cookieFormat: 74
@@ -106,7 +106,7 @@ MonoBehaviour:
       skyReflectionSize: 512
       skyLightingOverrideLayerMask:
         serializedVersion: 2
-        m_Bits: 0
+        m_Bits: 87
       supportFabricConvolution: 0
       maxDirectionalLightsOnScreen: 16
       maxPunctualLightsOnScreen: 512
@@ -119,17 +119,17 @@ MonoBehaviour:
       maxLocalVolumetricFogOnScreen: 256
     hdShadowInitParams:
       maxShadowRequests: 128
-      directionalShadowsDepthBits: 32
-      punctualShadowFilteringQuality: 1
-      directionalShadowFilteringQuality: 1
+      directionalShadowsDepthBits: 16
+      punctualShadowFilteringQuality: 0
+      directionalShadowFilteringQuality: 0
       areaShadowFilteringQuality: 0
       punctualLightShadowAtlas:
-        shadowAtlasResolution: 4096
+        shadowAtlasResolution: 1024
         shadowAtlasDepthBits: 32
-        useDynamicViewportRescale: 1
+        useDynamicViewportRescale: 0
       areaLightShadowAtlas:
-        shadowAtlasResolution: 4096
-        shadowAtlasDepthBits: 32
+        shadowAtlasResolution: 2048
+        shadowAtlasDepthBits: 16
         useDynamicViewportRescale: 1
       cachedPunctualLightShadowAtlas: 2048
       cachedAreaLightShadowAtlas: 1024
@@ -139,7 +139,7 @@ MonoBehaviour:
         m_SchemaId:
           m_Id: With4Levels
       shadowResolutionPunctual:
-        m_Values: 00010000000200000004000000080000
+        m_Values: 80000000000100000002000000040000
         m_SchemaId:
           m_Id: With4Levels
       shadowResolutionArea:
@@ -147,9 +147,9 @@ MonoBehaviour:
         m_SchemaId:
           m_Id: With4Levels
       maxDirectionalShadowMapResolution: 2048
-      maxPunctualShadowMapResolution: 2048
+      maxPunctualShadowMapResolution: 1024
       maxAreaShadowMapResolution: 2048
-      supportScreenSpaceShadows: 0
+      supportScreenSpaceShadows: 1
       maxScreenSpaceShadowSlots: 4
       screenSpaceShadowBufferFormat: 48
     decalSettings:
@@ -162,11 +162,11 @@ MonoBehaviour:
           m_Id: With3Levels
       perChannelMask: 0
     postProcessSettings:
-      m_LutSize: 64
-      lutFormat: 52
-      bufferFormat: 74
+      m_LutSize: 16
+      lutFormat: 48
+      bufferFormat: 48
     dynamicResolutionSettings:
-      enabled: 0
+      enabled: 1
       useMipBias: 0
       advancedUpscalersByPriority: 02
       DLSSPerfQualitySetting: 0
@@ -184,7 +184,7 @@ MonoBehaviour:
       fsrOverrideSharpness: 0
       fsrSharpness: 0.92
       maxPercentage: 100
-      minPercentage: 100
+      minPercentage: 50
       dynResType: 1
       upsampleFilter: 1
       forceResolution: 0
@@ -195,7 +195,7 @@ MonoBehaviour:
       lowResVolumetricCloudsMinimumThreshold: 50
       enableDLSS: 0
     lowresTransparentSettings:
-      enabled: 1
+      enabled: 0
       checkerboardDepthBuffer: 1
       upsampleType: 1
     xrSettings:
@@ -229,18 +229,18 @@ MonoBehaviour:
       ChromaticAberrationMaxSamples: 03000000060000000c000000
     lightSettings:
       useContactShadow:
-        m_Values: 000001
+        m_Values: 010101
         m_SchemaId:
           m_Id: With3Levels
     maximumLODLevel:
-      m_Values: 000000000000000000000000
+      m_Values: 020000000100000000000000
       m_SchemaId:
         m_Id: With3Levels
     lodBias:
       m_Values:
+      - 0.25
+      - 0.5
       - 1
-      - 2
-      - 2
       m_SchemaId:
         m_Id: With3Levels
     lightingQualitySettings:
@@ -315,7 +315,7 @@ MonoBehaviour:
       - 0.666
       - 0.5
     gpuResidentDrawerSettings:
-      mode: 1
+      mode: 0
       smallMeshScreenPercentage: 0
       enableOcclusionCullingInCameras: 1
       useDepthPrepassForOccluders: 1

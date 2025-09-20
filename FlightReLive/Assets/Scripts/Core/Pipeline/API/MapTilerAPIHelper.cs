@@ -123,18 +123,7 @@ internal static class MapTilerAPIHelper
             return null;
         }
 
-        QualityPreset terrainQualityPreset = SettingsManager.CurrentSettings.TerrainQualityPreset;
-
-        switch (terrainQualityPreset)
-        {
-            case QualityPreset.Quality:
-                return CombinePNGTiles(downloaded);
-            case QualityPreset.Balanced:
-                return CombinePNGTiles(downloaded);
-            default:
-            case QualityPreset.Performance:
-                return CombinePNGTiles(downloaded);
-        }
+        return CombinePNGTiles(downloaded);
     }
 
     private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)

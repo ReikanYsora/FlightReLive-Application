@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Environment;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using System.Collections.Generic;
@@ -13,15 +14,8 @@ namespace FlightReLive.Core.ProceduralTerrain
 {
     public class ProceduralTerrainManager : MonoBehaviour
     {
-        #region CONSTANTS
-        private const float PoolPadding = 50f;
-        private const float PoolHeightPadding = 20f;
-        #endregion
-
         #region ATTRIBUTES
         private GameObject _terrain;
-        [SerializeField] private Texture2D _detailNormalMap;
-        [SerializeField] private Texture2D _detailMaskMap;
         #endregion
 
         #region PROPERTIES
@@ -157,6 +151,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 return;
             }
 
+            QualityPreset hardawreQualityPreset = SettingsManager.CurrentSettings.HardwareQualityPreset;
             int resTile = tiles[0].HeightMap.GetLength(0);
             int texTileW = tiles[0].SatelliteTexture.width;
             int texTileH = tiles[0].SatelliteTexture.height;
@@ -254,32 +249,6 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             mergedFlat.Dispose();
 
-            QualityPreset terrainQualityPreset = SettingsManager.CurrentSettings.TerrainQualityPreset;
-
-            //Decimate heightmap based on quality preset
-            int decimationFactor;
-
-            switch (terrainQualityPreset)
-            {
-                case QualityPreset.Quality:
-                    decimationFactor = 1;
-                    break;
-                default:
-                case QualityPreset.Balanced:
-                    decimationFactor = 2;
-                    break;
-                case QualityPreset.Performance:
-                    decimationFactor = 4;
-                    break;
-            }
-
-            if (decimationFactor > 1)
-            {
-                merged = DecimateHeightmap(merged, decimationFactor);
-                totalW /= decimationFactor;
-                totalH /= decimationFactor;
-            }
-
             //Resample heightmap to next power-of-two resolution
             int longest = Mathf.Max(totalW, totalH);
             int terrainRes = Mathf.NextPowerOfTwo(longest - 1) + 1;
@@ -339,12 +308,8 @@ namespace FlightReLive.Core.ProceduralTerrain
             };
             terrainData.SetHeightsDelayLOD(0, 0, merged);
 
-            // pply resolution optimizations based on quality preset
-            terrainData.baseMapResolution = Mathf.Clamp(512 / decimationFactor, 128, 512);
-            terrainData.alphamapResolution = Mathf.Clamp(512 / decimationFactor, 128, 512);
-
             //Skip heightmap sync in Performance mode to reduce CPU cost
-            if (terrainQualityPreset != QualityPreset.Performance)
+            if (hardawreQualityPreset != QualityPreset.Performance)
             {
                 terrainData.SyncHeightmap();
             }
@@ -355,7 +320,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             _terrain.name = "Procedural Terrain";
             _terrain.transform.SetParent(transform, false);
 
-            switch (terrainQualityPreset)
+            switch (hardawreQualityPreset)
             {
                 case QualityPreset.Quality:
                     terrain.heightmapPixelError = 5;
@@ -403,7 +368,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             Texture2D globalSatellite = CombineSatelliteTiles(tiles);
 
             // Use bilinear filtering for satellite texture in Performance mode
-            if (terrainQualityPreset == QualityPreset.Performance)
+            if (hardawreQualityPreset == QualityPreset.Performance)
             {
                 globalSatellite.filterMode = FilterMode.Bilinear;
             }
@@ -414,36 +379,24 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
 
             //Setup terrain layers
-            TerrainLayer satelliteLayer = new TerrainLayer
+            TerrainLayer terrainLayer = new TerrainLayer
             {
                 diffuseTexture = globalSatellite,
                 tileSize = new Vector2(terrainData.size.x, terrainData.size.z)
             };
 
-            TerrainLayer detailLayer = new TerrainLayer
-            {
-                diffuseTexture = Texture2D.blackTexture,
-                normalMapTexture = _detailNormalMap,
-                maskMapTexture = _detailMaskMap,
-                tileSize = new Vector2(100f, 100f)
-            };
+            //Apply single layer
+            terrain.terrainData.terrainLayers = new TerrainLayer[] { terrainLayer };
 
-            terrain.terrainData.terrainLayers = new TerrainLayer[] { satelliteLayer, detailLayer };
-
-            //Apply default alphamaps
             int alphaRes = terrain.terrainData.alphamapResolution;
-            float[,,] maps = new float[alphaRes, alphaRes, 2];
-            float[] weights = new float[] { 0.80f, 0.20f };
-
+            float[,,] maps = new float[alphaRes, alphaRes, 1];
             for (int y = 0; y < alphaRes; y++)
             {
                 for (int x = 0; x < alphaRes; x++)
                 {
-                    maps[y, x, 0] = weights[0];
-                    maps[y, x, 1] = weights[1];
+                    maps[y, x, 0] = 1.0f;
                 }
             }
-
             terrain.terrainData.SetAlphamaps(0, 0, maps);
 
             //Cleanup satellite textures to free memory
@@ -453,50 +406,12 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
         }
 
-
         internal void Unload()
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 GameObject.Destroy(_terrain);
             });
-        }
-
-        private static float[,] DecimateHeightmap(float[,] source, int factor)
-        {
-            int srcH = source.GetLength(0);
-            int srcW = source.GetLength(1);
-
-            int dstH = srcH / factor;
-            int dstW = srcW / factor;
-
-            //Clamp to avoid out-of-bounds access
-            dstH = Mathf.Max(1, dstH);
-            dstW = Mathf.Max(1, dstW);
-
-            float[,] result = new float[dstH, dstW];
-
-            for (int y = 0; y < dstH; y++)
-            {
-                int srcY = y * factor;
-                if (srcY >= srcH)
-                {
-                    srcY = srcH - 1;
-                }
-
-                for (int x = 0; x < dstW; x++)
-                {
-                    int srcX = x * factor;
-                    if (srcX >= srcW)
-                    {
-                        srcX = srcW - 1;
-                    }
-
-                    result[y, x] = source[srcY, srcX];
-                }
-            }
-
-            return result;
         }
 
         private static Texture2D CombineSatelliteTiles(List<TileDefinition> tiles)
@@ -509,15 +424,15 @@ namespace FlightReLive.Core.ProceduralTerrain
             int tileCountX = maxX - minX + 1;
             int tileCountY = maxY - minY + 1;
 
-            // Determine max tile size (largest zoom level tile)
+            //Determine max tile size (largest zoom level tile)
             int maxTileW = tiles.Max(t => t.SatelliteTexture.width);
             int maxTileH = tiles.Max(t => t.SatelliteTexture.height);
 
             int atlasW = tileCountX * maxTileW;
             int atlasH = tileCountY * maxTileH;
 
-            // === Clamp to GPU max texture size ===
-            int maxSize = SystemInfo.maxTextureSize; // Usually 16384
+            //Clamp to GPU max texture size
+            int maxSize = SystemInfo.maxTextureSize;
             float scaleFactor = 1f;
 
             if (atlasW > maxSize || atlasH > maxSize)
@@ -530,7 +445,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 atlasH = Mathf.FloorToInt(atlasH * scaleFactor);
             }
 
-            // Create atlas RT (clamped)
+            //Create atlas RT (clamped)
             RenderTexture atlasRT = new RenderTexture(atlasW, atlasH, 0, RenderTextureFormat.ARGB32);
             atlasRT.Create();
 
@@ -551,7 +466,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 int targetW = Mathf.FloorToInt(maxTileW * scaleFactor);
                 int targetH = Mathf.FloorToInt(maxTileH * scaleFactor);
 
-                // Upscale/downscale to target size
+                //Upscale/downscale to target size
                 RenderTexture tempRT = RenderTexture.GetTemporary(targetW, targetH, 0, RenderTextureFormat.ARGB32);
                 Graphics.Blit(src, tempRT);
 
@@ -559,7 +474,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 RenderTexture.ReleaseTemporary(tempRT);
             }
 
-            // Convert to Texture2D
+            //Convert to Texture2D
             Texture2D finalTex = new Texture2D(atlasW, atlasH, TextureFormat.RGB24, false);
             RenderTexture.active = atlasRT;
             finalTex.ReadPixels(new Rect(0, 0, atlasW, atlasH), 0, 0);
@@ -570,11 +485,6 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             return finalTex;
         }
-
         #endregion
     }
 }
-
-
-
-

@@ -25,17 +25,11 @@ namespace FlightReLive.Core.Cameras
 
         private float _zoomSensitivity = 10f;
         private float zoomSpeed = 5f;
-        private float sensitivity = 2f;
         private float _rotationSensitivity = 3f;
         private float minFOV = 30f;
         private float maxFOV = 90f;
-        private bool isLooking = false;
-        private float yaw = 0f;
-        private float pitch = 0f;
         private float _targetX = 0f;
         private float _targetY = 30f;
-        private float _currentX = 0f;
-        private float _currentY = 30f;
         #endregion
 
         #region PROPERTIES
@@ -59,10 +53,6 @@ namespace FlightReLive.Core.Cameras
 
         private void Start()
         {
-            Vector3 angles = transform.eulerAngles;
-            yaw = angles.y;
-            pitch = angles.x;
-
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
             SettingsManager.OnCameraRotationSpeedChanged += OnCameraRotationSpeedChanged;

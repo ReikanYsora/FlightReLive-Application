@@ -487,7 +487,7 @@ namespace FlightReLive.Core.Environment
                 }
 
                 float saturation = SettingsManager.CurrentSettings.SaturationIntensity;
-                if (gridColorAdjustment.Slider("Saturation", ref saturation, -2f, 2f, 0.01f, format: "%.01f"))
+                if (gridColorAdjustment.Slider("Saturation", ref saturation, -20f, 20f, 0.1f, format: "%.1f"))
                 {
                     SettingsManager.SaveSaturationIntensity(saturation);
                 }

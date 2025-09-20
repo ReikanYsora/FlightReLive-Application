@@ -820,52 +820,6 @@ Transform:
   - {fileID: 2125856383}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &719437184
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 719437185}
-  - component: {fileID: 719437186}
-  m_Layer: 0
-  m_Name: AnalysisManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &719437185
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 719437184}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1896134859}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &719437186
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 719437184}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b96331ec77de6446ac674127377e722, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Analysis.VisualMotionEstimator
-  _frameAnalyserMaterial: {fileID: 2100000, guid: 5e99915837f41cf4fbbb2a996d09b2f2, type: 2}
-  enable: 0
 --- !u!1 &739676616
 GameObject:
   m_ObjectHideFlags: 0
@@ -910,8 +864,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0b379570607945438ebc9f25b66153d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.ProceduralTerrain.TerrainManager
-  _detailNormalMap: {fileID: 2800000, guid: 9cbcbf5c5d6f7da439b413720d481d84, type: 3}
-  _detailMaskMap: {fileID: 2800000, guid: bc93d98dec2404d4abbc238ddd7cff13, type: 3}
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0
@@ -924,7 +876,7 @@ GameObject:
   - component: {fileID: 796242730}
   - component: {fileID: 796242734}
   m_Layer: 0
-  m_Name: Camera
+  m_Name: Main Camera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1401,8 +1353,8 @@ MonoBehaviour:
   m_VolumetricShadowDimmer: 1
   m_ShadowFadeDistance: 10000
   m_UseContactShadow:
-    m_Override: 0
-    m_UseOverride: 0
+    m_Override: 1
+    m_UseOverride: 1
     m_Level: 2
   m_RayTracedContactShadow: 0
   m_ShadowTint: {r: 0, g: 0, b: 0, a: 1}
@@ -1458,7 +1410,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 1
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -1698,52 +1650,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbb07aad78f22074e8d688bfa368cf94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &1521792414
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1521792415}
-  - component: {fileID: 1521792416}
-  m_Layer: 0
-  m_Name: CaptureManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1521792415
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1521792414}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1896134859}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1521792416
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1521792414}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b565d6cc4d3ebb24fb2b59b53ab49ae1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Capture.CaptureManager
-  _filePrefix: video_
-  _logoFileName: logo.png
 --- !u!1 &1531727481
 GameObject:
   m_ObjectHideFlags: 0
@@ -1912,10 +1818,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 719437185}
   - {fileID: 2116168536}
   - {fileID: 289568083}
-  - {fileID: 1521792415}
   - {fileID: 1092402792}
   - {fileID: 311396844}
   - {fileID: 1289900097}
@@ -2031,7 +1935,6 @@ MonoBehaviour:
   priority: 0
   customPasses:
   - rid: 1696480920264507453
-  - rid: 1696480920264507454
   injectionPoint: 3
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
@@ -2050,17 +1953,6 @@ MonoBehaviour:
         m_Version: 0
         FuguiShader: {fileID: 4800000, guid: b27657a013856af41bdb687983ef0e57, type: 3}
         CameraLayer: 5
-    - rid: 1696480920264507454
-      type: {class: CaptureCustomPass, ns: FlightReLive.Core.Capture, asm: Assembly-CSharp}
-      data:
-        m_Name: Capture
-        enabled: 1
-        targetColorBuffer: 0
-        targetDepthBuffer: 0
-        clearFlags: 0
-        passFoldout: 0
-        m_Version: 0
-        TargetTexture: {fileID: 0}
 --- !u!4 &2125856383
 Transform:
   m_ObjectHideFlags: 0

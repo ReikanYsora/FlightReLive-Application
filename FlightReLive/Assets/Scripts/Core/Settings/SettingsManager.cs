@@ -40,7 +40,6 @@ namespace FlightReLive.Core.Settings
 
         #region EVENTS
         public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
-        public static event Action<QualityPreset> OnTerrainQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -63,11 +62,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnPOIHeightChanged;
         public static event Action<float> OnPOIVisibilityDistanceChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
-        public static event Action<int> OnCaptureResolutionChanged;
-        public static event Action<int> OnCaptureEncoderChanged;
-        public static event Action<int> OnCaptureFramerateChanged;
-        public static event Action<bool> OnCaptureEncodedLogoChanged;
-        public static event Action<string> OnCaptureOutputPathChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnSunIntensityChanged;
         public static event Action<float> OnPostExposureIntensityChanged;
@@ -78,9 +72,6 @@ namespace FlightReLive.Core.Settings
         #region METHODS
         internal static void LoadHardwareQualityPreset() =>
             CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
-
-        internal static void LoadTerrainQualityPreset() =>
-            CurrentSettings.TerrainQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.TerrainQualityPreset), (int)QualityPreset.Performance);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -188,26 +179,8 @@ namespace FlightReLive.Core.Settings
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
 
-        internal static void LoadCaptureResolution() =>
-            CurrentSettings.CaptureResolution = PlayerPrefs.GetInt(nameof(Settings.CaptureResolution), 1);
-
-        internal static void LoadCaptureEncoder() =>
-            CurrentSettings.CaptureEncoder = PlayerPrefs.GetInt(nameof(Settings.CaptureEncoder), 0);
-
-        internal static void LoadCaptureFramerate() =>
-            CurrentSettings.CaptureFramerate = PlayerPrefs.GetInt(nameof(Settings.CaptureFramerate), 1);
-
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
-
-        internal static void LoadCaptureOutputPath() =>
-            CurrentSettings.CaptureOutputPath = PlayerPrefs.GetString(
-            nameof(Settings.CaptureOutputPath),
-            Path.Combine(Application.persistentDataPath, "Captures")
-        );
-
-        internal static void LoadCaptureEncodedLogo() =>
-            CurrentSettings.CaptureEncodedLogo = PlayerPrefs.GetInt(nameof(Settings.CaptureEncodedLogo), 1) == 1;
 
         internal static void LoadVignettingIntensity() =>
             CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), 0.3f);
@@ -222,7 +195,7 @@ namespace FlightReLive.Core.Settings
             CurrentSettings.ContrastIntensity = PlayerPrefs.GetFloat(nameof(Settings.ContrastIntensity), 40);
 
         internal static void LoadSaturationIntensity() =>
-            CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 1.1f);
+            CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 5f);
 
         internal static void SaveHardwareQualityPreset(QualityPreset value)
         {
@@ -230,14 +203,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.HardwareQualityPreset), (int)value);
             PlayerPrefs.Save();
             OnHardwareQualityPresetChanged?.Invoke(value);
-        }
-
-        internal static void SaveTerrainQualityPreset(QualityPreset value)
-        {
-            CurrentSettings.TerrainQualityPreset = value;
-            PlayerPrefs.SetInt(nameof(Settings.TerrainQualityPreset), (int)value);
-            PlayerPrefs.Save();
-            OnTerrainQualityPresetChanged?.Invoke(value);
         }
 
         internal static void SaveApplicationTargetFPS(int value)
@@ -425,46 +390,6 @@ namespace FlightReLive.Core.Settings
             OnBuildingVisibilityChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureResolution(int value)
-        {
-            CurrentSettings.CaptureResolution = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureResolution), value);
-            PlayerPrefs.Save();
-            OnCaptureResolutionChanged?.Invoke(value);
-        }
-
-        internal static void SaveCaptureEncoder(int value)
-        {
-            CurrentSettings.CaptureEncoder = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureEncoder), value);
-            PlayerPrefs.Save();
-            OnCaptureEncoderChanged?.Invoke(value);
-        }
-
-        internal static void SaveCaptureFramerate(int value)
-        {
-            CurrentSettings.CaptureFramerate = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureFramerate), value);
-            PlayerPrefs.Save();
-            OnCaptureFramerateChanged?.Invoke(value);
-        }
-
-        internal static void SaveCaptureOutputPath(string value)
-        {
-            CurrentSettings.CaptureOutputPath = value;
-            PlayerPrefs.SetString(nameof(Settings.CaptureOutputPath), value);
-            PlayerPrefs.Save();
-            OnCaptureOutputPathChanged?.Invoke(value);
-        }
-
-        internal static void SaveCaptureEncodedLogo(bool value)
-        {
-            CurrentSettings.CaptureEncodedLogo = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureEncodedLogo), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnCaptureEncodedLogoChanged?.Invoke(value);
-        }
-
         internal static void SaveVignettingIntensity(float value)
         {
             CurrentSettings.VignettingIntensity = value;
@@ -514,7 +439,6 @@ namespace FlightReLive.Core.Settings
 
             LoadCurrentVersion();
             LoadHardwareQualityPreset();
-            LoadTerrainQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -537,11 +461,6 @@ namespace FlightReLive.Core.Settings
             LoadPOIHeight();
             LoadPOIVisibilityDistance();
             LoadBuildingVisibility();
-            LoadCaptureResolution();
-            LoadCaptureEncoder();
-            LoadCaptureFramerate();
-            LoadCaptureOutputPath();
-            LoadCaptureEncodedLogo();
             LoadVignettingIntensity();
             LoadSunIntensity();
             LoadPostExposureIntensity();
@@ -553,7 +472,6 @@ namespace FlightReLive.Core.Settings
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
-            SaveTerrainQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -579,16 +497,11 @@ namespace FlightReLive.Core.Settings
             SavePOIHeight(5f);
             SavePOIVisibilityDistance(200f);
             SaveBuildingVisibility(true);
-            SaveCaptureResolution(1);
-            SaveCaptureEncoder(0);
-            SaveCaptureFramerate(1);
-            SaveCaptureOutputPath(Path.Combine(Application.persistentDataPath, "Captures"));
-            SaveCaptureEncodedLogo(true);
             SaveVignettingIntensity(0.3f);
             SaveSunIntensity(0.8f);
             SavePostExposureIntensity(0f);
             SaveContrastIntensity(40f);
-            SaveSaturationIntensity(1.1f);
+            SaveSaturationIntensity(5f);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -803,28 +716,6 @@ namespace FlightReLive.Core.Settings
                                 if (ImGui.Selectable(label))
                                 {
                                     SaveHardwareQualityPreset(preset);
-                                }
-                            }
-                        });
-                    }
-
-                    using (FuGrid terrainQualityGrid = new FuGrid("terrainQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        terrainQualityGrid.SetNextElementToolTipWithLabel("This parameter determines the level of detail and quality of the terrain. This parameter has a very significant impact on performance.\nHigher settings will provide more detailed terrain at the cost of performance, while lower settings will improve performance but reduce terrain detail.\nChanges are applied after scene reloading.");
-
-                        QualityPreset currentPreset = CurrentSettings.TerrainQualityPreset;
-                        string comboLabel = currentPreset.ToString();
-
-                        terrainQualityGrid.Combobox("TerrainQualityPreset##TerrainQualityCombobox", comboLabel, () =>
-                        {
-                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
-                            {
-                                bool isSelected = preset == currentPreset;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveTerrainQualityPreset(preset);
                                 }
                             }
                         });

@@ -53,11 +53,8 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
-            //Apply hardware quality settings
-            ApplyUnityQualityPreset(SettingsManager.CurrentSettings.HardwareQualityPreset);
 
             //Register events
-            SettingsManager.OnHardwareQualityPresetChanged += OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
 
@@ -95,7 +92,6 @@ namespace FlightReLive.Core
         private void OnDestroy()
         {
             //Unregister events
-            SettingsManager.OnHardwareQualityPresetChanged -= OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
         }
         #endregion
@@ -185,30 +181,6 @@ namespace FlightReLive.Core
             float scale = SettingsManager.CurrentSettings.GlobalScale;
             Fugui.SetScale(scale, scale);
         }
-
-        private int GetUnityQualityIndex(QualityPreset preset)
-        {
-            switch (preset)
-            {
-                default:
-                case QualityPreset.Quality:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Quality", StringComparison.OrdinalIgnoreCase));
-                case QualityPreset.Balanced:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Balanced", StringComparison.OrdinalIgnoreCase));
-                case QualityPreset.Performance:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Performance", StringComparison.OrdinalIgnoreCase));
-            }
-        }
-
-        private void ApplyUnityQualityPreset(QualityPreset preset)
-        {
-            int index = GetUnityQualityIndex(preset);
-
-            if (index >= 0 && index < QualitySettings.names.Length)
-            {
-                QualitySettings.SetQualityLevel(index, true);
-            }
-        }
         #endregion
 
         #region UI
@@ -275,11 +247,6 @@ namespace FlightReLive.Core
         private void OnApplicationTargetFPSChanged(int value)
         {
             Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
-        }
-
-        private void OnHardwareQualityPresetChanged(QualityPreset qualityPreset)
-        {
-            ApplyUnityQualityPreset(qualityPreset);
         }
 
         private void OnGlobalScaleChanged(float scale)

@@ -151,7 +151,6 @@ namespace FlightReLive.Core.ProceduralTerrain
                 return;
             }
 
-            QualityPreset hardawreQualityPreset = SettingsManager.CurrentSettings.HardwareQualityPreset;
             int resTile = tiles[0].HeightMap.GetLength(0);
             int texTileW = tiles[0].SatelliteTexture.width;
             int texTileH = tiles[0].SatelliteTexture.height;
@@ -308,46 +307,13 @@ namespace FlightReLive.Core.ProceduralTerrain
             };
             terrainData.SetHeightsDelayLOD(0, 0, merged);
 
-            //Skip heightmap sync in Performance mode to reduce CPU cost
-            if (hardawreQualityPreset != QualityPreset.Performance)
-            {
-                terrainData.SyncHeightmap();
-            }
+            terrainData.SyncHeightmap();
 
             //Instantiate terrain object
             _terrain = Terrain.CreateTerrainGameObject(terrainData);
             Terrain terrain = _terrain.GetComponent<Terrain>();
             _terrain.name = "Procedural Terrain";
             _terrain.transform.SetParent(transform, false);
-
-            switch (hardawreQualityPreset)
-            {
-                case QualityPreset.Quality:
-                    terrain.heightmapPixelError = 5;
-                    terrain.basemapDistance = 1000;
-                    terrain.treeDistance = 1000;
-                    terrain.detailObjectDistance = 500;
-                    terrain.detailObjectDensity = 1f;
-                    terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-                    break;
-                default:
-                case QualityPreset.Balanced:
-                    terrain.heightmapPixelError = 10;
-                    terrain.basemapDistance = 500;
-                    terrain.treeDistance = 500;
-                    terrain.detailObjectDistance = 250;
-                    terrain.detailObjectDensity = 0.5f;
-                    terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-                    break;
-                case QualityPreset.Performance:
-                    terrain.heightmapPixelError = 20;
-                    terrain.basemapDistance = 250;
-                    terrain.treeDistance = 250;
-                    terrain.detailObjectDistance = 100;
-                    terrain.detailObjectDensity = 0.25f;
-                    terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    break;
-            }
 
             // Position terrain in world space
             float centerTileX = (minX + maxX) / 2.0f;
@@ -366,17 +332,8 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             //Merge satellite textures
             Texture2D globalSatellite = CombineSatelliteTiles(tiles);
-
-            // Use bilinear filtering for satellite texture in Performance mode
-            if (hardawreQualityPreset == QualityPreset.Performance)
-            {
-                globalSatellite.filterMode = FilterMode.Bilinear;
-            }
-            else
-            {
-                globalSatellite.filterMode = FilterMode.Trilinear;
-                globalSatellite.anisoLevel = 2;
-            }
+            globalSatellite.filterMode = FilterMode.Trilinear;
+            globalSatellite.anisoLevel = 2;
 
             //Setup terrain layers
             TerrainLayer terrainLayer = new TerrainLayer

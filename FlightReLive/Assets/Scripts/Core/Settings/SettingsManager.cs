@@ -39,7 +39,6 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region EVENTS
-        public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -70,9 +69,6 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region METHODS
-        internal static void LoadHardwareQualityPreset() =>
-            CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
-
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
 
@@ -196,14 +192,6 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadSaturationIntensity() =>
             CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 5f);
-
-        internal static void SaveHardwareQualityPreset(QualityPreset value)
-        {
-            CurrentSettings.HardwareQualityPreset = value;
-            PlayerPrefs.SetInt(nameof(Settings.HardwareQualityPreset), (int)value);
-            PlayerPrefs.Save();
-            OnHardwareQualityPresetChanged?.Invoke(value);
-        }
 
         internal static void SaveApplicationTargetFPS(int value)
         {
@@ -438,7 +426,6 @@ namespace FlightReLive.Core.Settings
             }
 
             LoadCurrentVersion();
-            LoadHardwareQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -471,7 +458,6 @@ namespace FlightReLive.Core.Settings
         internal static void LoadDefaultSettings()
         {
             SaveCurrentVersion(Application.version);
-            SaveHardwareQualityPreset(QualityPreset.Quality);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -697,30 +683,6 @@ namespace FlightReLive.Core.Settings
 
                 layout.Collapsable("Quality settings##collapsable", () =>
                 {
-                    Fugui.PushFont(14, FontType.Regular);
-
-                    using (FuGrid hardwareQualityGrid = new FuGrid("hardwareQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        hardwareQualityGrid.SetNextElementToolTipWithLabel("This parameter defines the graphic quality level of the scene. This includes: texture detail levels, shadows, lighting, and post-processing effects.");
-
-                        QualityPreset currentPreset = CurrentSettings.HardwareQualityPreset;
-                        string comboLabel = currentPreset.ToString();
-
-                        hardwareQualityGrid.Combobox("HardwareQualityPreset##HardwareQualityCombobox", comboLabel, () =>
-                        {
-                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
-                            {
-                                bool isSelected = preset == currentPreset;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveHardwareQualityPreset(preset);
-                                }
-                            }
-                        });
-                    }
-
                     using (FuGrid fpsSettings = new FuGrid("fpsSettingsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         fpsSettings.SetNextElementToolTipWithLabel("This parameter defines the refresh rate of the application while it is running.\nAdjusting this value can help balance visual fluidity and system performance.\nHigher values provide smoother animations but may increase GPU usage.\nLower values reduce resource consumption, which can be useful on less powerful machines or during background execution.\nChanges are applied immediately.");

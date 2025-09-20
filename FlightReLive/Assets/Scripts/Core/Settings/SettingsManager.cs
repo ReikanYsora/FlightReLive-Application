@@ -40,6 +40,7 @@ namespace FlightReLive.Core.Settings
 
         #region EVENTS
         public static event Action<QualityPreset> OnHardwareQualityPresetChanged;
+        public static event Action<QualityPreset> OnTerrainQualityPresetChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -77,6 +78,9 @@ namespace FlightReLive.Core.Settings
         #region METHODS
         internal static void LoadHardwareQualityPreset() =>
             CurrentSettings.HardwareQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.HardwareQualityPreset), (int)QualityPreset.Quality);
+
+        internal static void LoadTerrainQualityPreset() =>
+            CurrentSettings.TerrainQualityPreset = (QualityPreset)PlayerPrefs.GetInt(nameof(Settings.TerrainQualityPreset), (int)QualityPreset.Performance);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -180,7 +184,7 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadPOIVisibilityDistance() =>
             CurrentSettings.POIVisibilityDistance = PlayerPrefs.GetFloat(nameof(Settings.POIVisibilityDistance), 200f);
-        
+
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
 
@@ -226,6 +230,14 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.HardwareQualityPreset), (int)value);
             PlayerPrefs.Save();
             OnHardwareQualityPresetChanged?.Invoke(value);
+        }
+
+        internal static void SaveTerrainQualityPreset(QualityPreset value)
+        {
+            CurrentSettings.TerrainQualityPreset = value;
+            PlayerPrefs.SetInt(nameof(Settings.TerrainQualityPreset), (int)value);
+            PlayerPrefs.Save();
+            OnTerrainQualityPresetChanged?.Invoke(value);
         }
 
         internal static void SaveApplicationTargetFPS(int value)
@@ -404,7 +416,7 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnPOIVisibilityDistanceChanged?.Invoke(value);
         }
-        
+
         internal static void SaveBuildingVisibility(bool value)
         {
             CurrentSettings.BuildingVisibility = value;
@@ -502,6 +514,7 @@ namespace FlightReLive.Core.Settings
 
             LoadCurrentVersion();
             LoadHardwareQualityPreset();
+            LoadTerrainQualityPreset();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
             LoadDontAskWelcomeVersion();
@@ -540,6 +553,7 @@ namespace FlightReLive.Core.Settings
         {
             SaveCurrentVersion(Application.version);
             SaveHardwareQualityPreset(QualityPreset.Quality);
+            SaveTerrainQualityPreset(QualityPreset.Performance);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
@@ -789,6 +803,28 @@ namespace FlightReLive.Core.Settings
                                 if (ImGui.Selectable(label))
                                 {
                                     SaveHardwareQualityPreset(preset);
+                                }
+                            }
+                        });
+                    }
+
+                    using (FuGrid terrainQualityGrid = new FuGrid("terrainQualityGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        terrainQualityGrid.SetNextElementToolTipWithLabel("This parameter determines the level of detail and quality of the terrain. This parameter has a very significant impact on performance.\nHigher settings will provide more detailed terrain at the cost of performance, while lower settings will improve performance but reduce terrain detail.\nChanges are applied after scene reloading.");
+
+                        QualityPreset currentPreset = CurrentSettings.TerrainQualityPreset;
+                        string comboLabel = currentPreset.ToString();
+
+                        terrainQualityGrid.Combobox("TerrainQualityPreset##TerrainQualityCombobox", comboLabel, () =>
+                        {
+                            foreach (QualityPreset preset in Enum.GetValues(typeof(QualityPreset)))
+                            {
+                                bool isSelected = preset == currentPreset;
+                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {preset}";
+
+                                if (ImGui.Selectable(label))
+                                {
+                                    SaveTerrainQualityPreset(preset);
                                 }
                             }
                         });

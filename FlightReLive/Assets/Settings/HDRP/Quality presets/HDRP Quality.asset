@@ -50,11 +50,11 @@ MonoBehaviour:
     supportTransparentBackface: 1
     supportTransparentDepthPrepass: 1
     supportTransparentDepthPostpass: 1
-    colorBufferFormat: 74
+    colorBufferFormat: 48
     supportCustomPass: 1
     supportVariableRateShading: 1
-    customBufferFormat: 8
-    supportedLitShaderMode: 2
+    customBufferFormat: 48
+    supportedLitShaderMode: 3
     planarReflectionResolution:
       m_Values: 000100000004000000080000
       m_SchemaId:
@@ -63,7 +63,7 @@ MonoBehaviour:
       m_Values: 800000000001000000020000
       m_SchemaId:
         m_Id: With3Levels
-    supportDecals: 1
+    supportDecals: 0
     supportDecalLayers: 0
     supportSurfaceGradient: 1
     decalNormalBufferHP: 0
@@ -162,8 +162,8 @@ MonoBehaviour:
           m_Id: With3Levels
       perChannelMask: 0
     postProcessSettings:
-      m_LutSize: 32
-      lutFormat: 48
+      m_LutSize: 64
+      lutFormat: 52
       bufferFormat: 74
     dynamicResolutionSettings:
       enabled: 0
@@ -239,8 +239,8 @@ MonoBehaviour:
     lodBias:
       m_Values:
       - 1
-      - 1
-      - 1
+      - 2
+      - 2
       m_SchemaId:
         m_Id: With3Levels
     lightingQualitySettings:

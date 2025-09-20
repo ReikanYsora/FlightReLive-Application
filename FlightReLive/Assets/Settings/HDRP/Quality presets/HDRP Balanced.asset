@@ -50,7 +50,7 @@ MonoBehaviour:
     supportTransparentBackface: 1
     supportTransparentDepthPrepass: 1
     supportTransparentDepthPostpass: 1
-    colorBufferFormat: 74
+    colorBufferFormat: 48
     supportCustomPass: 1
     supportVariableRateShading: 1
     customBufferFormat: 8
@@ -63,7 +63,7 @@ MonoBehaviour:
       m_Values: 800000000001000000020000
       m_SchemaId:
         m_Id: With3Levels
-    supportDecals: 1
+    supportDecals: 0
     supportDecalLayers: 0
     supportSurfaceGradient: 1
     decalNormalBufferHP: 0
@@ -166,7 +166,7 @@ MonoBehaviour:
       lutFormat: 48
       bufferFormat: 74
     dynamicResolutionSettings:
-      enabled: 0
+      enabled: 1
       useMipBias: 0
       advancedUpscalersByPriority: 02
       DLSSPerfQualitySetting: 0
@@ -184,7 +184,7 @@ MonoBehaviour:
       fsrOverrideSharpness: 0
       fsrSharpness: 0.92
       maxPercentage: 100
-      minPercentage: 100
+      minPercentage: 50
       dynResType: 1
       upsampleFilter: 1
       forceResolution: 0
@@ -233,14 +233,14 @@ MonoBehaviour:
         m_SchemaId:
           m_Id: With3Levels
     maximumLODLevel:
-      m_Values: 000000000000000000000000
+      m_Values: 010000000000000000000000
       m_SchemaId:
         m_Id: With3Levels
     lodBias:
       m_Values:
+      - 0.5
       - 1
-      - 1
-      - 1
+      - 1.5
       m_SchemaId:
         m_Id: With3Levels
     lightingQualitySettings:
@@ -318,7 +318,7 @@ MonoBehaviour:
       mode: 1
       smallMeshScreenPercentage: 0
       enableOcclusionCullingInCameras: 1
-      useDepthPrepassForOccluders: 1
+      useDepthPrepassForOccluders: 0
     m_ObsoleteLightLayerName0: 
     m_ObsoleteLightLayerName1: 
     m_ObsoleteLightLayerName2: 

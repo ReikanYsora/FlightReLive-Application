@@ -6,7 +6,8 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
-        public QualityPreset HardwareQualityPreset; 
+        public QualityPreset HardwareQualityPreset;
+        public QualityPreset TerrainQualityPreset;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;

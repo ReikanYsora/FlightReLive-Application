@@ -2030,26 +2030,15 @@ MonoBehaviour:
   fadeRadius: 0
   priority: 0
   customPasses:
-  - rid: 901995788566528067
-  - rid: 901995788566528063
+  - rid: 1696480920264507453
+  - rid: 1696480920264507454
   injectionPoint: 3
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
   references:
     version: 2
     RefIds:
-    - rid: 901995788566528063
-      type: {class: CaptureCustomPass, ns: FlightReLive.Core.Capture, asm: Assembly-CSharp}
-      data:
-        m_Name: Capture
-        enabled: 1
-        targetColorBuffer: 0
-        targetDepthBuffer: 0
-        clearFlags: 0
-        passFoldout: 0
-        m_Version: 0
-        TargetTexture: {fileID: 0}
-    - rid: 901995788566528067
+    - rid: 1696480920264507453
       type: {class: FuguiHDRPCustomPass, ns: Fu, asm: Fugui}
       data:
         m_Name: Fugui
@@ -2061,6 +2050,17 @@ MonoBehaviour:
         m_Version: 0
         FuguiShader: {fileID: 4800000, guid: b27657a013856af41bdb687983ef0e57, type: 3}
         CameraLayer: 5
+    - rid: 1696480920264507454
+      type: {class: CaptureCustomPass, ns: FlightReLive.Core.Capture, asm: Assembly-CSharp}
+      data:
+        m_Name: Capture
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        TargetTexture: {fileID: 0}
 --- !u!4 &2125856383
 Transform:
   m_ObjectHideFlags: 0

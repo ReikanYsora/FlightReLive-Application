@@ -43,7 +43,7 @@ namespace FlightReLive.Core.Workspace
 
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
             // Enable Mono-managed watcher for macOS compatibility
-            Environment.SetEnvironmentVariable("MONO_MANAGED_WATCHER", "enabled");
+            System.Environment.SetEnvironmentVariable("MONO_MANAGED_WATCHER", "enabled");
 #endif
         }
 

@@ -23,7 +23,6 @@ internal static class MapTilerAPIHelper
 {
     #region CONSTANTS
     private const int TILE_SIZE = 512;
-    private const int SATELLITE_TILE_SUPER_SAMPLING_SIZE = 4096;
     #endregion
 
     #region ATTRIBUTES
@@ -120,11 +119,22 @@ internal static class MapTilerAPIHelper
         }
 
         if (downloaded.Count == 0)
-        { 
+        {
             return null;
         }
 
-        return CombinePNGTiles(downloaded, SATELLITE_TILE_SUPER_SAMPLING_SIZE);
+        QualityPreset terrainQualityPreset = SettingsManager.CurrentSettings.TerrainQualityPreset;
+
+        switch (terrainQualityPreset)
+        {
+            case QualityPreset.Quality:
+                return CombinePNGTiles(downloaded);
+            case QualityPreset.Balanced:
+                return CombinePNGTiles(downloaded);
+            default:
+            case QualityPreset.Performance:
+                return CombinePNGTiles(downloaded);
+        }
     }
 
     private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
@@ -164,7 +174,29 @@ internal static class MapTilerAPIHelper
         }
     }
 
-    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles, int finalSize = 1024)
+    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles)
+    {
+        int minX = tiles.Keys.Min(k => k.Item1);
+        int maxX = tiles.Keys.Max(k => k.Item1);
+        int minY = tiles.Keys.Min(k => k.Item2);
+        int maxY = tiles.Keys.Max(k => k.Item2);
+
+        int width = (maxX - minX + 1) * TILE_SIZE;
+        int height = (maxY - minY + 1) * TILE_SIZE;
+        Texture2D atlas = new Texture2D(width, height);
+
+        foreach (var kv in tiles)
+        {
+            int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
+            int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
+            atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, kv.Value.GetPixels());
+        }
+
+        atlas.Apply();
+        return atlas;
+    }
+
+    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles, int finalSize)
     {
         int minX = tiles.Keys.Min(k => k.Item1);
         int maxX = tiles.Keys.Max(k => k.Item1);
@@ -240,7 +272,7 @@ internal static class MapTilerAPIHelper
             byte[] webp = await tcs.Task;
 
             if (webp == null)
-            { 
+            {
                 return null;
             }
 
@@ -249,8 +281,8 @@ internal static class MapTilerAPIHelper
             Error err;
             byte[] raw = WebPDecoder.LoadRGBAFromWebP(webp, ref w, ref h, false, out err);
 
-            if (err != Error.Success || raw == null) 
-            { 
+            if (err != Error.Success || raw == null)
+            {
                 return null;
             }
 
@@ -294,7 +326,7 @@ internal static class MapTilerAPIHelper
             i++;
 
             if (buildings != null)
-            { 
+            {
                 all.AddRange(buildings);
             }
         }
@@ -328,7 +360,7 @@ internal static class MapTilerAPIHelper
             byte[] pbf = await tcs.Task;
 
             if (pbf == null)
-            { 
+            {
                 return null;
             }
 
@@ -361,7 +393,7 @@ internal static class MapTilerAPIHelper
             }
 
             if (results.Count > 0)
-            { 
+            {
                 await CacheManager.SaveBuildingTileDataAsync(results, zoom, x, y);
             }
 
@@ -416,12 +448,12 @@ internal static class MapTilerAPIHelper
                 json = await tcs.Task.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
-            { 
-                return null; 
+            {
+                return null;
             }
 
             if (string.IsNullOrEmpty(json))
-            { 
+            {
                 return null;
             }
 
@@ -448,8 +480,8 @@ internal static class MapTilerAPIHelper
     private static FeatureCollection FilterByBoundingBox(FeatureCollection collection, GPSBoundingBox bbox)
     {
         if (collection == null || collection.features == null)
-        { 
-            return collection; 
+        {
+            return collection;
         }
 
         collection.features = collection.features
@@ -489,7 +521,7 @@ internal static class MapTilerAPIHelper
                 return "de";
             case SystemLanguage.Italian:
                 return "it";
-            case SystemLanguage.Spanish: 
+            case SystemLanguage.Spanish:
                 return "es";
             case SystemLanguage.Japanese:
                 return "ja";
@@ -497,7 +529,7 @@ internal static class MapTilerAPIHelper
             case SystemLanguage.ChineseTraditional:
             case SystemLanguage.Chinese:
                 return "zh";
-            case SystemLanguage.Portuguese: 
+            case SystemLanguage.Portuguese:
                 return "pt";
             case SystemLanguage.Russian:
                 return "ru";

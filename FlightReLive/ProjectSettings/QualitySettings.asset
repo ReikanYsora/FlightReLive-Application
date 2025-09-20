@@ -4,7 +4,7 @@
 QualitySettings:
   m_ObjectHideFlags: 0
   serializedVersion: 5
-  m_CurrentQuality: 2
+  m_CurrentQuality: 1
   m_QualitySettings:
   - serializedVersion: 5
     name: Performance
@@ -33,9 +33,9 @@ QualitySettings:
     realtimeGICPUUsage: 75
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 1
+    lodBias: 0.25
     meshLodThreshold: 1
-    maximumLODLevel: 0
+    maximumLODLevel: 2
     enableLODCrossFade: 0
     streamingMipmapsActive: 0
     streamingMipmapsAddAllCameras: 1
@@ -88,9 +88,9 @@ QualitySettings:
     realtimeGICPUUsage: 100
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 1
+    lodBias: 0.5
     meshLodThreshold: 1
-    maximumLODLevel: 0
+    maximumLODLevel: 1
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
     streamingMipmapsAddAllCameras: 1

@@ -248,41 +248,16 @@ namespace FlightReLive.Core.Environment
 
             if (_fog != null)
             {
-                //Fog tint
-                Color fogTint;
-                //Morning
-                if (hour >= 6 && hour < 10)
-                {
-                    fogTint = new Color(1.0f, 0.9f, 0.6f);
-                }
-                //Day
-                else if (hour >= 10 && hour < 18)
-                {
-                    fogTint = new Color(0.8f, 0.8f, 0.8f);
-                }
-                //Evening
-                else if (hour >= 18 && hour < 22)
-                {
-                    fogTint = new Color(1.0f, 0.6f, 0.4f);
-                }
-                //Night
-                else
-                {
-                    fogTint = new Color(0.5f, 0.6f, 0.8f);
-                }
-
-                float horizonFog = Mathf.Clamp01(Mathf.InverseLerp(45f, 0f, sun.Elevation));
-
                 _fog.active = true;
                 _fog.enabled.Override(true);
                 _fog.enableVolumetricFog.Override(true);
-                _fog.meanFreePath.Override(5000f);
-                _fog.baseHeight.Override(0f);
+                _fog.meanFreePath.Override(400f);
+                _fog.baseHeight.overrideState = false;
                 _fog.maximumHeight.Override(500f);
-                _fog.maxFogDistance.Override(5000f);
+                _fog.maxFogDistance.Override(1000f);
                 _fog.colorMode.Override(FogColorMode.SkyColor);
-                _fog.tint.Override(fogTint);
-                _fog.albedo.Override(fogTint);
+                _fog.tint.overrideState = false;
+                _fog.albedo.overrideState = false;
                 _fog.globalLightProbeDimmer.Override(1f);
                 _fog.volumetricFogBudget = 64f;
                 _fog.denoisingMode.Override(FogDenoisingMode.Gaussian);
@@ -290,35 +265,12 @@ namespace FlightReLive.Core.Environment
 
             if (_clouds != null)
             {
-                //Scattering tint
-                Color scatterTint;
-                //Morning
-                if (hour >= 6 && hour < 10)
-                {
-                    scatterTint = new Color(1.0f, 0.85f, 0.6f);
-                }
-                //Day
-                else if (hour >= 10 && hour < 18)
-                {
-                    scatterTint = new Color(1f, 1f, 1f);
-                }
-                //Evening
-                else if (hour >= 18 && hour < 22)
-                {
-                    scatterTint = new Color(1.0f, 0.6f, 0.4f);
-                }
-                //Night
-                else
-                {
-                    scatterTint = new Color(0.6f, 0.7f, 1.0f);
-                }
-
                 _clouds.active = true;
                 _clouds.enable.overrideState = true;
                 _clouds.enable.value = true;
                 _clouds.enable.Override(true);
                 _clouds.cloudControl.Override(VolumetricClouds.CloudControl.Simple);
-                _clouds.cloudSimpleMode.Override(VolumetricClouds.CloudSimpleMode.Performance);
+                _clouds.cloudSimpleMode.Override(VolumetricClouds.CloudSimpleMode.Quality);
                 _clouds.cloudPreset = VolumetricClouds.CloudPresets.Sparse;
                 _clouds.shadows.Override(true);
                 _clouds.shapeFactor.Override(0.95f);
@@ -328,7 +280,7 @@ namespace FlightReLive.Core.Environment
                 _clouds.altitudeRange.Override(1000f);
                 _clouds.ambientLightProbeDimmer.Override(1f);
                 _clouds.sunLightDimmer.Override(1f);
-                _clouds.scatteringTint.Override(scatterTint);
+                _clouds.scatteringTint.overrideState = false;
             }
 
             if (_contactShadows != null)

@@ -54,6 +54,15 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
+            //Apply upascalers settings
+            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.MainCameraUpscalerName);
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
+            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeningEnabled);
+            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeness);
+            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.POVCameraUpscalerName);
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
+            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeningEnabled);
+            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeness);
 
             //Register events
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;

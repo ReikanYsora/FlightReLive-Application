@@ -315,19 +315,19 @@ Camera:
   serializedVersion: 2
   m_ClearFlags: 2
   m_BackGroundColor: {r: 0.122641504, g: 0.122641504, b: 0.122641504, a: 1}
-  m_projectionMatrixMode: 1
+  m_projectionMatrixMode: 2
   m_GateFitMode: 2
   m_FOVAxisMode: 0
   m_Iso: 200
   m_ShutterSpeed: 0.005
   m_Aperture: 16
   m_FocusDistance: 10
-  m_FocalLength: 50
+  m_FocalLength: 20.78461
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
   m_Anamorphism: 0
-  m_SensorSize: {x: 36, y: 24}
+  m_SensorSize: {x: 24.89, y: 18.66}
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
@@ -337,7 +337,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 48.34965
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -989,7 +989,7 @@ Camera:
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 55
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -1706,6 +1706,7 @@ MonoBehaviour:
     m_Bits: 64
   _glowDuration: 1
   _droneAnchorTransform: {fileID: 283911657}
+  _linePathMaterial: {fileID: 2100000, guid: e42fe6339d96c9e4096937ba6d397f99, type: 2}
 --- !u!1 &1389988518
 GameObject:
   m_ObjectHideFlags: 0
@@ -2141,12 +2142,54 @@ MonoBehaviour:
   priority: 0
   customPasses:
   - rid: 1696480920264507453
+  - rid: 901995841906016329
+  - rid: 901995841906016370
   injectionPoint: 3
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
   references:
     version: 2
     RefIds:
+    - rid: 901995841906016329
+      type: {class: RenderAfterUpscalingCustomPass, ns: FlightReLive.Core, asm: Assembly-CSharp}
+      data:
+        m_Name: Render After Upscaling
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        targetLayers:
+          serializedVersion: 2
+          m_Bits: 72
+        targetCamera: {fileID: 796242730}
+        drawOpaque: 1
+        drawTransparent: 1
+        overrideMaterial: {fileID: 0}
+        overrideMaterialPassIndex: 0
+        transparentSorting: 23
+        colorOnly: 0
+    - rid: 901995841906016370
+      type: {class: RenderAfterUpscalingCustomPass, ns: FlightReLive.Core, asm: Assembly-CSharp}
+      data:
+        m_Name: POV Render After Upscaling
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        targetLayers:
+          serializedVersion: 2
+          m_Bits: 128
+        targetCamera: {fileID: 137108794}
+        drawOpaque: 1
+        drawTransparent: 1
+        overrideMaterial: {fileID: 0}
+        overrideMaterialPassIndex: 0
+        transparentSorting: 23
+        colorOnly: 0
     - rid: 1696480920264507453
       type: {class: FuguiHDRPCustomPass, ns: Fu, asm: Fugui}
       data:
@@ -2158,6 +2201,7 @@ MonoBehaviour:
         passFoldout: 0
         m_Version: 0
         FuguiShader: {fileID: 4800000, guid: b27657a013856af41bdb687983ef0e57, type: 3}
+        targetCamera: {fileID: 255147439}
         CameraLayer: 5
 --- !u!4 &2125856383
 Transform:

@@ -9,6 +9,7 @@ using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
 using FlightReLive.Core.FlightDefinition;
 using System;
+using FlightReLive.Core.Loading;
 
 namespace FlightReLive.Core.Building
 {
@@ -52,11 +53,13 @@ namespace FlightReLive.Core.Building
         private void Start()
         {
             SettingsManager.OnBuildingVisibilityChanged += OnBuildingVisibilityChanged;
+            LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
         }
 
         private void OnDestroy()
         {
             SettingsManager.OnBuildingVisibilityChanged -= OnBuildingVisibilityChanged;
+            LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
         }
         #endregion
 
@@ -350,7 +353,7 @@ namespace FlightReLive.Core.Building
             MeshFilter meshFilter = building.GetComponent<MeshFilter>();
             MeshRenderer meshRenderer = building.GetComponent<MeshRenderer>();
 
-            meshRenderer.enabled = SettingsManager.CurrentSettings.BuildingVisibility;
+            meshRenderer.enabled = false;
             meshFilter.sharedMesh = mesh;
 
             building.transform.SetParent(transform);
@@ -360,15 +363,32 @@ namespace FlightReLive.Core.Building
             _buildings.Add(building);
             return building;
         }
+
+        private void DisplayBuildingsFromSettings()
+        {
+            bool enabled = SettingsManager.CurrentSettings.BuildingVisibility;
+
+            foreach (GameObject tempBuilding in _buildings)
+            {
+                MeshRenderer tempBuildingRenderer = tempBuilding.GetComponent<MeshRenderer>();
+
+                if (tempBuildingRenderer != null)
+                {
+                    tempBuildingRenderer.enabled = enabled;
+                }
+            }
+        }
         #endregion
 
         #region CALLBACKS
         private void OnBuildingVisibilityChanged(bool buildingVisible)
         {
-            foreach (GameObject go in _buildings)
-            {
-                go.GetComponent<MeshRenderer>().enabled = buildingVisible;
-            }
+            DisplayBuildingsFromSettings();
+        }
+
+        private void OnFlightEndLoading()
+        {
+            DisplayBuildingsFromSettings();
         }
         #endregion
 

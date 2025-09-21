@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e73e64cd02302074e85cd1a30e7b9cfb
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/TND Upscaler Framework - Documentation.pdf
+  uploadId: 789972

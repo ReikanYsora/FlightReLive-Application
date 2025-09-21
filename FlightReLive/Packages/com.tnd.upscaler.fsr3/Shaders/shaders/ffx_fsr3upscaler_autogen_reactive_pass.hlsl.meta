@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0731dfbd04968084582397e48795d9d8
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Shaders/shaders/ffx_fsr3upscaler_autogen_reactive_pass.hlsl
+  uploadId: 789972

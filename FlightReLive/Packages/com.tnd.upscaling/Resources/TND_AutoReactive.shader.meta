@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 28232a2b4b0c4987a0bad3a6e33c48f1
+timeCreated: 1749834134
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Resources/TND_AutoReactive.shader
+  uploadId: 789972

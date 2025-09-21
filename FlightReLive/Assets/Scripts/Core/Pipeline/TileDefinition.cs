@@ -8,7 +8,7 @@ namespace FlightReLive.Core.Pipeline
         #region PROPERTIES
         internal GPSBoundingBox BoundingBox { set; get; }
 
-        internal TilePriority TilePriority { set; get; }
+        internal int Priority { get; set; }
 
         internal int ZoomLevel { set; get; }
 
@@ -16,11 +16,9 @@ namespace FlightReLive.Core.Pipeline
 
         internal int Y { set; get; }
 
-        internal Texture2D SatelliteTexture { set; get; }
+        internal Texture2D SatelliteTexture { get; set; }
 
         internal float[,] HeightMap { set; get; }
-
-        internal MeshData MeshData { set; get; }
 
         internal List<BuildingData> Buildings { get; set; }
 

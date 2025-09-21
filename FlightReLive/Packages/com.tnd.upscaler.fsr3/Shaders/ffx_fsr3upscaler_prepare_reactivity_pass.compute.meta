@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 20e44016ed34b0d4b8de499d1b566c69
+ComputeShaderImporter:
+  externalObjects: {}
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Shaders/ffx_fsr3upscaler_prepare_reactivity_pass.compute
+  uploadId: 789972

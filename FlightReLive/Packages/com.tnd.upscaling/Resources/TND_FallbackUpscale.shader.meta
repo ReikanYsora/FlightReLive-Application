@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: d05d1e42801d4499b025155be0826764
+timeCreated: 1750004566
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Resources/TND_FallbackUpscale.shader
+  uploadId: 789972

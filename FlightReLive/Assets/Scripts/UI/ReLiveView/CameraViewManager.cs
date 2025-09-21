@@ -1,9 +1,6 @@
-﻿using FlightReLive.Core;
-using FlightReLive.Core.Cameras;
-using FlightReLive.Core.Capture;
+﻿using FlightReLive.Core.Cameras;
+using FlightReLive.Core.Environment;
 using FlightReLive.Core.Paths;
-using FlightReLive.Core.Scene;
-using FlightReLive.Core.Terrain;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -62,36 +59,7 @@ namespace FlightReLive.UI.ReLiveView
                 layout.SameLine();
 
                 float totalWidth = ImGui.GetContentRegionAvail().x;
-                float rightGroupWidth = 4 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
-
-                //Capture toggle
-                layout.SetNextElementToolTip("Start / Stop a recording");
-                ImGui.SameLine();
-
-                bool isCapturing = CaptureManager.Instance.IsCapturing;
-                bool wasCapturing = isCapturing;
-
-                if (layout.Toggle("Screen capture mode", ref isCapturing, "Start recording", "Stop recording", FuToggleFlags.AlignLeft))
-                {
-                    if (isCapturing && !wasCapturing)
-                    {
-                        CaptureManager.Instance.StartCapture();
-                    }
-                    else if (!isCapturing && wasCapturing)
-                    {
-                        CaptureManager.Instance.StopCapture();
-                    }
-                }
-                ImGui.SameLine();
-
-                if (isCapturing && CaptureManager.Instance.ElapsedTime != null)
-                {
-                    Fugui.MoveX(30f);
-                    layout.Text(CaptureManager.Instance.ElapsedTime, FuTextStyle.Danger);
-                    ImGui.SameLine();
-
-                    Fugui.Layouts.OnDockLayoutReloaded += FuDockingLayoutManager_OnDockLayoutReloaded;
-                }
+                float rightGroupWidth = 3 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
 
                 //3DView settings menus
                 float minRightRequiredWidth = rightGroupWidth * scale;
@@ -106,11 +74,6 @@ namespace FlightReLive.UI.ReLiveView
                     Fugui.PushFont(14, FontType.Regular);
 
                     Fugui.MoveY(-4f);
-                    layout.SetNextElementToolTip("Capture mode settings");
-                    PopupButton(FlightReLiveIcons.CaptureMode, () => DrawCaptureModeSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
-                    layout.SameLine();
-
-                    Fugui.MoveY(-4f);
                     layout.SetNextElementToolTip("Post-processing settings");
                     PopupButton(FlightReLiveIcons.PostProcess, () => DrawPostProcessingSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
                     layout.SameLine();
@@ -123,11 +86,6 @@ namespace FlightReLive.UI.ReLiveView
                     Fugui.MoveY(-4f);
                     layout.SetNextElementToolTip("Open scene settings");
                     PopupButton(FlightReLiveIcons.AltitudeRelative, () => DrawSceneSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
-                    //layout.SameLine();
-
-                    //Fugui.MoveY(-4f);
-                    //layout.SetNextElementToolTip("Open heightmap display settings");
-                    //PopupButton(FlightReLiveIcons.HeightMap, () => DrawHeightSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
 
                     Fugui.PopFont();
                 }
@@ -151,34 +109,10 @@ namespace FlightReLive.UI.ReLiveView
             }
         }
 
-        private void FuDockingLayoutManager_OnDockLayoutReloaded()
-        {
-            Debug.Log("TEST");
-        }
-
-        private void DrawCaptureModeSettings(float popupButtonWidth, FuLayout layout)
-        {
-            ImGui.Dummy(Vector2.zero);
-            Fugui.PushDefaultFont();
-            layout.FramedText("Capture Mode");
-            layout.Separator();
-
-            CaptureManager.Instance.DrawCaptureModeSettings(layout);
-
-            Fugui.PopFont();
-            ImGui.Dummy(Vector2.zero);
-        }
-
         private void DrawPostProcessingSettings(float popupButtonWidth, FuLayout layout)
         {
             ImGui.Dummy(Vector2.zero);
-            Fugui.PushDefaultFont();
-            layout.FramedText("Post-Processing");
-            layout.Separator();
-
-            ApplicationManager.Instance.DrawPostProcessingSettings(layout);
-
-            Fugui.PopFont();
+            EnvironmentManager.Instance.DrawPostProcessingSettings(layout);
             ImGui.Dummy(Vector2.zero);
         }
 
@@ -202,7 +136,7 @@ namespace FlightReLive.UI.ReLiveView
             layout.FramedText("Scene Settings");
             layout.Separator();
 
-            SceneManager.Instance.DrawSceneSettings(layout);
+            EnvironmentManager.Instance.DrawSceneSettings(layout);
 
             Fugui.PopFont();
             ImGui.Dummy(Vector2.zero);
@@ -212,7 +146,7 @@ namespace FlightReLive.UI.ReLiveView
         #region CALLBACKS
         public override void OnWindowCreated(FuWindow window)
         {
-            EmbeddedCameraManager.Instance.CameraWindow = CameraWindow;
+            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
             PathManager.Instance.Camera = CameraWindow;
             window.HeaderHeight = TOP_BAR_HEIGHT;
             window.HeaderUI = DrawCameraWindowSettingBar;

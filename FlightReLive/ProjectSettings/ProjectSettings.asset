@@ -57,7 +57,7 @@ PlayerSettings:
   mipStripping: 0
   numberOfMipsStripped: 0
   numberOfMipsStrippedPerMipmapLimitGroup: {}
-  m_StackTraceTypes: 010000000100000001000000010000000100000001000000
+  m_StackTraceTypes: 020000000200000002000000020000000200000001000000
   iosShowActivityIndicatorOnLoading: -1
   androidShowActivityIndicatorOnLoading: -1
   iosUseCustomAppBackgroundBehavior: 0
@@ -108,7 +108,7 @@ PlayerSettings:
   xboxEnableFitness: 0
   visibleInBackground: 1
   allowFullscreenSwitch: 0
-  fullscreenMode: 3
+  fullscreenMode: 2
   xboxSpeechDB: 0
   xboxEnableHeadOrientation: 0
   xboxEnableGuest: 0
@@ -143,7 +143,7 @@ PlayerSettings:
   loadStoreDebugModeEnabled: 0
   visionOSBundleVersion: 1.0
   tvOSBundleVersion: 1.0
-  bundleVersion: 1.0.1
+  bundleVersion: 1.1.0
   preloadedAssets: []
   metroInputSource: 0
   wsaTransparentSwapchain: 0
@@ -157,7 +157,7 @@ PlayerSettings:
   enableOpenGLProfilerGPURecorders: 1
   allowHDRDisplaySupport: 0
   useHDRDisplay: 0
-  hdrBitDepth: 0
+  hdrBitDepth: 1
   m_ColorGamuts: 00000000
   targetPixelDensity: 30
   resolutionScalingMode: 0
@@ -604,7 +604,19 @@ PlayerSettings:
   m_BuildTargetGroupLightmapEncodingQuality:
   - serializedVersion: 2
     m_BuildTarget: Android
-    m_EncodingQuality: 1
+    m_EncodingQuality: 2
+  - serializedVersion: 2
+    m_BuildTarget: Standalone
+    m_EncodingQuality: 2
+  - serializedVersion: 2
+    m_BuildTarget: iOS
+    m_EncodingQuality: 2
+  - serializedVersion: 2
+    m_BuildTarget: Switch
+    m_EncodingQuality: 2
+  - serializedVersion: 2
+    m_BuildTarget: WindowsStoreApps
+    m_EncodingQuality: 2
   m_BuildTargetGroupHDRCubemapEncodingQuality: []
   m_BuildTargetGroupLightmapSettings: []
   m_BuildTargetGroupLoadStoreDebugModeSettings: []
@@ -881,24 +893,24 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    EmbeddedLinux: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    GameCoreScarlett: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    GameCoreXboxOne: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    Kepler: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    LinuxHeadlessSimulation: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    Nintendo Switch: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    PS4: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    PS5: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    QNX: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    ReservedCFE: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    Standalone: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN;HAS_URP
-    VisionOS: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    WebGL: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    Windows Store Apps: DOTWEEN
-    XboxOne: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
-    iPhone: DOTWEEN
-    tvOS: UNITY_POST_PROCESSING_STACK_V2;DOTWEEN
+    Android: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    EmbeddedLinux: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    GameCoreScarlett: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    GameCoreXboxOne: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    Kepler: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    LinuxHeadlessSimulation: UNITY_POST_PROCESSING_STACK_V2
+    Nintendo Switch: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    PS4: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    PS5: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    QNX: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    ReservedCFE: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    Standalone: UNITY_POST_PROCESSING_STACK_V2;HAS_HDRP;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    VisionOS: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    WebGL: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    Windows Store Apps: TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    XboxOne: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    iPhone: TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
+    tvOS: UNITY_POST_PROCESSING_STACK_V2;TND_HDRP;ENABLE_NVIDIA;ENABLE_NVIDIA_MODULE
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

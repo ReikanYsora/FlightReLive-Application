@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 962144f474814f146a748d483788a440
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Resources/FSR3 Upscaler Assets.asset
+  uploadId: 789972

@@ -2,7 +2,7 @@
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
+using FlightReLive.Core.ProceduralTerrain;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -64,19 +64,17 @@ namespace FlightReLive.UI.FlightCharts
 
         private void Start()
         {
-            TerrainManager.Instance.OnTerrainLoaded += OnTerrainLoaded;
             SettingsManager.OnUnitSystemTypeChanged += OnUnitSystemTypeChanged;
         }
 
         private void OnDestroy()
         {
-            TerrainManager.Instance.OnTerrainLoaded -= OnTerrainLoaded;
             SettingsManager.OnUnitSystemTypeChanged -= OnUnitSystemTypeChanged;
         }
         #endregion
 
         #region METHODS
-        internal void LoadFlightCharts(FlightData flight)
+        internal void Load(FlightData flight)
         {
             if (flight == null)
             {
@@ -320,7 +318,7 @@ namespace FlightReLive.UI.FlightCharts
             return (min, max, range, isFlat);
         }
 
-        internal void UnloadFlightCharts()
+        internal void Unload()
         {
             foreach (KeyValuePair<FlightChartType, FlightChart> flightChart in _flightChartsBar)
             {
@@ -451,11 +449,6 @@ namespace FlightReLive.UI.FlightCharts
             _speedChart.AddStep(speedChartSteps);
             _relativeAltitudeChart.AddStep(relativeAltitudeChart);
             _absoluteAltitudeChart.AddStep(absoluteAltitudeChart);
-        }
-
-        private void OnTerrainLoaded(FlightData flightData)
-        {
-            LoadFlightCharts(flightData);
         }
         #endregion
 

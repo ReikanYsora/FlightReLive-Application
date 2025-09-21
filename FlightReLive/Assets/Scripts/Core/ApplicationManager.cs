@@ -4,30 +4,18 @@ using FlightReLive.Core.Version;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
-using System;
-using System.Linq;
+using TND.Upscaling.Framework;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace FlightReLive.Core
 {
     public class ApplicationManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [Header("Camera Settings")]
-        [SerializeField] private Camera _camera;
-
         [Header("Welcome")]
         [SerializeField] private Texture2D _welcome;
-
-        [Header("PostProcess Settings")]
-        [SerializeField] private Volume _volume;
-
-        [Header("Outline")]
-        [SerializeField] private ScriptableRendererFeature _edgeFeature;
-        private DepthOfField _depthOfField;
-        private Vignette _vignette;
+        [SerializeField] private TNDUpscaler _mainCameraUpscaler;
+        [SerializeField] private TNDUpscaler _povCameraUpscaler;
         #endregion
 
         #region PROPERTIES
@@ -66,21 +54,18 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
-            //Apply hardware quality settings
-            ApplyUnityQualityPreset(SettingsManager.CurrentSettings.HardwareQualityPreset);
-
-            //Load post-processing values
-            LoadPostProcessingValues();
 
             //Register events
-            SettingsManager.OnHardwareQualityPresetChanged += OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
-            SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
-            SettingsManager.OnOutlineVisibilityChanged += OnOutlineVisibilityChanged;
-            SettingsManager.OnDepthOfFieldEnabledChanged += OnDepthOfFieldEnabledChanged;
-            SettingsManager.OnDepthOfFieldStartChanged += OnDepthOfFieldStartChanged;
-            SettingsManager.OnDepthOfFieldEndChanged += OnDepthOfFieldEndChanged;
             SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
+            SettingsManager.OnMainCameraUpscalerNameChanged += OnMainCameraUpscalerNameChanged;
+            SettingsManager.OnMainCameraUpscalerQualityChanged += OnMainCameraUpscalerQualityChanged;
+            SettingsManager.OnMainCameraUpscalerSharpeningEnabledChanged += OnMainCameraUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnMainCameraUpscalerSharpenessChanged += OnMainCameraUpscalerSharpenessChanged;
+            SettingsManager.OnPOVCameraUpscalerNameChanged += OnPOVCameraUpscalerNameChanged;
+            SettingsManager.OnPOVCameraUpscalerQualityChanged += OnPOVCameraUpscalerQualityChanged;
+            SettingsManager.OnPOVCameraUpscalerSharpeningEnabledChanged += OnPOVCameraUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnPOVCameraUpscalerSharpenessChanged += OnPOVCameraUpscalerSharpenessChanged;
 
             //Check if welcome panel need do be displayed
             bool displayWelcomePanel = CheckIfDisplayWelcomePanelNeedToBeDisplayed();
@@ -116,14 +101,16 @@ namespace FlightReLive.Core
         private void OnDestroy()
         {
             //Unregister events
-            SettingsManager.OnHardwareQualityPresetChanged -= OnHardwareQualityPresetChanged;
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
-            SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
-            SettingsManager.OnOutlineVisibilityChanged -= OnOutlineVisibilityChanged;
-            SettingsManager.OnDepthOfFieldEnabledChanged -= OnDepthOfFieldEnabledChanged;
-            SettingsManager.OnDepthOfFieldStartChanged -= OnDepthOfFieldStartChanged;
-            SettingsManager.OnDepthOfFieldEndChanged -= OnDepthOfFieldEndChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
+            SettingsManager.OnMainCameraUpscalerNameChanged += OnMainCameraUpscalerNameChanged;
+            SettingsManager.OnMainCameraUpscalerQualityChanged -= OnMainCameraUpscalerQualityChanged;
+            SettingsManager.OnMainCameraUpscalerSharpeningEnabledChanged -= OnMainCameraUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnMainCameraUpscalerSharpenessChanged -= OnMainCameraUpscalerSharpenessChanged;
+            SettingsManager.OnPOVCameraUpscalerNameChanged -= OnPOVCameraUpscalerNameChanged;
+            SettingsManager.OnPOVCameraUpscalerQualityChanged -= OnPOVCameraUpscalerQualityChanged;
+            SettingsManager.OnPOVCameraUpscalerSharpeningEnabledChanged -= OnPOVCameraUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnPOVCameraUpscalerSharpenessChanged -= OnPOVCameraUpscalerSharpenessChanged;
         }
         #endregion
 
@@ -162,43 +149,6 @@ namespace FlightReLive.Core
             {
                 Fugui.Notify("Update Available", $"A newer version of Flight ReLive is available for your system ({latestVersion.DisplayName}).\nWe recommend updating to enjoy the latest improvements and features.", StateType.Info);
             }
-        }
-
-        private void LoadPostProcessingValues()
-        {
-            //Apply saved post-processing values
-            if (_volume != null && _volume.profile != null && _volume.profile.TryGet<Vignette>(out Vignette vignette))
-            {
-                _vignette = vignette;
-            }
-
-            if (_volume != null && _volume.profile != null && _volume.profile.TryGet<DepthOfField>(out DepthOfField depthOfField))
-            {
-                _depthOfField = depthOfField;
-            }
-
-            if (_vignette != null)
-            {
-                _vignette.intensity.value = SettingsManager.CurrentSettings.VignettingIntensity;
-                _vignette.active = true;
-            }
-
-            if (_depthOfField != null)
-            {
-                if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
-                {
-                    _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                }
-                else
-                {
-                    _depthOfField.mode.value = DepthOfFieldMode.Off;
-                }
-
-                _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-            }
-
-            _edgeFeature.SetActive(SettingsManager.CurrentSettings.OutlineVisibility);
         }
 
         internal void QuitApplication()
@@ -249,40 +199,6 @@ namespace FlightReLive.Core
             float scale = SettingsManager.CurrentSettings.GlobalScale;
             Fugui.SetScale(scale, scale);
         }
-
-        private int GetUnityQualityIndex(QualityPreset preset)
-        {
-            switch (preset)
-            {
-                default:
-                case QualityPreset.Quality:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Quality", StringComparison.OrdinalIgnoreCase));
-                case QualityPreset.Balanced:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Balanced", StringComparison.OrdinalIgnoreCase));
-                case QualityPreset.Performance:
-                    return QualitySettings.names.ToList().FindIndex(q => q.Equals("Performance", StringComparison.OrdinalIgnoreCase));
-            }
-        }
-
-        private void ApplyUnityQualityPreset(QualityPreset preset)
-        {
-            int index = GetUnityQualityIndex(preset);
-
-            if (index >= 0 && index < QualitySettings.names.Length)
-            {
-                QualitySettings.SetQualityLevel(index, true);
-            }
-        }
-
-        internal void DisablePostProcessing()
-        {
-            _camera.GetUniversalAdditionalCameraData().renderPostProcessing = false;
-        }
-
-        internal void EnablePostProcessing()
-        {
-            _camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
-        }
         #endregion
 
         #region UI
@@ -299,7 +215,7 @@ namespace FlightReLive.Core
 
                 ImGui.Indent(10f);
                 Fugui.PushFont(18, FontType.Bold);
-                layout.CenterNextItem("Flight ReLive is 100% free.");
+                layout.CenterNextItemH("Flight ReLive is 100% free.");
                 layout.Text("Flight ReLive is 100% free.");
                 Fugui.PopFont();
 
@@ -314,15 +230,15 @@ namespace FlightReLive.Core
                 Fugui.PopFont();
 
                 Fugui.PushFont(16, FontType.Italic);
-                layout.CenterNextItem("Make a donation — so Flight ReLive can continue to fly freely.");
+                layout.CenterNextItemH("Make a donation — so Flight ReLive can continue to fly freely.");
                 layout.Text("Make a donation — so Flight ReLive can continue to fly freely.", FuTextWrapping.Wrap);
                 Fugui.PopFont();
                 layout.Spacing();
                 Fugui.PushFont(16, FontType.Bold);
-                layout.CenterNextItem("Support Flight ReLive on Tipee !");
+                layout.CenterNextItemH("Support Flight ReLive on Tipee !");
                 layout.TextURL("Support Flight ReLive on Tipee !", "https://fr.tipeee.com/flight-relive/", FuTextWrapping.Wrap);
                 layout.Spacing();
-                layout.CenterNextItem("Thank you for being here. And happy reliving.");
+                layout.CenterNextItemH("Thank you for being here. And happy reliving.");
                 layout.Text("Thank you for being here. And happy reliving.");
                 Fugui.PopFont();
                 ImGui.Unindent(10);
@@ -331,7 +247,7 @@ namespace FlightReLive.Core
                 ImGui.Indent(10);
                 Fugui.PushFont(14, FontType.Italic);
                 bool dontAskForThisVersion = SettingsManager.CurrentSettings.DontAskWelcomeVersion;
-                if (layout.CheckBox("askCheckbox", ref dontAskForThisVersion))
+                if (layout.CheckBox("##askForDisplay", ref dontAskForThisVersion))
                 {
                     SettingsManager.SaveDontAskWelcomeVersion(true);
                 }
@@ -346,9 +262,9 @@ namespace FlightReLive.Core
         #endregion
 
         #region CALLBACKS
-        private void OnHardwareQualityPresetChanged(QualityPreset qualityPreset)
+        private void OnApplicationTargetFPSChanged(int value)
         {
-            ApplyUnityQualityPreset(qualityPreset);
+            Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
         }
 
         private void OnGlobalScaleChanged(float scale)
@@ -356,100 +272,46 @@ namespace FlightReLive.Core
             ApplySavedGlobalScale();
         }
 
-        internal void DrawPostProcessingSettings(FuLayout layout)
+        private void OnMainCameraUpscalerQualityChanged(UpscalerQuality upscalerQuality)
         {
-            using (FuGrid grid = new FuGrid("gridPostProcessSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
-            {
-                float vignettingIntensity = SettingsManager.CurrentSettings.VignettingIntensity;
-                if (grid.Slider("Vignetting", ref vignettingIntensity, 0f, 1f, 0.01f))
-                {
-                    SettingsManager.SaveVignettingIntensity(vignettingIntensity);
-                }
-
-                bool depthOfFieldEnabled = SettingsManager.CurrentSettings.DepthOfFieldEnabled;
-
-                if (grid.Toggle("Depth of Field", ref depthOfFieldEnabled))
-                {
-                    SettingsManager.SaveDepthOfFieldEnabled(depthOfFieldEnabled);
-                }
-
-                if (!depthOfFieldEnabled)
-                {
-                    grid.DisableNextElements();
-                }
-
-                float depthOfFieldStart = SettingsManager.CurrentSettings.DepthOfFieldStart;
-                if (grid.Slider("DoF Start", ref depthOfFieldStart, 10f, 300f, 0.1f))
-                {
-                    SettingsManager.SaveDepthOfFieldStart(depthOfFieldStart);
-                }
-
-                float depthOfFieldEnd = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-                if (grid.Slider("DoF End", ref depthOfFieldEnd, 300f, 1000f, 0.1f))
-                {
-                    SettingsManager.SaveDepthOfFieldEnd(depthOfFieldEnd);
-                }
-
-                grid.EnableNextElements();
-                bool outlineEnabled = SettingsManager.CurrentSettings.OutlineVisibility;
-                if (grid.Toggle("Display Outline", ref outlineEnabled))
-                {
-                    SettingsManager.SaveOutlineVisibility(outlineEnabled);
-                }
-            }
+            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.MainCameraUpscalerName);
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
         }
 
-        private void OnVignettingIntensityChanged(float intensity)
+        private void OnMainCameraUpscalerNameChanged(UpscalerName upscalerName)
         {
-            if (_vignette != null)
-            {
-                _vignette.intensity.value = intensity;
-                _vignette.active = true;
-            }
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
         }
 
-        private void OnOutlineVisibilityChanged(bool status)
+        private void OnMainCameraUpscalerSharpenessChanged(float enabled)
         {
-            if (_edgeFeature != null)
-            {
-                _edgeFeature.SetActive(status);
-            }
+            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeningEnabled);
         }
 
-        private void OnDepthOfFieldEnabledChanged(bool enabled)
+        private void OnMainCameraUpscalerSharpeningEnabledChanged(bool value)
         {
-            if (SettingsManager.CurrentSettings.DepthOfFieldEnabled)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-            }
-            else
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Off;
-            }
+            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeness);
         }
 
-        private void OnDepthOfFieldStartChanged(float start)
+        private void OnPOVCameraUpscalerQualityChanged(UpscalerQuality upscalerQuality)
         {
-            if (_depthOfField != null)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                _depthOfField.gaussianStart.value = SettingsManager.CurrentSettings.DepthOfFieldStart;
-            }
+            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.POVCameraUpscalerName);
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
         }
 
-        private void OnDepthOfFieldEndChanged(float end)
+        private void OnPOVCameraUpscalerNameChanged(UpscalerName upscalerName)
         {
-            if (_depthOfField != null)
-            {
-                _depthOfField.mode.value = DepthOfFieldMode.Gaussian;
-                _depthOfField.gaussianEnd.value = SettingsManager.CurrentSettings.DepthOfFieldEnd;
-
-            }
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
         }
 
-        private void OnApplicationTargetFPSChanged(int value)
+        private void OnPOVCameraUpscalerSharpenessChanged(float enabled)
         {
-            Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
+            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeningEnabled);
+        }
+
+        private void OnPOVCameraUpscalerSharpeningEnabledChanged(bool value)
+        {
+            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeness);
         }
         #endregion
     }

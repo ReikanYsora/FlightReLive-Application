@@ -43,7 +43,7 @@ namespace FlightReLive.Core.Workspace
 
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
             // Enable Mono-managed watcher for macOS compatibility
-            Environment.SetEnvironmentVariable("MONO_MANAGED_WATCHER", "enabled");
+            System.Environment.SetEnvironmentVariable("MONO_MANAGED_WATCHER", "enabled");
 #endif
         }
 
@@ -124,7 +124,7 @@ namespace FlightReLive.Core.Workspace
 
             string[] videoFiles = Directory.GetFiles(workspacePath, "*.mp4");
 
-            int cpuCores = Environment.ProcessorCount;
+            int cpuCores = System.Environment.ProcessorCount;
             int fileCount = videoFiles.Length;
             int maxConcurrency = Math.Clamp(fileCount >= cpuCores ? cpuCores : fileCount, 2, 16);
             SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrency);

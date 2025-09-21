@@ -73,6 +73,7 @@ namespace FlightReLive.Core.Pipeline
             if (addDefinition != null)
             {
                 _tileDefinitions.Add(addDefinition);
+                UpdateBoundingBoxFromTiles();
             }
         }
 

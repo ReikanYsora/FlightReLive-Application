@@ -285,27 +285,34 @@ namespace FlightReLive.UI.Workspace
                 {
                     using (FuLayout layout = new FuLayout())
                     {
-                        Vector2 screenSize = ImGui.GetContentRegionAvail();
+                        Vector2 contentPos = ImGui.GetCursorScreenPos();
+
+                        float availWidth = layout.GetAvailableWidth();
+                        float availHeight = layout.GetAvailableHeight();
+
                         float barWidth = 100f * scale;
                         float barHeight = 16f * scale;
                         FuElementSize barSize = new FuElementSize(barWidth, barHeight);
 
                         Vector2 barPos = new Vector2(
-                            screenSize.x / 2f - barWidth / 2f,
-                            screenSize.y / 2f - barHeight
+                            contentPos.x + (availWidth - barWidth) * 0.5f,
+                            contentPos.y + (availHeight - barHeight) * 0.5f
                         );
 
-                        ImGui.SetCursorPos(barPos);
+                        ImGui.SetCursorScreenPos(barPos);
                         layout.ProgressBar("Loading Workspace", _loadingProgress, barSize, ProgressBarTextPosition.Inside);
 
                         string message = "Workspace is loading. Please wait...";
+                        Fugui.PushFont(14, FontType.Regular);
                         Vector2 textSize = ImGui.CalcTextSize(message);
+                        Fugui.PopFont();
+
                         Vector2 textPos = new Vector2(
-                            screenSize.x / 2f - textSize.x / 2f,
+                            contentPos.x + (availWidth - textSize.x) * 0.5f,
                             barPos.y + barHeight + 12f * scale
                         );
 
-                        ImGui.SetCursorPos(textPos);
+                        ImGui.SetCursorScreenPos(textPos);
                         Fugui.PushFont(14, FontType.Regular);
                         layout.Text(message, FuTextStyle.Default);
                         Fugui.PopFont();

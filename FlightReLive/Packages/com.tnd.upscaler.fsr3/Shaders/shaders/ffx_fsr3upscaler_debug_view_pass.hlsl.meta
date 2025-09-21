@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 00c8328353e3dba449b5e3855add5a35
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Shaders/shaders/ffx_fsr3upscaler_debug_view_pass.hlsl
+  uploadId: 789972

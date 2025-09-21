@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 40ddba67b20e0e441b1cb2e8209025b0
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Editor/Core/InitialisationPopup.cs
+  uploadId: 789972

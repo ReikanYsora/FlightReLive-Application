@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 10b66892c68bbe1408580a330cccb381
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaler.fsr3/Shaders/shaders/ffx_fsr3upscaler_luma_pyramid_pass.hlsl
+  uploadId: 789972

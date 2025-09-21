@@ -1,14 +1,12 @@
-using FlightReLive.Core.Building;
+﻿using FlightReLive.Core.Building;
+using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
-using FlightReLive.Core.Pipeline.API;
-using FlightReLive.Core.Pipeline.Download;
-using FlightReLive.Core.Rendering;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Terrain;
 using FlightReLive.Core.Workspace;
-using FlightReLive.Core.WorldUI;
+using FlightReLive.Core.POI;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
@@ -16,6 +14,7 @@ using Fu.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 
 namespace FlightReLive.Core.Loading
@@ -23,28 +22,26 @@ namespace FlightReLive.Core.Loading
     public class LoadingManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [SerializeField] private LoadingAnimationManager _animationManager;
+        private CancellationTokenSource _cancellationTokenSource;
+        private string _currentLoadingText;
+        private float _tileProgress;
+        private int _tilesProcessed;
+        private int _tilesTotal;
         #endregion
 
         #region PROPERTIES
         internal static LoadingManager Instance { get; private set; }
 
-        internal float LoadingProgress { set; get; }
+        internal bool IsLoading { get; private set; }
 
-        internal bool IsLoading { set; get; }
+        internal FlightFile CurrentFlightFile { get; private set; }
 
-        internal FlightFile CurrentFlightFile { set; get; }
-
-        internal FlightData CurrentFlightData { set; get; }
+        internal FlightData CurrentFlightData { get; private set; }
         #endregion
 
         #region EVENTS
         internal event Action OnFlightStartLoading;
-
         internal event Action OnFlightEndLoading;
-
-        internal event Action<float> OnFlightLoadingProgressChanged;
-
         internal event Action OnFlightUnloaded;
         #endregion
 
@@ -58,6 +55,10 @@ namespace FlightReLive.Core.Loading
             }
 
             Instance = this;
+
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = 0;
         }
 
         private void Start()
@@ -72,81 +73,256 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
-        private void LoadFlightDataInModules(FlightData flightData)
+        private async void StartLoadingScene(FlightFile flightFile)
         {
-            //Load FlightData in all modules
-            //Certains modules need to wait TerrainManager because we need data about topography altitude (display graph, buildins, path..). They work with the TerrainManager.Instance.OnTerrainLoaded event
-            TerrainManager.Instance.LoadFlightMap(flightData);
-            VideoPlayerManager.Instance.LoadFlightVideo(flightData);
-            SunManager.Instance.LoadFlightRendering(flightData);
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            CancelLoading();
+            _cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken token = _cancellationTokenSource.Token;
 
-            OnFlightEndLoading?.Invoke();
+            FlightData flightData = ConvertFileToFlight(flightFile);
+            CurrentFlightFile = flightFile;
+            CurrentFlightData = flightData;
+
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = flightData.MapDefinition.TileDefinitions.Count;
+            _currentLoadingText = "Preparing resources...";
+
+            DisplayLoading();
+            IsLoading = true;
+            OnFlightStartLoading?.Invoke();
+
+            try
+            {
+                string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
+
+                if (string.IsNullOrWhiteSpace(apiKey))
+                {
+                    NotifyError("Missing MapTiler API key.");
+                    return;
+                }
+
+                bool isValid = await MapTilerAPIHelper.IsMapTilerKeyValidAsync(apiKey, token);
+
+                if (!isValid)
+                {
+                    NotifyError("Invalid MapTiler API key.");
+                    return;
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                List<int> priorities = flightData.MapDefinition.TileDefinitions
+                    .Select(t => t.Priority)
+                    .Distinct()
+                    .OrderBy(p => p)
+                    .ToList();
+
+                foreach (int priority in priorities)
+                {
+                    List<TileDefinition> tiles = flightData.MapDefinition.TileDefinitions.Where(t => t.Priority == priority).ToList();
+                    List<TileDefinition> loadedTiles = new List<TileDefinition>();
+
+                    foreach (TileDefinition tile in tiles)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        _tileProgress = 0f;
+                        _currentLoadingText = $"Create tile resources <{tile.X},{tile.Y}>";
+
+                        TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, token, (phase, progress) =>
+                        {
+                            _tileProgress = (phase + progress) / 4f;
+                        });
+
+                        if (loaded != null)
+                        {
+                            flightData.AddTile(loaded);
+                            loadedTiles.Add(loaded);
+                        }
+
+                        _tilesProcessed++;
+                    }
+
+                    if (priority == 0)
+                    {
+                        flightData.BuildTileLookup();
+                        flightData.InitializeAltitude();
+                    }
+
+                    foreach (TileDefinition t in loadedTiles)
+                    {
+                        if (t.Priority < 2)
+                        {
+                            BuildingManager.Instance.LoadTile(t, flightData);
+                            POIManager.Instance.LoadTile(t, flightData);
+                        }
+                    }
+                }
+
+                sw.Restart();
+                ProceduralTerrainManager.Instance.Load(flightData);
+                sw.Stop();
+                Debug.Log("ProceduralTerrainManager : " + sw.ElapsedMilliseconds);
+                VideoPlayerManager.Instance.Load(flightData);
+                EnvironmentManager.Instance.Load(flightData);
+                FlightChartsManager.Instance.Load(flightData);
+                PathManager.Instance.Load(flightData);
+                Fugui.CloseModal();
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
+
+                OnFlightEndLoading?.Invoke();
+            }
+            catch (OperationCanceledException)
+            {
+                Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning);
+                UnloadFlightDataInModules();
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        internal static FlightData ConvertFileToFlight(FlightFile file)
+        {
+            FlightData flightData = new FlightData
+            {
+                Name = file.Name,
+                Date = file.CreationDate,
+                Length = file.Duration,
+                Points = file.DataPoints,
+                IsValid = file.IsValid,
+                HasExtractionError = file.HasExtractionError,
+                HasTakeOffPosition = file.HasTakeOffPosition,
+                VideoPath = file.VideoPath
+            };
+
+            if (file.HasTakeOffPosition)
+            {
+                flightData.GPSOrigin = new FlightGPSData(file.FlightGPSCoordinates.x, file.FlightGPSCoordinates.y);
+            }
+            else
+            {
+                FlightDataPoint firstPoint = file.DataPoints.First();
+                flightData.GPSOrigin = new FlightGPSData(firstPoint.Latitude, firstPoint.Longitude);
+            }
+
+            flightData.InitializeMapDefinition();
+            flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
+
+            int padding = 1;
+
+            IEnumerable<(double Latitude, double Longitude)> allPoints;
+            if (file.HasTakeOffPosition)
+            {
+                allPoints = file.DataPoints
+                    .Select(p => (p.Latitude, p.Longitude))
+                    .Append((file.EstimateTakeOffPosition.Latitude, file.EstimateTakeOffPosition.Longitude));
+            }
+            else
+            {
+                allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude));
+            }
+
+            double minLat = allPoints.Min(p => p.Latitude);
+            double maxLat = allPoints.Max(p => p.Latitude);
+            double minLon = allPoints.Min(p => p.Longitude);
+            double maxLon = allPoints.Max(p => p.Longitude);
+
+            (int baseMinTileX, int baseMaxTileY) = MapTools.GPSToTileXY(minLat, minLon);
+            (int baseMaxTileX, int baseMinTileY) = MapTools.GPSToTileXY(maxLat, maxLon);
+
+            int originalMinTileX = baseMinTileX;
+            int originalMaxTileX = baseMaxTileX;
+            int originalMinTileY = baseMinTileY;
+            int originalMaxTileY = baseMaxTileY;
+
+            int minTileX = originalMinTileX - padding;
+            int maxTileX = originalMaxTileX + padding;
+            int minTileY = originalMinTileY - padding;
+            int maxTileY = originalMaxTileY + padding;
+
+            for (int x = minTileX; x <= maxTileX; x++)
+            {
+                for (int y = minTileY; y <= maxTileY; y++)
+                {
+                    int dx = 0;
+                    if (x < originalMinTileX)
+                    {
+                        dx = originalMinTileX - x;
+                    }
+                    else if (x > originalMaxTileX)
+                    {
+                        dx = x - originalMaxTileX;
+                    }
+
+                    int dy = 0;
+                    if (y < originalMinTileY)
+                    {
+                        dy = originalMinTileY - y;
+                    }
+                    else if (y > originalMaxTileY)
+                    {
+                        dy = y - originalMaxTileY;
+                    }
+
+                    //Define tile priority based on distance from original tile
+                    int priority = Math.Max(dx, dy);
+
+                    TileDefinition tileDefinition = new TileDefinition
+                    {
+                        BoundingBox = MapTools.GetBoundingBoxFromTileXY(x, y),
+                        ZoomLevel = MapTools.ZOOM_LEVEL_TOPOGRAPHIC,
+                        X = x,
+                        Y = y,
+                        SatelliteTexture = null,
+                        HeightMap = null,
+                        Priority = priority
+                    };
+
+                    flightData.MapDefinition.AddTile(tileDefinition);
+                }
+            }
+
+            return flightData;
+        }
+
+        private void NotifyError(string message)
+        {
+            Fugui.Notify("Resource loading error", message, StateType.Danger);
             IsLoading = false;
         }
 
         private void UnloadFlightDataInModules()
         {
-            //Unload FLightData in all modules
-            FlightChartsManager.Instance.UnloadFlightCharts();
-            VideoPlayerManager.Instance.UnloadFlightVideo();
-            TerrainManager.Instance.UnloadFlightMap();
-            PathManager.Instance.UnloadFlightPath();
-            SunManager.Instance.UnloadFlightRendering();
-            WorldUIManager.Instance.UnloadFlightPOIs();
-            BuildingManager.Instance.UnloadFLightBuildings();
+            FlightChartsManager.Instance.Unload();
+            VideoPlayerManager.Instance.Unload();
+            ProceduralTerrainManager.Instance.Unload();
+            PathManager.Instance.Unload();
+            EnvironmentManager.Instance.Unload();
+            POIManager.Instance.Unload();
+            BuildingManager.Instance.Unload();
+            CurrentFlightData?.Dispose();
             CurrentFlightData = null;
-
             OnFlightUnloaded?.Invoke();
         }
 
-        private async void StartLoadingScene(FlightFile flightFile)
+        private void CancelLoading()
         {
-            FlightData flightData = FlightMapDownloader.ConvertFileToFlight(flightFile);
+            _tileProgress = 0f;
+            _tilesProcessed = 0;
+            _tilesTotal = 0;
 
-            IsLoading = true;
-            OnFlightStartLoading?.Invoke();
-
-            string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
-
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
-                OnFlightMapBuildEnd(flightData, new List<string> { "The application requires a valid MapTiler API key to download satellite imagery.\nPlease enter your key in 'Preferences' before continuing." });
-                IsLoading = false;
-
-                return;
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+                UnloadFlightDataInModules();
             }
-
-            bool isValid = await MapTilerAPIHelper.IsMapTilerKeyValidAsync(apiKey);
-
-            if (!isValid)
-            {
-                OnFlightMapBuildEnd(flightData, new List<string> { "The provided MapTiler API key is not authorized or has expired.\nPlease verify your key and try again.\nDownloads cannot proceed until a valid key is set." });
-                IsLoading = false;
-
-                return;
-            }
-
-            FlightMapDownloader builder = new FlightMapDownloader();
-
-            builder.OnDownloadStarted += () =>
-            {
-                OnFlightMapBuildStart();
-            };
-
-            builder.OnGlobalProgressUpdated += progress =>
-            {
-                OnFlightMapBuildProgressChanged(progress);
-            };
-
-            builder.OnDownloadCompleted += errors =>
-            {
-                OnFlightMapBuildEnd(flightData, errors);
-                IsLoading = false;
-            };
-
-            builder.BuildFlightMap(flightData);
         }
-
         #endregion
 
         #region CALLBACKS
@@ -157,56 +333,28 @@ namespace FlightReLive.Core.Loading
                 UnloadFlightDataInModules();
             }
 
-            CurrentFlightFile = flightFile;
-
-            //Start loading
             StartLoadingScene(flightFile);
         }
+        #endregion
 
-        private void OnFlightMapBuildStart()
+        #region UI
+        internal void DisplayLoading()
         {
-            _animationManager.StartLoadingAnimation();
-        }
+            float scale = Fugui.CurrentContext.Scale;
 
-        private void OnFlightMapBuildProgressChanged(float progress)
-        {
-            LoadingProgress = progress;
-
-            _animationManager.Progress = LoadingProgress;
-
-            OnFlightLoadingProgressChanged?.Invoke(progress);
-        }
-
-        private void OnFlightMapBuildEnd(FlightData flightData, List<string> errors)
-        {
-            LoadingProgress = 0f;
-
-            _animationManager.StopLoadingAnimation();
-
-            if (errors.Count > 0)
+            Fugui.ShowModal("  ", (layout) =>
             {
-                string error = string.Empty;
-
-                for (int i = 0; i < errors.Count; i++)
-                {
-                    error += "\n" + errors[i];
-                }
-
-                Fugui.Notify("Resource loading error", error, StateType.Danger);
-                return;
-            }
-
-            //Bake scene center GPS 
-            double averageLatitude = flightData.MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
-            double averageLongitude = flightData.MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
-            flightData.SceneCenterGPS = new Vector2((float)averageLatitude, (float)averageLongitude);
-
-            //Load FLightData in all modules
-            LoadFlightDataInModules(flightData);
-
-            CurrentFlightData = flightData;
-
-            Fugui.Notify("Successful operation", $"{flightData.Name} loaded successfully.", StateType.Info);
+                float paddingX = 10f;
+                float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
+                float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
+                Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
+                layout.CenterNextItemH(_currentLoadingText);
+                layout.Text(_currentLoadingText);
+                layout.CenterNextItemH(availableX);
+                layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
+            },
+            FuModalSize.Medium,
+            new FuModalButton("Cancel loading", () => CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));
         }
         #endregion
     }

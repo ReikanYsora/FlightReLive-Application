@@ -1,4 +1,3 @@
-using FlightReLive.Core.Pipeline.Download;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,12 +19,15 @@ namespace FlightReLive.Core.Pipeline.Download
         #region PROPERTIES
         internal static float Progress
         {
-            get { return _progress; }
+            get
+            { 
+                return _progress;
+            }
         }
         #endregion
 
         #region METHODS
-        internal static void EnqueueDownload(string url, Action<byte[]> onSuccess, Action<string> onError)
+        internal static void EnqueueDownload(string url, Action<byte[]> onSuccess, Action<string> onError, Action<long, long> onProgress = null)
         {
             if (_activeUrls.Contains(url))
             {
@@ -33,14 +35,13 @@ namespace FlightReLive.Core.Pipeline.Download
             }
 
             _activeUrls.Add(url);
-            _downloadQueue.Enqueue(new DownloadRequest(url, onSuccess, onError));
+            _downloadQueue.Enqueue(new DownloadRequest(url, onSuccess, onError, onProgress));
 
             if (!_isProcessing)
             {
                 ProcessQueue();
             }
         }
-
 
         private static async void ProcessQueue()
         {
@@ -63,9 +64,19 @@ namespace FlightReLive.Core.Pipeline.Download
 
             var operation = uwr.SendWebRequest();
 
+            long totalBytes = 0;
+            if (uwr.GetResponseHeaders() != null && uwr.GetResponseHeaders().ContainsKey("CONTENT-LENGTH"))
+            {
+                long.TryParse(uwr.GetResponseHeader("CONTENT-LENGTH"), out totalBytes);
+            }
+
             while (!operation.isDone)
             {
                 _progress = operation.progress;
+
+                long received = (long)uwr.downloadedBytes;
+                request.OnProgress?.Invoke(received, totalBytes);
+
                 await Task.Yield();
             }
 
@@ -85,7 +96,6 @@ namespace FlightReLive.Core.Pipeline.Download
                 UnityMainThreadDispatcher.AddActionInMainThread(() => request.OnError?.Invoke(uwr.error));
             }
         }
-
         #endregion
     }
 }

@@ -107,11 +107,26 @@ namespace FlightReLive.UI.VideoPlayer
                 return _videoPlayer.Texture;
             }
         }
+
+        internal UnityEngine.Video.VideoPlayer Player
+        {
+            get
+            {
+                if (_videoPlayer == null)
+                {
+                    return null;
+                }
+
+                return _videoPlayer.Player;
+            }
+        }
+
         #endregion
 
         #region EVENTS
         internal event Action<float, int, FlightDataPoint> OnProgressChanged;
         internal event Action<FlightData> OnVideoLoaded;
+        internal event Action OnVideoUnloaded;
         #endregion
 
         #region UNITY METHODS
@@ -169,7 +184,7 @@ namespace FlightReLive.UI.VideoPlayer
         #endregion
 
         #region METHODS
-        internal void LoadFlightVideo(FlightData flightData)
+        internal void Load(FlightData flightData)
         {
             if (flightData == null || _videoPlayer == null || !File.Exists(flightData.VideoPath))
             {
@@ -183,7 +198,7 @@ namespace FlightReLive.UI.VideoPlayer
             });
         }
 
-        internal void UnloadFlightVideo()
+        internal void Unload()
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
@@ -193,6 +208,7 @@ namespace FlightReLive.UI.VideoPlayer
                 }
 
                 _videoPlayer.Stop();
+                OnVideoUnloaded?.Invoke();
             });
         }
 
@@ -300,7 +316,7 @@ namespace FlightReLive.UI.VideoPlayer
                     float verticalOffset = (size.y - textSize.y) / 2f;
                     Fugui.MoveY(verticalOffset);
 
-                    layout.CenterNextItem(currentFlightData.Name);
+                    layout.CenterNextItemH(currentFlightData.Name);
                     layout.Text(currentFlightData.Name);
                     Fugui.PopFont();
                 }

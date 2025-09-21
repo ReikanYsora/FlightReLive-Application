@@ -1,4 +1,5 @@
 using System;
+using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Settings
@@ -6,7 +7,14 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
-        public QualityPreset HardwareQualityPreset;
+        public UpscalerName MainCameraUpscalerName;
+        public UpscalerQuality MainCameraUpscalerQuality;
+        public bool MainCameraUpscalerSharpeningEnabled;
+        public float MainCameraUpscalerSharpeness;
+        public UpscalerName POVCameraUpscalerName;
+        public UpscalerQuality POVCameraUpscalerQuality;
+        public bool POVCameraUpscalerSharpeningEnabled;
+        public float POVCameraUpscalerSharpeness;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
@@ -20,31 +28,22 @@ namespace FlightReLive.Core.Settings
         public string WorkspacePath;
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
-        public SatelliteTileQualityPreset SatelliteTileQualityPreset;
-        public int TilePadding;
         public float GlobalScale;
         public Color CameraBackgroundColor;
-        public Color CameraCaptureBackgroundColor;
         public float PathWidth;
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
-        public bool OutlineVisibility;
-        public float WorldIconScale;
-        public float WorldIconHeight;
-        public bool Icon3DVisibility;
-        public int CaptureResolution;
-        public int CaptureEncoder;
-        public int CaptureFramerate;
-        public bool CaptureEncodedLogo;
-        public string CaptureOutputPath;
-        public bool CaptureReplaceBackground;
+        public float POIScale;
+        public float POIHeight;
+        public float POIVisibilityDistance;
+        public bool POIVisibility;
         public float VignettingIntensity;
-        public bool DepthOfFieldEnabled;
-        public float DepthOfFieldStart;
-        public float DepthOfFieldEnd;
         public string CurrentVersion;
-        public float GlobalIntensity;
+        public float SunIntensity;
+        public float PostExposureIntensity;
+        public float ContrastIntensity;
+        public float SaturationIntensity;
         #endregion
     }
 }

@@ -232,7 +232,7 @@ namespace FlightReLive.UI.Layout
                 ImGui.Unindent(10f);
                 aboutLayout.Separator();
 
-                aboutLayout.CenterNextItem(128);
+                aboutLayout.CenterNextItemH(128);
                 if (aboutLayout.Image("tipeee", _tipeee, new FuElementSize(128, 64), false, true))
                 {
                     Process.Start("https://fr.tipeee.com/flight-relive/");

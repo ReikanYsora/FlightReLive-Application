@@ -1,0 +1,16 @@
+Packages\TND FSR 3\Shaders\LICENSE.txt
+https://github.com/ndepoel/FSR2Unity
+
+FSR 2.2 for Unity
+This project aims to bring FSR2 to Unity, as an alternative to Unity's existing FXAA, SMAA and 
+TAA anti-aliasing solutions. Compared to Unity's TAA implementation, FSR2 offers a sharper and more stable image,
+with a better sub-pixel detail resolve and better performance due to its reliance on upscaling.
+
+Packages\TND FSR 3\Shaders\shaders\LICENSE.txt
+https://github.com/GPUOpen-Effects/FidelityFX-FSR2
+
+FidelityFX Super Resolution 3.1 (FSR 3.1)
+AMD FidelityFX Super Resolution 2 (FSR 3) is an open source, high-quality solution for producing high 
+resolution frames from lower resolution inputs.
+
+You can find the binaries for FidelityFX FSR in the release section on GitHub.

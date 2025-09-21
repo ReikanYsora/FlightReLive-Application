@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: fc734ee8a9e31914c90a172837beddbf
+timeCreated: 1748775111
+AssetOrigin:
+  serializedVersion: 1
+  productId: 252172
+  packageName: FSR 3 - Upscaling for Unity
+  packageVersion: 1.8.2
+  assetPath: Packages/com.tnd.upscaling/Runtime/BIRP/Scripts/UpscalerController_BIRP.cs
+  uploadId: 789972

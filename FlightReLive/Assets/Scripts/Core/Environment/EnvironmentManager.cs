@@ -254,7 +254,7 @@ namespace FlightReLive.Core.Environment
                 _fog.meanFreePath.Override(400f);
                 _fog.baseHeight.overrideState = false;
                 _fog.maximumHeight.Override(500f);
-                _fog.maxFogDistance.Override(1000f);
+                _fog.maxFogDistance.Override(5000f);
                 _fog.colorMode.Override(FogColorMode.SkyColor);
                 _fog.tint.overrideState = false;
                 _fog.albedo.overrideState = false;

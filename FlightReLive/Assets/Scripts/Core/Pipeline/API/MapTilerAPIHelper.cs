@@ -22,6 +22,7 @@ using System.Text;
 internal static class MapTilerAPIHelper
 {
     #region CONSTANTS
+    private const int MAX_CONCURRENT_DOWNLOADS = 8;
     private const int TILE_SIZE = 512;
     #endregion
 
@@ -105,25 +106,55 @@ internal static class MapTilerAPIHelper
         HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, targetZoom);
         Dictionary<(int, int), Texture2D> downloaded = new();
 
-        int i = 0;
+        SemaphoreSlim semaphore = new(MAX_CONCURRENT_DOWNLOADS);
+        List<Task> tasks = new();
+        int total = coords.Count;
+        int completed = 0;
+
         foreach ((int x, int y) in coords)
         {
-            token.ThrowIfCancellationRequested();
-            Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
-            i++;
+            await semaphore.WaitAsync(token);
 
-            if (texture != null)
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            UnityMainThreadDispatcher.AddActionInMainThread(async () =>
             {
-                downloaded[(x, y)] = texture;
-            }
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p =>
+                    {
+                        onProgress?.Invoke((completed + p) / total);
+                    });
+
+                    if (texture != null)
+                    {
+                        lock (downloaded)
+                        {
+                            downloaded[(x, y)] = texture;
+                        }
+                    }
+
+                    Interlocked.Increment(ref completed);
+                    onProgress?.Invoke((float)completed / total);
+
+                    tcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            tasks.Add(tcs.Task);
         }
 
-        if (downloaded.Count == 0)
-        {
-            return null;
-        }
+        await Task.WhenAll(tasks);
 
-        return CombinePNGTiles(downloaded);
+        return downloaded.Count == 0 ? null : CombinePNGTiles(downloaded);
     }
 
     private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)

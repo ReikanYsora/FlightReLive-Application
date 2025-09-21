@@ -212,7 +212,7 @@ namespace FlightReLive.Core.Loading
             flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
 
-            int padding = 1;
+            int padding = 3;
 
             IEnumerable<(double Latitude, double Longitude)> allPoints;
             if (file.HasTakeOffPosition)

@@ -10,9 +10,9 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region CONSTANTS
         internal static readonly int TILE_RESOLUTION = 512;
-        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_0 = 17;
-        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_1 = 16;
-        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_2 = 15;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_0 = 18;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_1 = 17;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_2 = 14;
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_3 = 14;
         internal static readonly int ZOOM_LEVEL_TOPOGRAPHIC = 14;
         internal static readonly int ZOOM_LEVEL_BUILDING = 14;
@@ -126,49 +126,14 @@ namespace FlightReLive.Core.ProceduralTerrain
             return new FlightGPSData(centerLatitude, centerLongitude);
         }
 
-        internal static GPSBoundingBox GetGlobalBoundingBox(List<TileDefinition> tiles)
-        {
-            double minLon = double.MaxValue;
-            double minLat = double.MaxValue;
-            double maxLon = double.MinValue;
-            double maxLat = double.MinValue;
-
-            foreach (var tile in tiles)
-            {
-                minLon = Math.Min(minLon, tile.BoundingBox.MinLongitude);
-                minLat = Math.Min(minLat, tile.BoundingBox.MinLatitude);
-                maxLon = Math.Max(maxLon, tile.BoundingBox.MaxLongitude);
-                maxLat = Math.Max(maxLat, tile.BoundingBox.MaxLatitude);
-            }
-
-            return new GPSBoundingBox
-            {
-                MinLongitude = minLon,
-                MinLatitude = minLat,
-                MaxLongitude = maxLon,
-                MaxLatitude = maxLat
-            };
-        }
-
-        internal static float GetTileSizeMeters(double latitude)
+        internal static double GetTileSizeMeters(double latitude)
         {
             const double EarthCircumference = 40075016.68557849;
             double latitudeRad = latitude * Math.PI / 180.0;
             double numTiles = Math.Pow(2, ZOOM_LEVEL_TOPOGRAPHIC);
             double metersPerTileEquator = EarthCircumference / numTiles;
             double metersPerTile = metersPerTileEquator * Math.Cos(latitudeRad);
-            double metersPerPixel = metersPerTile / TILE_RESOLUTION;
-
-            return (float)(TILE_RESOLUTION * metersPerPixel);
-        }
-
-        internal static float GetTileSizeMetersFromBoundingBox(GPSBoundingBox boundingBox)
-        {
-            double latCenter = (boundingBox.MinLatitude + boundingBox.MaxLatitude) * 0.5;
-            double widthMeters = HaversineDistance(latCenter, boundingBox.MinLongitude, latCenter, boundingBox.MaxLongitude);
-            double heightMeters = HaversineDistance(boundingBox.MinLatitude, boundingBox.MinLongitude, boundingBox.MaxLatitude, boundingBox.MinLongitude);
-
-            return (float)((widthMeters + heightMeters) * 0.5);
+            return metersPerTile;
         }
         #endregion
     }

@@ -8,14 +8,17 @@ using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Workspace;
+using FlightReLive.UI;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
+using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Loading
@@ -25,7 +28,7 @@ namespace FlightReLive.Core.Loading
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
         private string _currentTile;
-        private string _currentTilePriority;
+        private int _currentTilePriority;
         private float _tileProgress;
         private int _tilesProcessed;
         private int _tilesTotal;
@@ -94,7 +97,7 @@ namespace FlightReLive.Core.Loading
             _filesFromCache = 0;
             _filesDownloaded = 0;
             _currentTile = "";
-            _currentTilePriority = "";
+            _currentTilePriority = -1;
 
             DisplayLoading();
             IsLoading = true;
@@ -139,7 +142,7 @@ namespace FlightReLive.Core.Loading
 
                         _tileProgress = 0f;
                         _currentTile = $"{tile.X},{tile.Y}";
-                        _currentTilePriority = $"{tile.Priority}";
+                        _currentTilePriority = tile.Priority;
 
                         TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(
                             tile,
@@ -380,28 +383,51 @@ namespace FlightReLive.Core.Loading
                 layout.Text(loading);
                 layout.CenterNextItemH(availableX);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
-
-                layout.Spacing();
-                layout.Separator();
                 layout.Spacing();
 
-                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", FuGridFlag.LinesBackground, 2, 2, paddingX))
+                layout.Collapsable("Loading details##collapsable", () =>
                 {
-                    loadingDetailsGrid.Text("Tiles processed");
-                    loadingDetailsGrid.FramedText($"{_tilesProcessed} / {_tilesTotal}");
 
-                    loadingDetailsGrid.Text("Current tile");
-                    loadingDetailsGrid.FramedText($"{_currentTile}");
+                    string priorityStr = "";
 
-                    loadingDetailsGrid.Text("Current tile priority");
-                    loadingDetailsGrid.FramedText($"{_currentTilePriority}");
+                    switch (_currentTilePriority)
+                    {
+                        case 0:
+                            priorityStr = "Critical";
+                            break;
+                        case 1:
+                            priorityStr = "High";
+                            break;
+                        case 2:
+                            priorityStr = "Normal";
+                            break;
+                        case 3:
+                            priorityStr = "Low";
+                            break;
+                        default:
+                            priorityStr = "-";
+                            break;
+                    }
 
-                    loadingDetailsGrid.Text("Files from cache");
-                    loadingDetailsGrid.FramedText($"{_filesFromCache}");
+                    using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground, 2, 2, paddingX))
+                    {
+                        loadingDetailsGrid.Text("Tiles processed");
+                        loadingDetailsGrid.FramedText($"{_tilesProcessed} / {_tilesTotal}");
 
-                    loadingDetailsGrid.Text("Files downloaded");
-                    loadingDetailsGrid.FramedText($"{_filesDownloaded}");
-                }
+                        loadingDetailsGrid.Text("Current tile");
+                        loadingDetailsGrid.FramedText($"{_currentTile}");
+
+                        loadingDetailsGrid.Text("Current tile priority");
+                        loadingDetailsGrid.FramedText($"{priorityStr}");
+
+                        loadingDetailsGrid.Text("Files from cache");
+                        loadingDetailsGrid.FramedText($"{_filesFromCache}");
+
+                        loadingDetailsGrid.Text("Files downloaded");
+                        loadingDetailsGrid.FramedText($"{_filesDownloaded}");
+                    }
+                }, FuButtonStyle.Collapsable, defaultOpen: false);
+                
             },
             FuModalSize.Medium,
             new FuModalButton("Cancel loading", () => CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));

@@ -106,5 +106,8 @@ namespace FlightReLive.UI
 
         protected static string _PostProcess = "\uE086";
         public static string PostProcess { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _PostProcess; }
+
+        protected static string _POV = "\uE087";
+        public static string POV { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _POV; }
     }
 }

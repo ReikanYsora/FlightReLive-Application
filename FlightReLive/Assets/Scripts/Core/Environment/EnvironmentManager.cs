@@ -1,8 +1,7 @@
 using FlightReLive.Core.Building;
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Settings;
 using FlightReLive.Core.POI;
-using FlightReLive.UI.VideoPlayer;
+using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
 using UnityEngine;
@@ -20,7 +19,8 @@ namespace FlightReLive.Core.Environment
         #region ATTRIBUTES
         [Header("Light & Camera")]
         [SerializeField] private Light _mainLight;
-        [SerializeField] private Camera _mainCamera;
+        [SerializeField] private Camera _reliveCamera;
+        [SerializeField] private Camera _povCamera;
 
         //HDRP volume overrides
         private Volume _globalVolume;
@@ -109,11 +109,18 @@ namespace FlightReLive.Core.Environment
 
         private void UninitializedVolumeProfile()
         {
-            if (_mainCamera != null)
+            if (_reliveCamera != null)
             {
-                HDAdditionalCameraData hdCam = _mainCamera.GetComponent<HDAdditionalCameraData>();
+                HDAdditionalCameraData hdCam = _reliveCamera.GetComponent<HDAdditionalCameraData>();
                 hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Color;
-                _mainCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+                _reliveCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+            }
+
+            if (_povCamera != null)
+            {
+                HDAdditionalCameraData hdCam = _povCamera.GetComponent<HDAdditionalCameraData>();
+                hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Color;
+                _povCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
             }
 
             if (_globalVolume != null)
@@ -202,9 +209,16 @@ namespace FlightReLive.Core.Environment
                 _vignette = _globalVolumeProfile.Add<Vignette>(true);
             }
 
-            if (_mainCamera != null)
+            if (_reliveCamera != null)
             {
-                HDAdditionalCameraData hdCam = _mainCamera.GetComponent<HDAdditionalCameraData>();
+                HDAdditionalCameraData hdCam = _reliveCamera.GetComponent<HDAdditionalCameraData>();
+                hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Sky;
+            }
+
+
+            if (_povCamera != null)
+            {
+                HDAdditionalCameraData hdCam = _povCamera.GetComponent<HDAdditionalCameraData>();
                 hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Sky;
             }
 
@@ -393,8 +407,7 @@ namespace FlightReLive.Core.Environment
         #region UI
         internal void DrawPostProcessingSettings(FuLayout layout)
         {
-            layout.Separator();
-            layout.FramedText("Lights & Shadows");
+            layout.FramedText("Scene");
             layout.Separator();
 
             using (FuGrid gridSunIntensity = new FuGrid("gridSunIntensitySettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
@@ -421,7 +434,7 @@ namespace FlightReLive.Core.Environment
             }
 
             layout.Separator();
-            layout.FramedText("Color adjustments");
+            layout.FramedText("Light & colors adjustments");
             layout.Separator();
 
             using (FuGrid gridColorAdjustment = new FuGrid("gridColorAdjustmentSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
@@ -448,7 +461,6 @@ namespace FlightReLive.Core.Environment
 
         internal void DrawSceneSettings(FuLayout layout)
         {
-            layout.Separator();
             layout.FramedText("POI");
             layout.Separator();
 

@@ -1,6 +1,7 @@
 using FlightReLive.Core.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace FlightReLive.Core.POI
 {
@@ -12,36 +13,38 @@ namespace FlightReLive.Core.POI
         [SerializeField] private Material _lineMaterial;
         [SerializeField] private float _textYOffsetFromPoint = 2f;
         [SerializeField] private float _minVisibleDistance = 10f;
-        [SerializeField] private float _maxVisibleDistance = 100f;
-        [SerializeField] private float _manualElevation = -1f;
+        [SerializeField] private float _maxVisibleDistance = 2000f;
         [SerializeField] private float _randomElevationRange = 0.5f;
+
         private float _randomOffset = 0f;
         private LineRenderer _lineRenderer;
         private Vector3 _parentOrigin;
         private Camera _targetCamera;
         private float _scaleFactor = 0.1f;
+        private float _manualElevation = -1f;
         #endregion
 
         #region PROPERTIES
         internal float ScaleFactor
         {
-            set
-            {
+            set 
+            { 
                 _scaleFactor = value;
             }
-            get
-            {
+            get 
+            { 
                 return _scaleFactor;
             }
         }
+
         internal float ManualElevation
         {
             set
-            {
+            { 
                 _manualElevation = value;
             }
             get
-            {
+            { 
                 return _manualElevation;
             }
         }
@@ -59,42 +62,33 @@ namespace FlightReLive.Core.POI
         #endregion
 
         #region METHODS
-        internal void Inialize(Camera camera, Vector3 parentPosition)
+        internal void Initialize(Camera camera, Vector3 parentPosition, string text = "", float height = -1f)
         {
             _targetCamera = camera;
-            _lineRenderer = gameObject.AddComponent<LineRenderer>();
-            _lineRenderer.material = _lineMaterial;
-            _lineRenderer.textureMode = LineTextureMode.Tile;
-            _lineRenderer.alignment = LineAlignment.TransformZ;
-            _lineRenderer.startWidth = 0.2f;
-            _lineRenderer.endWidth = 0.2f;
-            _lineRenderer.numCapVertices = 0;
-            _lineRenderer.numCornerVertices = 0;
-            _lineRenderer.positionCount = 2;
             _parentOrigin = parentPosition;
-            ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
-            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
-            ManualElevation = -1;
-        }
 
-        internal void Inialize(Camera camera, Vector3 parentPosition, string text, float height = -1f)
-        {
-            _text.text = text;
-            _targetCamera = camera;
-            _lineRenderer = gameObject.AddComponent<LineRenderer>();
-            _lineRenderer.material = _lineMaterial;
-            _lineRenderer.textureMode = LineTextureMode.Tile;
-            _lineRenderer.alignment = LineAlignment.TransformZ;
-            _lineRenderer.startWidth = 0.2f;
-            _lineRenderer.endWidth = 0.2f;
-            _lineRenderer.numCapVertices = 0;
-            _lineRenderer.numCornerVertices = 0;
-            _lineRenderer.positionCount = 2;
-            _parentOrigin = parentPosition;
+            if (!string.IsNullOrEmpty(text))
+            {
+                _text.text = text;
+            }
+
+            if (_lineRenderer == null)
+            {
+                _lineRenderer = gameObject.AddComponent<LineRenderer>();
+                _lineRenderer.material = _lineMaterial;
+                _lineRenderer.textureMode = LineTextureMode.Tile;
+                _lineRenderer.alignment = LineAlignment.TransformZ;
+                _lineRenderer.startWidth = 0.3f;
+                _lineRenderer.endWidth = 0.3f;
+                _lineRenderer.numCapVertices = 0;
+                _lineRenderer.numCornerVertices = 0;
+                _lineRenderer.positionCount = 2;
+            }
+
             ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
             _randomOffset = Random.Range(0, _randomElevationRange);
-            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
             ManualElevation = height;
+            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
         }
 
         private void UpdateTransparencyByDistance()
@@ -105,8 +99,10 @@ namespace FlightReLive.Core.POI
             }
 
             float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
-            float t = Mathf.InverseLerp(_maxVisibleDistance, _minVisibleDistance, distance); // 0 = far, 1 = near
-            float alpha = Mathf.Clamp01(t);
+
+            //Normalisation : 0 = near, 1 = far
+            float t = Mathf.InverseLerp(_minVisibleDistance, _maxVisibleDistance, distance);
+            float alpha = 1f - Mathf.Clamp01(t);
 
             //LineRenderer
             if (_lineRenderer != null && _lineRenderer.material.HasProperty("_Color"))
@@ -119,12 +115,12 @@ namespace FlightReLive.Core.POI
             //Image
             if (_image != null)
             {
-                Renderer iconRenderer = _image.GetComponent<Renderer>();
-                if (iconRenderer != null && iconRenderer.material.HasProperty("_Color"))
+                Image imageRenderer = _image.GetComponent<Image>();
+                if (imageRenderer != null)
                 {
-                    Color iconColor = iconRenderer.material.color;
+                    Color iconColor = imageRenderer.color;
                     iconColor.a = alpha;
-                    iconRenderer.material.color = iconColor;
+                    imageRenderer.color = iconColor;
                 }
             }
 
@@ -180,7 +176,6 @@ namespace FlightReLive.Core.POI
 
             if (_text != null)
             {
-                //Use world scale
                 float scaleFactor = _image.lossyScale.y;
                 Vector3 textOffset = imageUpDir * (_textYOffsetFromPoint * scaleFactor);
                 _text.transform.position = imagePosition + textOffset;
@@ -189,13 +184,12 @@ namespace FlightReLive.Core.POI
 
         private void UpdateLineRenderer()
         {
-            if (_lineRenderer == null || _image == null || transform.parent == null)
+            if (_lineRenderer == null || _image == null)
             {
                 return;
             }
 
             RectTransform rect = _image.GetComponent<RectTransform>();
-
             Vector3 downWorld = rect.transform.rotation * Vector3.down;
             Vector3 start = rect.position + downWorld * rect.rect.height * rect.lossyScale.y * 0.5f;
             Vector3 end = _parentOrigin;
@@ -203,7 +197,6 @@ namespace FlightReLive.Core.POI
             _lineRenderer.SetPosition(0, start);
             _lineRenderer.SetPosition(1, end);
 
-            //Adapte witdh from scale
             float scale = _image.localScale.x;
             _lineRenderer.startWidth = scale / 5f;
             _lineRenderer.endWidth = scale / 5f;

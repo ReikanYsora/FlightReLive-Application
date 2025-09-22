@@ -64,7 +64,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnPOIVisibilityChanged;
         public static event Action<float> OnPOIScaleChanged;
         public static event Action<float> OnPOIHeightChanged;
-        public static event Action<float> OnPOIVisibilityDistanceChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnSunIntensityChanged;
@@ -185,9 +184,6 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadPOIHeight() =>
             CurrentSettings.POIHeight = PlayerPrefs.GetFloat(nameof(Settings.POIHeight), 5f);
-
-        internal static void LoadPOIVisibilityDistance() =>
-            CurrentSettings.POIVisibilityDistance = PlayerPrefs.GetFloat(nameof(Settings.POIVisibilityDistance), 200f);
 
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
@@ -411,14 +407,6 @@ namespace FlightReLive.Core.Settings
             OnPOIHeightChanged?.Invoke(value);
         }
 
-        internal static void SavePOIVisibilityDistance(float value)
-        {
-            CurrentSettings.POIVisibilityDistance = value;
-            PlayerPrefs.SetFloat(nameof(Settings.POIVisibilityDistance), value);
-            PlayerPrefs.Save();
-            OnPOIVisibilityDistanceChanged?.Invoke(value);
-        }
-
         internal static void SaveBuildingVisibility(bool value)
         {
             CurrentSettings.BuildingVisibility = value;
@@ -499,7 +487,6 @@ namespace FlightReLive.Core.Settings
             LoadPOIVisibility();
             LoadPOIScale();
             LoadPOIHeight();
-            LoadPOIVisibilityDistance();
             LoadBuildingVisibility();
             LoadVignettingIntensity();
             LoadSunIntensity();
@@ -538,7 +525,6 @@ namespace FlightReLive.Core.Settings
             SavePOIVisibility(true);
             SavePOIScale(0.5f);
             SavePOIHeight(5f);
-            SavePOIVisibilityDistance(200f);
             SaveBuildingVisibility(true);
             SaveVignettingIntensity(0.3f);
             SaveSunIntensity(0.8f);

@@ -1,6 +1,5 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
-using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System.Collections.Generic;
@@ -18,9 +17,6 @@ namespace FlightReLive.Core.POI
         #region ATTRIBUTES
         [SerializeField] private Camera _mainCamera;
         private POIPool _poiPool;
-
-        [Header("Visibility")]
-        private float _maxVisibleDistance;
 
         private readonly List<POIEntity> _allPOIs = new List<POIEntity>();
         private readonly Dictionary<(int, int), List<POIEntity>> _tileToPOIs = new Dictionary<(int, int), List<POIEntity>>();
@@ -45,10 +41,8 @@ namespace FlightReLive.Core.POI
 
         private void Start()
         {
-            _maxVisibleDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
             SettingsManager.OnPOIScaleChanged += OnPOIScaleChanged;
             SettingsManager.OnPOIHeightChanged += OnPOIHeightChanged;
-            SettingsManager.OnPOIVisibilityDistanceChanged += OnPOIVisibilityDistanceChanged;
             SettingsManager.OnPOIVisibilityChanged += OnPOIVisibilityChanged;
         }
 
@@ -61,7 +55,6 @@ namespace FlightReLive.Core.POI
         {
             SettingsManager.OnPOIScaleChanged -= OnPOIScaleChanged;
             SettingsManager.OnPOIHeightChanged -= OnPOIHeightChanged;
-            SettingsManager.OnPOIVisibilityDistanceChanged -= OnPOIVisibilityDistanceChanged;
             SettingsManager.OnPOIVisibilityChanged -= OnPOIVisibilityChanged;
         }
         #endregion
@@ -97,7 +90,7 @@ namespace FlightReLive.Core.POI
 
                 string key = $"{name}_{gpsData.Latitude}_{gpsData.Longitude}";
 
-                if (processedKeys.Contains(name))
+                if (processedKeys.Contains(key))
                 {
                     continue;
                 }
@@ -111,37 +104,29 @@ namespace FlightReLive.Core.POI
                 GameObject poiGO = _poiPool.Get();
                 poiGO.transform.position = worldPos;
                 POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
-                poiEntity.Inialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.POIHeight);
+                poiEntity.Initialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.POIHeight);
                 _allPOIs.Add(poiEntity);
                 createdForTile.Add(poiEntity);
             }
 
             _tileToPOIs[(tile.X, tile.Y)] = createdForTile;
 
-            //Cleanup
+            // Cleanup
             tile.GeoData = null;
         }
 
         /// <summary>
-        /// Updates visibility of POIs based on distance to camera.
+        /// Updates visibility of POIs based on global toggle.
         /// </summary>
         internal void UpdatePOIVisibility()
         {
-            if (_mainCamera == null)
-            {
-                return;
-            }
-
-            Vector3 camPos = _mainCamera.transform.position;
+            bool globalVisibility = SettingsManager.CurrentSettings.POIVisibility;
 
             foreach (POIEntity poi in _allPOIs)
             {
-                float distance = Vector3.Distance(camPos, poi.transform.position);
-                bool shouldBeVisible = distance <= _maxVisibleDistance;
-
-                if (poi.gameObject.activeSelf != shouldBeVisible)
+                if (poi != null && poi.gameObject.activeSelf != globalVisibility)
                 {
-                    poi.gameObject.SetActive(shouldBeVisible);
+                    poi.gameObject.SetActive(globalVisibility);
                 }
             }
         }
@@ -178,11 +163,6 @@ namespace FlightReLive.Core.POI
             }
         }
 
-        private void OnPOIVisibilityDistanceChanged(float distance)
-        {
-            _maxVisibleDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
-        }
-
         private void OnPOIVisibilityChanged(bool visibility)
         {
             foreach (POIEntity poi in _allPOIs)
@@ -208,21 +188,15 @@ namespace FlightReLive.Core.POI
             }
 
             float poiScale = SettingsManager.CurrentSettings.POIScale;
-            if (grid.Slider("POI scale", ref poiScale, 0.5f, 1f, 0.01f, format: "%.01f"))
+            if (grid.Slider("POI scale", ref poiScale, 0.1f, 1f, 0.01f, format: "%.01f"))
             {
                 SettingsManager.SavePOIScale(poiScale);
             }
 
             float poiHeight = SettingsManager.CurrentSettings.POIHeight;
-            if (grid.Slider("POI height", ref poiHeight, 0f, 10f, 0.1f, format: "%.1f"))
+            if (grid.Slider("POI height", ref poiHeight, 0.1f, 15f, 0.1f, format: "%.1f"))
             {
                 SettingsManager.SavePOIHeight(poiHeight);
-            }
-
-            float poiVisibilityDistance = SettingsManager.CurrentSettings.POIVisibilityDistance;
-            if (grid.Slider("POI distance", ref poiVisibilityDistance, 100f, 2000f, 0.1f, format: "%.1f"))
-            {
-                SettingsManager.SavePOIVisibilityDistance(poiVisibilityDistance);
             }
         }
         #endregion

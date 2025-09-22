@@ -32,7 +32,6 @@ namespace FlightReLive.Core.Settings
         public bool BuildingVisibility;
         public float POIScale;
         public float POIHeight;
-        public float POIVisibilityDistance;
         public bool POIVisibility;
         public float VignettingIntensity;
         public string CurrentVersion;

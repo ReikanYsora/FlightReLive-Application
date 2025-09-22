@@ -73,17 +73,17 @@ namespace FlightReLive.UI.ReLiveView
                     Fugui.MoveXUnscaled(layout.GetAvailableWidth() - rightGroupWidth);
                     Fugui.PushFont(14, FontType.Regular);
 
-                    Fugui.MoveY(-4f);
+                    Fugui.MoveY(-3f);
                     layout.SetNextElementToolTip("Post-processing settings");
                     PopupButton(FlightReLiveIcons.PostProcess, () => DrawPostProcessingSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
                     layout.SameLine();
 
-                    Fugui.MoveY(-4f);
+                    Fugui.MoveY(-3f);
                     layout.SetNextElementToolTip("Open path settings");
                     PopupButton(FlightReLiveIcons.Path, () => DrawPathSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
                     layout.SameLine();
 
-                    Fugui.MoveY(-4f);
+                    Fugui.MoveY(-3f);
                     layout.SetNextElementToolTip("Open scene settings");
                     PopupButton(FlightReLiveIcons.AltitudeRelative, () => DrawSceneSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
 
@@ -120,7 +120,7 @@ namespace FlightReLive.UI.ReLiveView
         {
             ImGui.Dummy(Vector2.zero);
             Fugui.PushDefaultFont();
-            layout.FramedText("Path Settings");
+            layout.FramedText("Path settings");
             layout.Separator();
 
             PathManager.Instance.DrawPathSettings(layout);
@@ -133,8 +133,6 @@ namespace FlightReLive.UI.ReLiveView
         {
             ImGui.Dummy(Vector2.zero);
             Fugui.PushDefaultFont();
-            layout.FramedText("Scene Settings");
-            layout.Separator();
 
             EnvironmentManager.Instance.DrawSceneSettings(layout);
 

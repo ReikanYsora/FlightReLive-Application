@@ -10,6 +10,7 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region ATTRIBUTES
         private List<GameObject> _terrainsList;
+        [SerializeField] private GameObject _terrain;
         #endregion
 
         #region PROPERTIES
@@ -28,6 +29,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             Instance = this;
 
             _terrainsList = new List<GameObject>();
+            _terrain.SetActive(false);
         }
         #endregion
 

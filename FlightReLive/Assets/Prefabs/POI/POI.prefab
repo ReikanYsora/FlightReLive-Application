@@ -55,8 +55,6 @@ MonoBehaviour:
   _lineMaterial: {fileID: 2100000, guid: e42fe6339d96c9e4096937ba6d397f99, type: 2}
   _textYOffsetFromPoint: 4
   _minVisibleDistance: 30
-  _maxVisibleDistance: 10000
-  _manualElevation: -1
   _randomElevationRange: 20
 --- !u!1 &4164295304431874847
 GameObject:

@@ -376,7 +376,7 @@ namespace FlightReLive.Core.Paths
             {
                 Vector3 center = pathPoints[i];
 
-                // Tangente sécurisée
+                //Secured tangent
                 Vector3 tangent;
                 if (i == 0)
                 {
@@ -400,7 +400,7 @@ namespace FlightReLive.Core.Paths
                     tangent.Normalize();
                 }
 
-                // Sécuriser le vecteur up pour éviter les artefacts
+                //Secure up vector to avoid artefacts
                 if (Mathf.Abs(Vector3.Dot(up, tangent)) > 0.99f)
                 {
                     up = Vector3.Cross(tangent, Vector3.right).magnitude > 0.001f ? Vector3.right : Vector3.up;
@@ -427,7 +427,7 @@ namespace FlightReLive.Core.Paths
                 up = normal;
             }
 
-            // Construction des triangles
+            //Triangles
             for (int i = 0; i < ringCount - 1; i++)
             {
                 int ringStart = i * radialSegments;
@@ -450,7 +450,7 @@ namespace FlightReLive.Core.Paths
                 }
             }
 
-            // Cap start
+            //Cap start
             Vector3 startCenter = pathPoints[0];
             Vector3 startTangent = (pathPoints[1] - startCenter).normalized;
             int startCenterIndex = vertices.Count;
@@ -467,7 +467,7 @@ namespace FlightReLive.Core.Paths
                 triangles.Add(next);
             }
 
-            // Cap end
+            //Cap end
             Vector3 endCenter = pathPoints[ringCount - 1];
             Vector3 endTangent = (endCenter - pathPoints[ringCount - 2]).normalized;
             int endCenterIndex = vertices.Count;

@@ -14,7 +14,10 @@ namespace FlightReLive.Core
         #region ATTRIBUTES
         [Header("Welcome")]
         [SerializeField] private Texture2D _welcome;
-        [SerializeField] private TNDUpscaler _mainCameraUpscaler;
+
+
+        [Header("System settings")]
+        [SerializeField] private TNDUpscaler _reliveUpscaler;
         [SerializeField] private TNDUpscaler _povCameraUpscaler;
         #endregion
 
@@ -54,15 +57,8 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
-            //Apply upascalers settings
-            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
-            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
-            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
-            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+            //Apply upscaler settings
+            ApplyUpscalersSettingsValues();
 
             //Register events
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
@@ -200,6 +196,36 @@ namespace FlightReLive.Core
             float scale = SettingsManager.CurrentSettings.GlobalScale;
             Fugui.SetScale(scale, scale);
         }
+
+        private void ApplyUpscalersSettingsValues()
+        {
+#if UNITY_EDITOR
+            _reliveUpscaler.runInEditMode = true;
+            _povCameraUpscaler.runInEditMode = true;
+#endif
+            if (SettingsManager.CurrentSettings.UpscalerName == UpscalerName.None)
+            {
+                UpscalerName mainCameraEnabledUpscaler = _reliveUpscaler.GetActiveUpscaler();
+
+                _reliveUpscaler.SetQuality(UpscalerQuality.Off);
+                _povCameraUpscaler.SetQuality(UpscalerQuality.Off);
+                _reliveUpscaler.ResetCamera();
+                _povCameraUpscaler.ResetCamera();
+            }
+            else
+            {
+                _reliveUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+                _reliveUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+                _reliveUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+                _reliveUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+                _reliveUpscaler.SetAutoReactive(true);
+                _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+                _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+                _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+                _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+                _povCameraUpscaler.SetAutoReactive(true);
+            }
+        }
         #endregion
 
         #region UI
@@ -208,11 +234,7 @@ namespace FlightReLive.Core
             Fugui.ShowModal(" ", (layout) =>
             {
                 layout.BeginGroup();
-
-                if (layout.Image("welcome", _welcome, new FuElementSize(496, 195), true, true))
-                {
-
-                }
+                layout.Image("welcome", _welcome, new FuElementSize(496, 195), true, false);
 
                 ImGui.Indent(10f);
                 Fugui.PushFont(18, FontType.Bold);
@@ -275,28 +297,22 @@ namespace FlightReLive.Core
 
         private void OnUpscalerNameChanged(UpscalerName upscalerName)
         {
-            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            ApplyUpscalersSettingsValues();
         }
 
         private void OnUpscalerQualityChanged(UpscalerQuality upscalerQuality)
         {
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            ApplyUpscalersSettingsValues();
         }
 
         private void OnUpscalerSharpenessChanged(float enabled)
         {
-            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
-            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+            ApplyUpscalersSettingsValues();
         }
 
         private void OnUpscalerSharpeningEnabledChanged(bool value)
         {
-            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
-            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+            ApplyUpscalersSettingsValues();
         }
         #endregion
     }

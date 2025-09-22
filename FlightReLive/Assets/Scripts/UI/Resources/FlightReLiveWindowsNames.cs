@@ -22,7 +22,7 @@ public class FlightReLiveWindowsNames : FuSystemWindowsNames
 
     public static FuWindowName FlightCharts { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _FlightCharts; }
 
-    private static FuWindowName _POVView = new FuWindowName(15, FlightReLiveIcons.Drone + "  POV View", true, -1);
+    private static FuWindowName _POVView = new FuWindowName(15, FlightReLiveIcons.POV + "  POV View", true, -1);
 
     public static FuWindowName POVView { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _POVView; }
     #endregion

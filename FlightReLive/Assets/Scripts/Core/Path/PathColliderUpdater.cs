@@ -5,7 +5,7 @@ namespace FlightReLive.Core.Paths
     [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
     public class PathColliderUpdater : MonoBehaviour
     {
-        [Header("Displacement Settings")]
+        [Header("Displacement settings")]
         public float baseThickness = 0.09f;
         public float cameraDistanceFactor = 1.0f;
 

@@ -163,7 +163,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1289900097}
+  m_Father: {fileID: 289568083}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &137108793
 MonoBehaviour:
@@ -177,8 +177,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23c1ce4fb46143f46bc5cb5224c934f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.HighDefinition.Runtime::UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData
-  clearColorMode: 0
-  backgroundColorHDR: {r: 0.025, g: 0.07, b: 0.19, a: 0}
+  clearColorMode: 1
+  backgroundColorHDR: {r: 0.009433985, g: 0.009433985, b: 0.009433985, a: 1}
   clearDepth: 1
   volumeLayerMask:
     serializedVersion: 2
@@ -343,7 +343,7 @@ Camera:
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 55
+    m_Bits: 183
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -369,6 +369,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TND.Upscaling.Framework.Runtime.HDRP::TND.Upscaling.Framework.TNDUpscaler
   upscalerChain:
   - TND.Upscaling.FSR3.FSR3UpscalerPlugin
+  - TND.Upscaling.HDRP.DLSS.DLSSUpscalerPlugin
   qualityMode: 5
   enableSharpening: 1
   sharpness: 0.5
@@ -538,7 +539,7 @@ Camera:
   m_Depth: 1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -750,7 +751,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 137108792}
+  - {fileID: 796242733}
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &289568084
@@ -880,7 +883,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 954186473}
-  - {fileID: 796242733}
   - {fileID: 1721477097}
   - {fileID: 2125856383}
   m_Father: {fileID: 0}
@@ -930,6 +932,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0b379570607945438ebc9f25b66153d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.ProceduralTerrain.TerrainManager
+  _terrain: {fileID: 1630641272}
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0
@@ -1008,12 +1011,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 796242729}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.3420201, y: 0, z: 0, w: 0.9396927}
+  m_LocalRotation: {x: 0.3420201, y: -0, z: -0, w: 0.9396927}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 686105527}
+  m_Father: {fileID: 289568083}
   m_LocalEulerAnglesHint: {x: 40, y: 0, z: 0}
 --- !u!114 &796242734
 MonoBehaviour:
@@ -1032,7 +1035,7 @@ MonoBehaviour:
   clearDepth: 1
   volumeLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 1
   volumeAnchorOverride: {fileID: 0}
   antialiasing: 0
   SMAAQuality: 2
@@ -1168,6 +1171,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TND.Upscaling.Framework.Runtime.HDRP::TND.Upscaling.Framework.TNDUpscaler
   upscalerChain:
   - TND.Upscaling.FSR3.FSR3UpscalerPlugin
+  - TND.Upscaling.HDRP.DLSS.DLSSUpscalerPlugin
   qualityMode: 2
   enableSharpening: 1
   sharpness: 0.1
@@ -1651,7 +1655,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Environment.EnvironmentManager
   _mainLight: {fileID: 954186476}
-  _mainCamera: {fileID: 796242730}
+  _reliveCamera: {fileID: 796242730}
+  _povCamera: {fileID: 137108794}
 --- !u!1 &1289900096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1682,7 +1687,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 137108792}
   - {fileID: 283911657}
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1841,13 +1845,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1630641273}
   - component: {fileID: 1630641274}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Procedural Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1630641273
 Transform:
   m_ObjectHideFlags: 0
@@ -2045,7 +2049,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _welcome: {fileID: 2800000, guid: 69e09da936753794e94bb0b7cde884c2, type: 3}
-  _mainCameraUpscaler: {fileID: 796242735}
+  _reliveUpscaler: {fileID: 796242735}
   _povCameraUpscaler: {fileID: 137108795}
 --- !u!1 &2116168535
 GameObject:
@@ -2449,7 +2453,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.UI.POVView.POVViewManager
   _windowName:
     _id: 15
-    _name: "\uE076  POV View"
+    _name: "\uE087  POV View"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 0

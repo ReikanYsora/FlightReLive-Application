@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEngine;
+using ImGuiNET;
 
 namespace FlightReLive.Core.Loading
 {
@@ -27,6 +28,8 @@ namespace FlightReLive.Core.Loading
         private float _tileProgress;
         private int _tilesProcessed;
         private int _tilesTotal;
+        private int _filesFromCache;
+        private int _filesDownloaded;
         #endregion
 
         #region PROPERTIES
@@ -87,6 +90,8 @@ namespace FlightReLive.Core.Loading
             _tileProgress = 0f;
             _tilesProcessed = 0;
             _tilesTotal = flightData.MapDefinition.TileDefinitions.Count;
+            _filesFromCache = 0;
+            _filesDownloaded = 0;
             _currentLoadingText = "Preparing resources...";
 
             DisplayLoading();
@@ -121,7 +126,9 @@ namespace FlightReLive.Core.Loading
 
                 foreach (int priority in priorities)
                 {
-                    List<TileDefinition> tiles = flightData.MapDefinition.TileDefinitions.Where(t => t.Priority == priority).ToList();
+                    List<TileDefinition> tiles = flightData.MapDefinition.TileDefinitions
+                        .Where(t => t.Priority == priority)
+                        .ToList();
                     List<TileDefinition> loadedTiles = new List<TileDefinition>();
 
                     foreach (TileDefinition tile in tiles)
@@ -131,10 +138,22 @@ namespace FlightReLive.Core.Loading
                         _tileProgress = 0f;
                         _currentLoadingText = $"Create tile resources <{tile.X},{tile.Y}>";
 
-                        TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(tile, token, (phase, progress) =>
-                        {
-                            _tileProgress = (phase + progress) / 4f;
-                        });
+                        TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(
+                            tile,
+                            token,
+                            (phase, progress, source) =>
+                            {
+                                _tileProgress = (phase + progress) / 4f;
+
+                                if (source == TileResourceSource.Cache)
+                                {
+                                    Interlocked.Increment(ref _filesFromCache);
+                                }
+                                else if (source == TileResourceSource.Download)
+                                {
+                                    Interlocked.Increment(ref _filesDownloaded);
+                                }
+                            });
 
                         if (loaded != null)
                         {
@@ -165,12 +184,16 @@ namespace FlightReLive.Core.Loading
                 ProceduralTerrainManager.Instance.Load(flightData);
                 sw.Stop();
                 Debug.Log("ProceduralTerrainManager : " + sw.ElapsedMilliseconds);
+
                 VideoPlayerManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
+
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
+                Fugui.Notify("Flight loaded",
+                    $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}",
+                    StateType.Info);
 
                 OnFlightEndLoading?.Invoke();
             }
@@ -184,6 +207,7 @@ namespace FlightReLive.Core.Loading
                 IsLoading = false;
             }
         }
+
 
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {
@@ -352,6 +376,20 @@ namespace FlightReLive.Core.Loading
                 layout.Text(_currentLoadingText);
                 layout.CenterNextItemH(availableX);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
+
+                layout.Separator();
+
+                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.LinesBackground, 2, 2, 2))
+                {
+                    loadingDetailsGrid.Text("Tiles processed");
+                    loadingDetailsGrid.FramedText($"{_tilesProcessed} / {_tilesTotal}");
+
+                    loadingDetailsGrid.Text("Files from cache");
+                    loadingDetailsGrid.FramedText($"{_filesFromCache}");
+
+                    loadingDetailsGrid.Text("Files downloaded");
+                    loadingDetailsGrid.FramedText($"{_filesDownloaded}");
+                }
             },
             FuModalSize.Medium,
             new FuModalButton("Cancel loading", () => CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));

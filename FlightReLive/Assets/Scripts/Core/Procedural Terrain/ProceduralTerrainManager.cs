@@ -65,22 +65,22 @@ namespace FlightReLive.Core.ProceduralTerrain
             foreach (TileDefinition tile in tiles)
             {
                 if (tile.X < minX)
-                { 
+                {
                     minX = tile.X;
                 }
 
                 if (tile.X > maxX)
                 {
-                    maxX = tile.X; 
+                    maxX = tile.X;
                 }
 
                 if (tile.Y < minY)
-                { 
+                {
                     minY = tile.Y;
                 }
 
                 if (tile.Y > maxY)
-                { 
+                {
                     maxY = tile.Y;
                 }
             }
@@ -206,19 +206,22 @@ namespace FlightReLive.Core.ProceduralTerrain
                 _terrain.terrainData = new TerrainData();
             });
         }
-        
+
         /// <summary>
-         /// Create a single ARM texture for all terrain layers.
-         /// AO = 0.9, Smoothness = 0 (so Roughness = 1), Metallic = 0
-         /// </summary>
+        /// Create a single ARM texture for all terrain layers.
+        /// AO = 0.9, Smoothness = 0 (so Roughness = 1), Metallic = 0
+        /// </summary>
         private Texture2D CreateARMTexture(int size = 4)
         {
             // Small texture (4x4) since it is uniform, no need for full res
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
             tex.wrapMode = TextureWrapMode.Repeat;
             tex.filterMode = FilterMode.Bilinear;
-
+#if UNITY_STANDALONE_OSX
+            Color arm = new Color(0.9f, 0.0f, 0.0f, 1.0f);
+#else
             Color arm = new Color(0.9f, 1.0f, 0.0f, 1.0f);
+#endif
             Color[] pixels = new Color[size * size];
 
             for (int i = 0; i < pixels.Length; i++)

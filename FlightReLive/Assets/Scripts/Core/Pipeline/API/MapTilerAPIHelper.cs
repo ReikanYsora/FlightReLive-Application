@@ -18,6 +18,7 @@ using UnityEngine.Networking;
 using VexTile.Mapbox.VectorTile;
 using VexTile.Mapbox.VectorTile.Geometry;
 using System.Text;
+using FlightReLive.Core.Loading;
 
 internal static class MapTilerAPIHelper
 {
@@ -50,24 +51,47 @@ internal static class MapTilerAPIHelper
         return uwr.result == UnityWebRequest.Result.Success && uwr.responseCode == 200;
     }
 
-    internal static async Task<TileDefinition> DownloadTileAsync(TileDefinition tile, CancellationToken token, Action<int, float> onProgress = null)
+    internal static async Task<TileDefinition> DownloadTileAsync(
+        TileDefinition tile,
+        CancellationToken token,
+        Action<int, float, TileResourceSource?> onProgress = null)
     {
         try
         {
             //Phase 0 : Satellite
-            tile.SatelliteTexture = await DownloadSatelliteAsync(tile, token, p => onProgress?.Invoke(0, p));
+            ResourceResult<Texture2D> sat = await DownloadSatelliteAsync(tile, token, p => onProgress?.Invoke(0, p, null));
+            if (sat != null)
+            {
+                tile.SatelliteTexture = sat.Data;
+                onProgress?.Invoke(0, 1f, sat.Source);
+            }
             token.ThrowIfCancellationRequested();
 
             //Phase 1 : Heightmap
-            tile.HeightMap = await DownloadHeightmapAsync(tile, token, p => onProgress?.Invoke(1, p));
+            ResourceResult<float[,]> hm = await DownloadHeightmapAsync(tile, token, p => onProgress?.Invoke(1, p, null));
+            if (hm != null)
+            {
+                tile.HeightMap = hm.Data;
+                onProgress?.Invoke(1, 1f, hm.Source);
+            }
             token.ThrowIfCancellationRequested();
 
             //Phase 2 : Buildings
-            tile.Buildings = await DownloadBuildingsAsync(tile, token, p => onProgress?.Invoke(2, p));
+            ResourceResult<List<BuildingData>> bld = await DownloadBuildingsAsync(tile, token, p => onProgress?.Invoke(2, p, null));
+            if (bld != null)
+            {
+                tile.Buildings = bld.Data;
+                onProgress?.Invoke(2, 1f, bld.Source);
+            }
             token.ThrowIfCancellationRequested();
 
             //Phase 3 : GeoData
-            tile.GeoData = await DownloadGeoDataAsync(tile, token, p => onProgress?.Invoke(3, p));
+            ResourceResult<FeatureCollection> geo = await DownloadGeoDataAsync(tile, token, p => onProgress?.Invoke(3, p, null));
+            if (geo != null)
+            {
+                tile.GeoData = geo.Data;
+                onProgress?.Invoke(3, 1f, geo.Source);
+            }
             token.ThrowIfCancellationRequested();
 
             return tile;
@@ -82,26 +106,16 @@ internal static class MapTilerAPIHelper
     #endregion
 
     #region SATELLITE
-    private static async Task<Texture2D> DownloadSatelliteAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<Texture2D>> DownloadSatelliteAsync(
+        TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
-        int targetZoom;
-
-        switch (tile.Priority)
+        int targetZoom = tile.Priority switch
         {
-            case 0:
-                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0;
-                break;
-            case 1:
-                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1;
-                break;
-            case 2:
-                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2;
-                break;
-            default:
-            case 3:
-                targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3;
-                break;
-        }
+            0 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0,
+            1 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1,
+            2 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2,
+            _ => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3
+        };
 
         HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, targetZoom);
         Dictionary<(int, int), Texture2D> downloaded = new();
@@ -110,6 +124,7 @@ internal static class MapTilerAPIHelper
         List<Task> tasks = new();
         int total = coords.Count;
         int completed = 0;
+        TileResourceSource finalSource = TileResourceSource.Download;
 
         foreach ((int x, int y) in coords)
         {
@@ -121,16 +136,20 @@ internal static class MapTilerAPIHelper
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    Texture2D texture = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p =>
+                    ResourceResult<Texture2D> tex = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p =>
                     {
                         onProgress?.Invoke((completed + p) / total);
                     });
 
-                    if (texture != null)
+                    if (tex != null && tex.Data != null)
                     {
                         lock (downloaded)
                         {
-                            downloaded[(x, y)] = texture;
+                            downloaded[(x, y)] = tex.Data;
+                        }
+                        if (tex.Source == TileResourceSource.Cache)
+                        {
+                            finalSource = TileResourceSource.Cache;
                         }
                     }
 
@@ -154,18 +173,22 @@ internal static class MapTilerAPIHelper
 
         await Task.WhenAll(tasks);
 
-        return downloaded.Count == 0 ? null : CombinePNGTiles(downloaded);
+        return downloaded.Count == 0
+            ? null
+            : new ResourceResult<Texture2D>(CombinePNGTiles(downloaded), finalSource);
     }
 
-    private static async Task<Texture2D> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<Texture2D>> DownloadSingleSatelliteTileAsync(
+        int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.SatelliteTileExistsAsync(zoom, x, y))
         {
-            return await CacheManager.LoadSatelliteTileAsync(zoom, x, y);
+            Texture2D cached = await CacheManager.LoadSatelliteTileAsync(zoom, x, y);
+            return new ResourceResult<Texture2D>(cached, TileResourceSource.Cache);
         }
 
         string url = $"https://api.maptiler.com/tiles/satellite-v2/{zoom}/{x}/{y}.png?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
-        TaskCompletionSource<Texture2D> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<ResourceResult<Texture2D>> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         DownloadManager.EnqueueDownload(
             url,
@@ -177,7 +200,7 @@ internal static class MapTilerAPIHelper
                 if (tex.LoadImage(data))
                 {
                     await CacheManager.SaveSatelliteTileAsync(tex.EncodeToPNG(), zoom, x, y);
-                    tcs.TrySetResult(tex);
+                    tcs.TrySetResult(new ResourceResult<Texture2D>(tex, TileResourceSource.Download));
                 }
                 else
                 {
@@ -193,84 +216,16 @@ internal static class MapTilerAPIHelper
             return await tcs.Task;
         }
     }
-
-    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles)
-    {
-        int minX = tiles.Keys.Min(k => k.Item1);
-        int maxX = tiles.Keys.Max(k => k.Item1);
-        int minY = tiles.Keys.Min(k => k.Item2);
-        int maxY = tiles.Keys.Max(k => k.Item2);
-
-        int width = (maxX - minX + 1) * TILE_SIZE;
-        int height = (maxY - minY + 1) * TILE_SIZE;
-        Texture2D atlas = new Texture2D(width, height);
-
-        foreach (var kv in tiles)
-        {
-            int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
-            int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
-            atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, kv.Value.GetPixels());
-        }
-
-        atlas.Apply();
-        return atlas;
-    }
-
-    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles, int finalSize)
-    {
-        int minX = tiles.Keys.Min(k => k.Item1);
-        int maxX = tiles.Keys.Max(k => k.Item1);
-        int minY = tiles.Keys.Min(k => k.Item2);
-        int maxY = tiles.Keys.Max(k => k.Item2);
-
-        int tileCountX = maxX - minX + 1;
-        int tileCountY = maxY - minY + 1;
-
-        int atlasWidth = tileCountX * TILE_SIZE;
-        int atlasHeight = tileCountY * TILE_SIZE;
-
-        RenderTexture atlasRT = new RenderTexture(atlasWidth, atlasHeight, 0, RenderTextureFormat.ARGB32);
-        atlasRT.Create();
-
-        foreach (var kv in tiles)
-        {
-            int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
-            int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
-
-            Texture2D src = kv.Value;
-
-            RenderTexture tempRT = RenderTexture.GetTemporary(TILE_SIZE, TILE_SIZE, 0, RenderTextureFormat.ARGB32);
-            Graphics.Blit(src, tempRT); // GPU rescale
-
-            // Copy into atlas at correct offset
-            Graphics.CopyTexture(tempRT, 0, 0, 0, 0, TILE_SIZE, TILE_SIZE, atlasRT, 0, 0, offsetX, offsetY);
-
-            RenderTexture.ReleaseTemporary(tempRT);
-        }
-
-        // Downscale to final texture
-        RenderTexture finalRT = new RenderTexture(finalSize, finalSize, 0, RenderTextureFormat.ARGB32);
-        Graphics.Blit(atlasRT, finalRT); // Bilinear GPU
-
-        Texture2D finalTex = new Texture2D(finalSize, finalSize, TextureFormat.RGB24, false);
-        RenderTexture.active = finalRT;
-        finalTex.ReadPixels(new Rect(0, 0, finalSize, finalSize), 0, 0);
-        finalTex.Apply();
-
-        RenderTexture.active = null;
-        atlasRT.Release();
-        finalRT.Release();
-
-        return finalTex;
-    }
     #endregion
 
     #region HEIGHTMAP
-    private static async Task<float[,]> DownloadHeightmapAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<float[,]>> DownloadHeightmapAsync(
+        TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.HeightmapExistsAsync(tile.X, tile.Y))
         {
-            return await CacheManager.LoadHeightmapAsync(tile.X, tile.Y);
+            float[,] cached = await CacheManager.LoadHeightmapAsync(tile.X, tile.Y);
+            return new ResourceResult<float[,]>(cached, TileResourceSource.Cache);
         }
 
         string url = $"https://api.maptiler.com/tiles/terrain-rgb-v2/{MapTools.ZOOM_LEVEL_TOPOGRAPHIC}/{tile.X}/{tile.Y}.webp?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
@@ -278,11 +233,7 @@ internal static class MapTilerAPIHelper
 
         DownloadManager.EnqueueDownload(
             url,
-            data =>
-            {
-                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
-                tcs.TrySetResult(data);
-            },
+            data => { if (!token.IsCancellationRequested) tcs.TrySetResult(data); },
             error => tcs.TrySetResult(null),
             (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
         );
@@ -290,21 +241,14 @@ internal static class MapTilerAPIHelper
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
             byte[] webp = await tcs.Task;
-
-            if (webp == null)
-            {
-                return null;
-            }
+            if (webp == null) { return null; }
 
             int w = MapTools.TILE_RESOLUTION;
             int h = MapTools.TILE_RESOLUTION;
             Error err;
             byte[] raw = WebPDecoder.LoadRGBAFromWebP(webp, ref w, ref h, false, out err);
 
-            if (err != Error.Success || raw == null)
-            {
-                return null;
-            }
+            if (err != Error.Success || raw == null) { return null; }
 
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             tex.LoadRawTextureData(raw);
@@ -325,40 +269,45 @@ internal static class MapTilerAPIHelper
             }
 
             await CacheManager.SaveHeightmapAsync(map, tile.X, tile.Y);
-
-            return map;
+            return new ResourceResult<float[,]>(map, TileResourceSource.Download);
         }
     }
     #endregion
 
     #region BUILDINGS
-    private static async Task<List<BuildingData>> DownloadBuildingsAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<List<BuildingData>>> DownloadBuildingsAsync(
+        TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
         int zoom = MapTools.ZOOM_LEVEL_BUILDING;
         List<BuildingData> all = new();
         HashSet<(int, int)> coords = MapTools.GetTilesFromZoomLevel(tile, zoom);
 
         int i = 0;
+        TileResourceSource finalSource = TileResourceSource.Download;
+
         foreach ((int x, int y) in coords)
         {
             token.ThrowIfCancellationRequested();
-            List<BuildingData> buildings = await DownloadAndParseOsmTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
+            ResourceResult<List<BuildingData>> res = await DownloadAndParseOsmTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
             i++;
 
-            if (buildings != null)
+            if (res != null && res.Data != null)
             {
-                all.AddRange(buildings);
+                all.AddRange(res.Data);
+                if (res.Source == TileResourceSource.Cache) { finalSource = TileResourceSource.Cache; }
             }
         }
 
-        return all;
+        return new ResourceResult<List<BuildingData>>(all, finalSource);
     }
 
-    private static async Task<List<BuildingData>> DownloadAndParseOsmTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<List<BuildingData>>> DownloadAndParseOsmTileAsync(
+        int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
     {
         if (await CacheManager.BuildingTileDataExistsAsync(zoom, x, y))
         {
-            return await CacheManager.LoadBuildingTileDataAsync(zoom, x, y);
+            List<BuildingData> cached = await CacheManager.LoadBuildingTileDataAsync(zoom, x, y);
+            return new ResourceResult<List<BuildingData>>(cached, TileResourceSource.Cache);
         }
 
         string url = $"https://api.maptiler.com/tiles/v3-openmaptiles/{zoom}/{x}/{y}.pbf?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
@@ -366,11 +315,7 @@ internal static class MapTilerAPIHelper
 
         DownloadManager.EnqueueDownload(
             url,
-            data =>
-            {
-                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
-                tcs.TrySetResult(data);
-            },
+            data => { if (!token.IsCancellationRequested) tcs.TrySetResult(data); },
             error => tcs.TrySetResult(null),
             (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
         );
@@ -378,11 +323,7 @@ internal static class MapTilerAPIHelper
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
             byte[] pbf = await tcs.Task;
-
-            if (pbf == null)
-            {
-                return null;
-            }
+            if (pbf == null) { return null; }
 
             VectorTileReader reader = new VectorTileReader(pbf);
             List<BuildingData> results = new();
@@ -417,19 +358,21 @@ internal static class MapTilerAPIHelper
                 await CacheManager.SaveBuildingTileDataAsync(results, zoom, x, y);
             }
 
-            return results;
+            return new ResourceResult<List<BuildingData>>(results, TileResourceSource.Download);
         }
     }
     #endregion
 
     #region GEODATA
-    private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+    private static async Task<ResourceResult<FeatureCollection>> DownloadGeoDataAsync(
+        TileDefinition tile, CancellationToken token, Action<float> onProgress)
     {
         string lang = GetPreferredLanguage();
 
         if (await CacheManager.GeoTileDataExistsAsync(tile.X, tile.Y, lang))
         {
-            return await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+            FeatureCollection cached = await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+            return new ResourceResult<FeatureCollection>(cached, TileResourceSource.Cache);
         }
 
         FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
@@ -451,31 +394,15 @@ internal static class MapTilerAPIHelper
 
         DownloadManager.EnqueueDownload(
             url,
-            data =>
-            {
-                if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
-                tcs.TrySetResult(Encoding.UTF8.GetString(data));
-            },
+            data => { if (!token.IsCancellationRequested) tcs.TrySetResult(Encoding.UTF8.GetString(data)); },
             error => tcs.TrySetResult(null),
             (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
         );
 
         using (token.Register(() => tcs.TrySetCanceled(token)))
         {
-            string json;
-            try
-            {
-                json = await tcs.Task.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(json))
-            {
-                return null;
-            }
+            string json = await tcs.Task;
+            if (string.IsNullOrEmpty(json)) { return null; }
 
             try
             {
@@ -487,7 +414,7 @@ internal static class MapTilerAPIHelper
                     await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
                 }
 
-                return filtered;
+                return new ResourceResult<FeatureCollection>(filtered, TileResourceSource.Download);
             }
             catch (Exception ex)
             {
@@ -520,6 +447,28 @@ internal static class MapTilerAPIHelper
     #endregion
 
     #region COMMONS
+    private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles)
+    {
+        int minX = tiles.Keys.Min(k => k.Item1);
+        int maxX = tiles.Keys.Max(k => k.Item1);
+        int minY = tiles.Keys.Min(k => k.Item2);
+        int maxY = tiles.Keys.Max(k => k.Item2);
+
+        int width = (maxX - minX + 1) * TILE_SIZE;
+        int height = (maxY - minY + 1) * TILE_SIZE;
+        Texture2D atlas = new Texture2D(width, height);
+
+        foreach (var kv in tiles)
+        {
+            int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
+            int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
+            atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, kv.Value.GetPixels());
+        }
+
+        atlas.Apply();
+        return atlas;
+    }
+
     private static string GetPreferredLanguage()
     {
         SystemLanguage lang = Application.systemLanguage;

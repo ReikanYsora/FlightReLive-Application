@@ -251,7 +251,7 @@ namespace FlightReLive.Core.Environment
                 _fog.active = true;
                 _fog.enabled.Override(true);
                 _fog.enableVolumetricFog.Override(true);
-                _fog.meanFreePath.Override(400f);
+                _fog.meanFreePath.Override(600f);
                 _fog.baseHeight.overrideState = false;
                 _fog.maximumHeight.Override(500f);
                 _fog.maxFogDistance.Override(5000f);

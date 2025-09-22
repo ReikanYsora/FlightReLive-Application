@@ -7,14 +7,10 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
-        public UpscalerName MainCameraUpscalerName;
-        public UpscalerQuality MainCameraUpscalerQuality;
-        public bool MainCameraUpscalerSharpeningEnabled;
-        public float MainCameraUpscalerSharpeness;
-        public UpscalerName POVCameraUpscalerName;
-        public UpscalerQuality POVCameraUpscalerQuality;
-        public bool POVCameraUpscalerSharpeningEnabled;
-        public float POVCameraUpscalerSharpeness;
+        public UpscalerName UpscalerName;
+        public UpscalerQuality UpscalerQuality;
+        public bool UpscalerSharpeningEnabled;
+        public float UpscalerSharpeness;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;

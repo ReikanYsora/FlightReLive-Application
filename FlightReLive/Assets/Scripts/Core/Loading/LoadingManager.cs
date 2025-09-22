@@ -24,7 +24,8 @@ namespace FlightReLive.Core.Loading
     {
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
-        private string _currentLoadingText;
+        private string _currentTile;
+        private string _currentTilePriority;
         private float _tileProgress;
         private int _tilesProcessed;
         private int _tilesTotal;
@@ -92,7 +93,8 @@ namespace FlightReLive.Core.Loading
             _tilesTotal = flightData.MapDefinition.TileDefinitions.Count;
             _filesFromCache = 0;
             _filesDownloaded = 0;
-            _currentLoadingText = "Preparing resources...";
+            _currentTile = "";
+            _currentTilePriority = "";
 
             DisplayLoading();
             IsLoading = true;
@@ -136,7 +138,8 @@ namespace FlightReLive.Core.Loading
                         token.ThrowIfCancellationRequested();
 
                         _tileProgress = 0f;
-                        _currentLoadingText = $"Create tile resources <{tile.X},{tile.Y}>";
+                        _currentTile = $"{tile.X},{tile.Y}";
+                        _currentTilePriority = $"{tile.Priority}";
 
                         TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(
                             tile,
@@ -372,17 +375,26 @@ namespace FlightReLive.Core.Loading
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
                 float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
                 Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
-                layout.CenterNextItemH(_currentLoadingText);
-                layout.Text(_currentLoadingText);
+                string loading = "Loading resources...";
+                layout.CenterNextItemH(loading);
+                layout.Text(loading);
                 layout.CenterNextItemH(availableX);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
 
+                layout.Spacing();
                 layout.Separator();
+                layout.Spacing();
 
-                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.LinesBackground, 2, 2, 10))
+                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", FuGridFlag.LinesBackground, 2, 2, paddingX))
                 {
                     loadingDetailsGrid.Text("Tiles processed");
                     loadingDetailsGrid.FramedText($"{_tilesProcessed} / {_tilesTotal}");
+
+                    loadingDetailsGrid.Text("Current tile");
+                    loadingDetailsGrid.FramedText($"{_currentTile}");
+
+                    loadingDetailsGrid.Text("Current tile priority");
+                    loadingDetailsGrid.FramedText($"{_currentTilePriority}");
 
                     loadingDetailsGrid.Text("Files from cache");
                     loadingDetailsGrid.FramedText($"{_filesFromCache}");

@@ -55,26 +55,22 @@ namespace FlightReLive.Core
             ApplySavedGlobalScale();
 
             //Apply upascalers settings
-            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.MainCameraUpscalerName);
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
-            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeningEnabled);
-            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeness);
-            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.POVCameraUpscalerName);
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
-            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeningEnabled);
-            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeness);
+            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
 
             //Register events
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
-            SettingsManager.OnMainCameraUpscalerNameChanged += OnMainCameraUpscalerNameChanged;
-            SettingsManager.OnMainCameraUpscalerQualityChanged += OnMainCameraUpscalerQualityChanged;
-            SettingsManager.OnMainCameraUpscalerSharpeningEnabledChanged += OnMainCameraUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnMainCameraUpscalerSharpenessChanged += OnMainCameraUpscalerSharpenessChanged;
-            SettingsManager.OnPOVCameraUpscalerNameChanged += OnPOVCameraUpscalerNameChanged;
-            SettingsManager.OnPOVCameraUpscalerQualityChanged += OnPOVCameraUpscalerQualityChanged;
-            SettingsManager.OnPOVCameraUpscalerSharpeningEnabledChanged += OnPOVCameraUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnPOVCameraUpscalerSharpenessChanged += OnPOVCameraUpscalerSharpenessChanged;
+            SettingsManager.OnUpscalerNameChanged += OnUpscalerNameChanged;
+            SettingsManager.OnUpscalerQualityChanged += OnUpscalerQualityChanged;
+            SettingsManager.OnUpscalerSharpeningEnabledChanged += OnUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnUpscalerSharpenessChanged += OnUpscalerSharpenessChanged;
 
             //Check if welcome panel need do be displayed
             bool displayWelcomePanel = CheckIfDisplayWelcomePanelNeedToBeDisplayed();
@@ -112,14 +108,10 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
-            SettingsManager.OnMainCameraUpscalerNameChanged += OnMainCameraUpscalerNameChanged;
-            SettingsManager.OnMainCameraUpscalerQualityChanged -= OnMainCameraUpscalerQualityChanged;
-            SettingsManager.OnMainCameraUpscalerSharpeningEnabledChanged -= OnMainCameraUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnMainCameraUpscalerSharpenessChanged -= OnMainCameraUpscalerSharpenessChanged;
-            SettingsManager.OnPOVCameraUpscalerNameChanged -= OnPOVCameraUpscalerNameChanged;
-            SettingsManager.OnPOVCameraUpscalerQualityChanged -= OnPOVCameraUpscalerQualityChanged;
-            SettingsManager.OnPOVCameraUpscalerSharpeningEnabledChanged -= OnPOVCameraUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnPOVCameraUpscalerSharpenessChanged -= OnPOVCameraUpscalerSharpenessChanged;
+            SettingsManager.OnUpscalerNameChanged -= OnUpscalerNameChanged;
+            SettingsManager.OnUpscalerQualityChanged -= OnUpscalerQualityChanged;
+            SettingsManager.OnUpscalerSharpeningEnabledChanged -= OnUpscalerSharpeningEnabledChanged;
+            SettingsManager.OnUpscalerSharpenessChanged -= OnUpscalerSharpenessChanged;
         }
         #endregion
 
@@ -271,56 +263,40 @@ namespace FlightReLive.Core
         #endregion
 
         #region CALLBACKS
-        private void OnApplicationTargetFPSChanged(int value)
-        {
-            Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
-        }
-
         private void OnGlobalScaleChanged(float scale)
         {
             ApplySavedGlobalScale();
         }
 
-        private void OnMainCameraUpscalerQualityChanged(UpscalerQuality upscalerQuality)
+        private void OnApplicationTargetFPSChanged(int value)
         {
-            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.MainCameraUpscalerName);
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
+            Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
         }
 
-        private void OnMainCameraUpscalerNameChanged(UpscalerName upscalerName)
+        private void OnUpscalerNameChanged(UpscalerName upscalerName)
         {
-            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.MainCameraUpscalerQuality);
+            _mainCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
         }
 
-        private void OnMainCameraUpscalerSharpenessChanged(float enabled)
+        private void OnUpscalerQualityChanged(UpscalerQuality upscalerQuality)
         {
-            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeningEnabled);
+            _mainCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
+            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
         }
 
-        private void OnMainCameraUpscalerSharpeningEnabledChanged(bool value)
+        private void OnUpscalerSharpenessChanged(float enabled)
         {
-            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.MainCameraUpscalerSharpeness);
+            _mainCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
+            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
         }
 
-        private void OnPOVCameraUpscalerQualityChanged(UpscalerQuality upscalerQuality)
+        private void OnUpscalerSharpeningEnabledChanged(bool value)
         {
-            _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.POVCameraUpscalerName);
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
-        }
-
-        private void OnPOVCameraUpscalerNameChanged(UpscalerName upscalerName)
-        {
-            _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.POVCameraUpscalerQuality);
-        }
-
-        private void OnPOVCameraUpscalerSharpenessChanged(float enabled)
-        {
-            _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeningEnabled);
-        }
-
-        private void OnPOVCameraUpscalerSharpeningEnabledChanged(bool value)
-        {
-            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.POVCameraUpscalerSharpeness);
+            _mainCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
+            _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
         }
         #endregion
     }

@@ -20,7 +20,9 @@
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "Queue"="Geometry" }
+        ZWrite On
+        ZTest LEqual
         LOD 100
 
         Pass
@@ -65,8 +67,6 @@
 
                 float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
                 float3 worldNormal = normalize(mul((float3x3)unity_ObjectToWorld, v.normal));
-
-                // Déformation fluide dans une bande élargie
                 float glowOffset = _GlowBandWidth * 0.5;
                 float glowCenter = saturate(_Progress - glowOffset);
                 float deformationFalloff = 1.0 - saturate(abs(v.uv.y - glowCenter) / _DeformationBandWidth);
@@ -112,13 +112,11 @@
                     }
                 }
 
-                // Glow visuel net
                 float glowOffset = _GlowBandWidth * 0.5;
                 float glowCenter = saturate(_Progress - glowOffset);
                 float glowMask = step(abs(i.uv.y - glowCenter), _GlowBandWidth);
                 float glowStrength = _GlowProgress * glowMask;
 
-                // Tranches permanentes
                 float progressMask = step(abs(i.uv.y - _Progress), _GlowBandWidth);
                 float hoverMask = step(abs(i.uv.y - _HoverProgress), _GlowBandWidth);
 

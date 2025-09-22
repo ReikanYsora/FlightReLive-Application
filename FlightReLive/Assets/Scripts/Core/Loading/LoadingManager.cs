@@ -3,10 +3,11 @@ using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.Pipeline.API;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Workspace;
-using FlightReLive.Core.POI;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
@@ -16,7 +17,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEngine;
-using ImGuiNET;
 
 namespace FlightReLive.Core.Loading
 {
@@ -379,7 +379,7 @@ namespace FlightReLive.Core.Loading
 
                 layout.Separator();
 
-                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.LinesBackground, 2, 2, 2))
+                using (FuGrid loadingDetailsGrid = new FuGrid("loadingDetailsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.LinesBackground, 2, 2, 10))
                 {
                     loadingDetailsGrid.Text("Tiles processed");
                     loadingDetailsGrid.FramedText($"{_tilesProcessed} / {_tilesTotal}");

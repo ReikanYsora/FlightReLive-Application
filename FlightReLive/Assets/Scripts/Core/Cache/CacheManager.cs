@@ -72,8 +72,7 @@ namespace FlightReLive.Core.Cache
 
         internal static string GetSatelliteTilePath(int zoom, int tileX, int tileY)
         {
-            string tileName = $"{zoom}_{tileX}_{tileY}";
-            string tileFile = $"{tileName}.png";
+            string tileFile = $"{zoom}_{tileX}_{tileY}.png";
 
             return Path.Combine(_cacheFolder, tileFile);
         }
@@ -218,7 +217,7 @@ namespace FlightReLive.Core.Cache
 
         internal static async Task SaveBuildingTileDataAsync(List<BuildingData> buildings, int zoom, int tileX, int tileY)
         {
-            if (buildings == null || buildings.Count == 0)
+            if (buildings == null)
             {
                 return;
             }
@@ -274,7 +273,7 @@ namespace FlightReLive.Core.Cache
 
         internal static async Task SaveGeoTileDataAsync(FeatureCollection geoData, int tileX, int tileY, string lang)
         {
-            if (geoData == null || geoData.features == null || geoData.features.Count == 0)
+            if (geoData == null || geoData.features == null)
             {
                 return;
             }

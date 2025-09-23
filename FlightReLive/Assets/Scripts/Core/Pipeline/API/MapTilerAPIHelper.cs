@@ -22,7 +22,6 @@ namespace FlightReLive.Core.Pipeline.API
     internal static class MapTilerAPIHelper
     {
         #region CONSTANTS
-        private const int MAX_CONCURRENT_DOWNLOADS = 8;
         private const int TILE_SIZE = 512;
         #endregion
 
@@ -54,8 +53,6 @@ namespace FlightReLive.Core.Pipeline.API
         {
             try
             {
-                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-                sw.Start();
                 //Phase 0 : Satellite
                 ResourceResult<Texture2D> sat = await DownloadSatelliteAsync(tile, token, p => onProgress?.Invoke(0, p, null));
                 if (sat != null)
@@ -64,8 +61,6 @@ namespace FlightReLive.Core.Pipeline.API
                     onProgress?.Invoke(0, 1f, sat.Source);
                 }
                 token.ThrowIfCancellationRequested();
-                sw.Stop();
-                Debug.Log($"Tile {tile.X}-{tile.Y} : DownloadSatelliteAsync : {sw.ElapsedMilliseconds}");
 
                 //Phase 1 : Heightmap
                 ResourceResult<float[,]> hm = await DownloadHeightmapAsync(tile, token, p => onProgress?.Invoke(1, p, null));
@@ -111,87 +106,58 @@ namespace FlightReLive.Core.Pipeline.API
         #region SATELLITE
         private static async Task<ResourceResult<Texture2D>> DownloadSatelliteAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
-            int targetZoom;
-
-            switch (tile.Priority)
+            int targetZoom = tile.Priority switch
             {
-                case 0:
-                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0;
-                    break;
-                case 1:
-                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1;
-                    break;
-                case 2:
-                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2;
-                    break;
-                default:
-                case 3:
-                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3;
-                    break;
-            }
+                0 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0,
+                1 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1,
+                2 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2,
+                _ => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3,
+            };
 
             HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, targetZoom);
-            Dictionary<(int, int), Texture2D> downloaded = new();
+            Dictionary<(int, int), Texture2D> downloaded = new Dictionary<(int, int), Texture2D>(coords.Count);
 
-            SemaphoreSlim semaphore = new(MAX_CONCURRENT_DOWNLOADS);
-            List<Task> tasks = new();
             int total = coords.Count;
             int completed = 0;
-            TileResourceSource finalSource = TileResourceSource.Download;
+            int anyFromCache = 0;
 
-            foreach ((int x, int y) in coords)
+            
+            IEnumerable<Task> tasks = coords.Select(async c =>
             {
-                await semaphore.WaitAsync(token);
-
-                TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-                UnityMainThreadDispatcher.AddActionInMainThread(async () =>
+                var tex = await DownloadSingleSatelliteTileAsync(c.x, c.y, targetZoom, token, p =>
                 {
-                    try
-                    {
-                        token.ThrowIfCancellationRequested();
-                        ResourceResult<Texture2D> tex = await DownloadSingleSatelliteTileAsync(x, y, targetZoom, token, p =>
-                        {
-                            onProgress?.Invoke((completed + p) / total);
-                        });
-
-                        if (tex != null && tex.Data != null)
-                        {
-                            lock (downloaded)
-                            {
-                                downloaded[(x, y)] = tex.Data;
-                            }
-
-                            if (tex.Source == TileResourceSource.Cache)
-                            {
-                                finalSource = TileResourceSource.Cache;
-                            }
-                        }
-
-                        Interlocked.Increment(ref completed);
-                        onProgress?.Invoke((float)completed / total);
-
-                        tcs.SetResult(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        tcs.SetException(ex);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
+                    onProgress?.Invoke((Interlocked.CompareExchange(ref completed, 0, 0) + p) / total);
                 });
 
-                tasks.Add(tcs.Task);
-            }
+                if (tex?.Data != null)
+                {
+                    lock (downloaded) downloaded[c] = tex.Data;
+                    if (tex.Source == TileResourceSource.Cache)
+                    {
+                        Interlocked.Exchange(ref anyFromCache, 1);
+                    }
+                }
+
+                Interlocked.Increment(ref completed);
+                onProgress?.Invoke((float)completed / total);
+            });
 
             await Task.WhenAll(tasks);
 
-            return downloaded.Count == 0 ? null : new ResourceResult<Texture2D>(CombinePNGTiles(downloaded), finalSource);
+            if (downloaded.Count == 0)
+            {
+                return null;
+            }
+
+            //Main thread
+            Texture2D atlas = await UnityMainThreadDispatcher.AwaitOnMainThread(() => CombinePNGTiles(downloaded) );
+
+            return new ResourceResult<Texture2D>(atlas, anyFromCache == 1 ? TileResourceSource.Cache : TileResourceSource.Download);
         }
 
         private static async Task<ResourceResult<Texture2D>> DownloadSingleSatelliteTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
         {
+            //Cache
             if (await CacheManager.SatelliteTileExistsAsync(zoom, x, y))
             {
                 Texture2D cached = await CacheManager.LoadSatelliteTileAsync(TILE_SIZE, zoom, x, y);
@@ -199,35 +165,41 @@ namespace FlightReLive.Core.Pipeline.API
             }
 
             string url = $"https://api.maptiler.com/tiles/satellite-v2/{zoom}/{x}/{y}.png?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
-            TaskCompletionSource<ResourceResult<Texture2D>> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<ResourceResult<Texture2D>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             DownloadManager.EnqueueDownload(
                 url,
                 async data =>
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        tcs.TrySetCanceled(token);
-                        return;
-                    }
+                    if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
 
-                    Texture2D tex = new Texture2D(2, 2, TextureFormat.RGB24, false);
-                    if (tex.LoadImage(data))
+                    try
                     {
-                        tex.name = $"{zoom}_{x}_{y}";
-                        tex.filterMode = FilterMode.Trilinear;
+                        //Main thread
+                        Texture2D tex = await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
+                        {
+                            var t = new Texture2D(2, 2, TextureFormat.RGB24, false);
+                            t.LoadImage(data);
+                            t.name = $"{zoom}_{x}_{y}";
+                            t.filterMode = FilterMode.Trilinear;
+                            return t;
+                        });
 
                         await CacheManager.SaveSatelliteTileAsync(tex, zoom, x, y);
-
                         tcs.TrySetResult(new ResourceResult<Texture2D>(tex, TileResourceSource.Download));
                     }
-                    else
+                    catch (Exception ex)
                     {
+                        Debug.LogWarning($"Tile {zoom}/{x}/{y} failed: {ex.Message}");
                         tcs.TrySetResult(null);
                     }
                 },
                 error => tcs.TrySetResult(null),
-                (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
+                (received, total) =>
+                {
+                    if (total > 0) onProgress?.Invoke((float)received / total);
+                    else onProgress?.Invoke(0f);
+                }
             );
 
             using (token.Register(() => tcs.TrySetCanceled(token)))

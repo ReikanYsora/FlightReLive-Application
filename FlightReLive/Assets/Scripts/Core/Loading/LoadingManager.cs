@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using TND.Upscaling.Framework;
 using UnityEngine;
 
@@ -82,7 +83,6 @@ namespace FlightReLive.Core.Loading
         #region METHODS
         private async void StartLoadingScene(FlightFile flightFile)
         {
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
             CancelLoading();
             _cancellationTokenSource = new CancellationTokenSource();
             CancellationToken token = _cancellationTokenSource.Token;
@@ -102,6 +102,7 @@ namespace FlightReLive.Core.Loading
             DisplayLoading();
             IsLoading = true;
             OnFlightStartLoading?.Invoke();
+            await Task.Delay(50);
 
             try
             {

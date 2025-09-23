@@ -884,7 +884,6 @@ Transform:
   m_Children:
   - {fileID: 954186473}
   - {fileID: 1721477097}
-  - {fileID: 2125856383}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &739676616
@@ -1956,6 +1955,7 @@ Transform:
   - {fileID: 2116168536}
   - {fileID: 289568083}
   - {fileID: 1092402792}
+  - {fileID: 2125856383}
   - {fileID: 311396844}
   - {fileID: 1289900097}
   - {fileID: 1531727482}
@@ -1978,6 +1978,8 @@ MonoBehaviour:
   _welcome: {fileID: 2800000, guid: 69e09da936753794e94bb0b7cde884c2, type: 3}
   _reliveUpscaler: {fileID: 796242735}
   _povCameraUpscaler: {fileID: 137108795}
+  _reliveCamera: {fileID: 796242730}
+  _povCamera: {fileID: 137108794}
 --- !u!1 &2116168535
 GameObject:
   m_ObjectHideFlags: 0
@@ -2146,7 +2148,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 686105527}
+  m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2932005272595287964
 MonoBehaviour:

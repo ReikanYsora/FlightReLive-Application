@@ -375,7 +375,7 @@ Material:
     - _ZWriteControl: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.7924528, g: 0.5450907, b: 0.30277678, a: 0.50980395}
+    - _Color: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 0.50980395}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}

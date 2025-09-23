@@ -21,8 +21,6 @@ namespace FlightReLive.Core.Building
     internal class BuildingManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const float MIN_BUILDING_HEIGHT = 3f;
-        private const float MAX_BUILDING_HEIGHT = 6f;
         private const float BOTTOM_EXTRUSION = 1f;
         #endregion
 
@@ -143,7 +141,10 @@ namespace FlightReLive.Core.Building
                     float terrainAltitude = flight.GetAltitudeAtPosition(tile, barycenterGPS);
 
                     Vector3 position = new Vector3(center.x, terrainAltitude * flight.GlobalScale, center.y);
-                    MeshData meshData = TriangulateAndExtrude(flight, contour, building.Height);
+
+                    //Use footprint estimation instead of raw height
+                    float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
+                    MeshData meshData = TriangulateAndExtrude(flight, contour, estimatedHeight);
 
                     GameObject buildingGO = CreateBuilding(meshData, position);
                     createdForTile.Add(buildingGO);
@@ -231,10 +232,9 @@ namespace FlightReLive.Core.Building
         /// Extrudes a 2D contour into a 3D building mesh (roof + walls).
         /// Preserves original winding order.
         /// </summary>
-        private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float buildingHeight)
+        private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float topY)
         {
             float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
-            float topY = Mathf.Clamp(buildingHeight, MIN_BUILDING_HEIGHT, MAX_BUILDING_HEIGHT) * flight.GlobalScale;
 
             Tess tess = new Tess();
             ContourVertex[] tessContour = new ContourVertex[contour.Count];
@@ -338,7 +338,6 @@ namespace FlightReLive.Core.Building
                 meshData.triangles[t++] = baseIndex + 0;
             }
 
-
             return meshData;
         }
 
@@ -362,6 +361,60 @@ namespace FlightReLive.Core.Building
 
             _buildings.Add(building);
             return building;
+        }
+
+        /// <summary>
+        /// Estimate building height from its footprint area (in m²).
+        /// </summary>
+        private float EstimateHeightFromFootprint(List<Vector2> contour, FlightData flight)
+        {
+            if (contour == null || contour.Count < 3)
+            {
+                return 6f; //Fallback
+            }
+
+            //Compute area using shoelace formula (in world units, scaled to meters)
+            double area = 0.0;
+            for (int i = 0; i < contour.Count; i++)
+            {
+                Vector2 p1 = contour[i];
+                Vector2 p2 = contour[(i + 1) % contour.Count];
+                area += (p1.x * p2.y - p2.x * p1.y);
+            }
+            area = Math.Abs(area) * 0.5;
+
+            //Convert world-space area back to meters² with global scale
+            float metersPerUnit = flight.GlobalScale;
+            double areaMeters = area / (metersPerUnit * metersPerUnit);
+
+            //Categorize building type
+            float baseHeight;
+
+            //Small houses
+            if (areaMeters < 80f)
+            {
+                baseHeight = 4f;
+            }
+            //Small apartment block
+            else if (areaMeters < 300f)
+            {
+                baseHeight = 8f;
+            }
+            //Offices, large apartments
+            else if (areaMeters < 2000f)
+            {
+                baseHeight = 14f;
+            }
+            //Warehouses, malls
+            else
+            {
+                baseHeight = 8f;
+            }                          
+
+            //Random variation for realism
+            float variation = UnityEngine.Random.Range(0.85f, 1.15f);
+
+            return baseHeight * variation * flight.GlobalScale;
         }
 
         private void DisplayBuildingsFromSettings()

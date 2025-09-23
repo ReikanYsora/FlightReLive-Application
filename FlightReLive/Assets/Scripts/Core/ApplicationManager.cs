@@ -6,6 +6,7 @@ using Fu.Framework;
 using ImGuiNET;
 using TND.Upscaling.Framework;
 using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace FlightReLive.Core
 {
@@ -15,10 +16,11 @@ namespace FlightReLive.Core
         [Header("Welcome")]
         [SerializeField] private Texture2D _welcome;
 
-
-        [Header("System settings")]
+        [Header("Cameras & upscalers settings")]
         [SerializeField] private TNDUpscaler _reliveUpscaler;
         [SerializeField] private TNDUpscaler _povCameraUpscaler;
+        [SerializeField] private Camera _reliveCamera;
+        [SerializeField] private Camera _povCamera;
         #endregion
 
         #region PROPERTIES
@@ -57,7 +59,7 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
-            //Apply upscaler settings
+            //Apply camera & upscaler settings
             ApplyUpscalersSettingsValues();
 
             //Register events
@@ -199,13 +201,10 @@ namespace FlightReLive.Core
 
         private void ApplyUpscalersSettingsValues()
         {
-#if UNITY_EDITOR
-            _reliveUpscaler.runInEditMode = true;
-            _povCameraUpscaler.runInEditMode = true;
-#endif
             if (SettingsManager.CurrentSettings.UpscalerName == UpscalerName.None)
             {
-                UpscalerName mainCameraEnabledUpscaler = _reliveUpscaler.GetActiveUpscaler();
+                ConfigureCameraForTAA(_reliveCamera);
+                ConfigureCameraForTAA(_povCamera);
 
                 _reliveUpscaler.SetQuality(UpscalerQuality.Off);
                 _povCameraUpscaler.SetQuality(UpscalerQuality.Off);
@@ -214,17 +213,78 @@ namespace FlightReLive.Core
             }
             else
             {
+                ConfigureCameraForUpscaler(_reliveCamera);
+                ConfigureCameraForUpscaler(_povCamera);
+#if UNITY_EDITOR
+                _reliveUpscaler.runInEditMode = true;
+                _povCameraUpscaler.runInEditMode = true;
+#endif
+
                 _reliveUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
                 _reliveUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
                 _reliveUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
                 _reliveUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
                 _reliveUpscaler.SetAutoReactive(true);
+
                 _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
                 _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
                 _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
                 _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
                 _povCameraUpscaler.SetAutoReactive(true);
             }
+        }
+
+        /// <summary>
+        /// Configure a camera with settings mandatory for use TND upscaler
+        /// </summary>
+        /// <param name="camera">Camera to set-up</param>
+        private void ConfigureCameraForUpscaler(Camera camera)
+        {
+            if (camera == null)
+            {
+                return;
+            }
+
+            if (!camera.TryGetComponent<HDAdditionalCameraData>(out var data))
+            {
+                return;
+            }
+
+            data.allowDynamicResolution = true;
+            data.allowDeepLearningSuperSampling = true;
+            data.deepLearningSuperSamplingUseCustomQualitySettings = false;
+            data.deepLearningSuperSamplingUseCustomAttributes = false;
+            data.deepLearningSuperSamplingUseOptimalSettings = false;
+            camera.allowMSAA = false;
+        }
+
+        /// <summary>
+        /// Configure a camera tbe used without upscaler and TAA antialiasing
+        /// </summary>
+        /// <param name="cam"></param>
+        private void ConfigureCameraForTAA(Camera cam)
+        {
+            if (cam == null)
+            {
+
+                return;
+            }
+
+            if (!cam.TryGetComponent<HDAdditionalCameraData>(out var data))
+            {
+                return;
+            }
+
+            //Disable all DLSS feature
+            data.allowDynamicResolution = false;
+            data.allowDeepLearningSuperSampling = false;
+            data.deepLearningSuperSamplingUseCustomQualitySettings = false;
+            data.deepLearningSuperSamplingUseCustomAttributes = false;
+            data.deepLearningSuperSamplingUseOptimalSettings = false;
+
+            //Force TAA (and disable MSAA)
+            data.antialiasing = HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing;
+            cam.allowMSAA = false;
         }
         #endregion
 

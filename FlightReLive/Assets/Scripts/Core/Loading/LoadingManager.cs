@@ -185,22 +185,14 @@ namespace FlightReLive.Core.Loading
                         }
                     }
                 }
-
-                sw.Restart();
+                
                 ProceduralTerrainManager.Instance.Load(flightData);
-                sw.Stop();
-                Debug.Log("ProceduralTerrainManager : " + sw.ElapsedMilliseconds);
-
                 VideoPlayerManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
-
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded",
-                    $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}",
-                    StateType.Info);
-
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}", StateType.Info);
                 OnFlightEndLoading?.Invoke();
             }
             catch (OperationCanceledException)
@@ -213,7 +205,6 @@ namespace FlightReLive.Core.Loading
                 IsLoading = false;
             }
         }
-
 
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {

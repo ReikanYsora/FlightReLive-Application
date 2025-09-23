@@ -50,13 +50,12 @@ namespace FlightReLive.Core.Pipeline.API
             return uwr.result == UnityWebRequest.Result.Success && uwr.responseCode == 200;
         }
 
-        internal static async Task<TileDefinition> DownloadTileAsync(
-            TileDefinition tile,
-            CancellationToken token,
-            Action<int, float, TileResourceSource?> onProgress = null)
+        internal static async Task<TileDefinition> DownloadTileAsync(TileDefinition tile, CancellationToken token, Action<int, float, TileResourceSource?> onProgress = null)
         {
             try
             {
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
                 //Phase 0 : Satellite
                 ResourceResult<Texture2D> sat = await DownloadSatelliteAsync(tile, token, p => onProgress?.Invoke(0, p, null));
                 if (sat != null)
@@ -65,6 +64,8 @@ namespace FlightReLive.Core.Pipeline.API
                     onProgress?.Invoke(0, 1f, sat.Source);
                 }
                 token.ThrowIfCancellationRequested();
+                sw.Stop();
+                Debug.Log($"Tile {tile.X}-{tile.Y} : DownloadSatelliteAsync : {sw.ElapsedMilliseconds}");
 
                 //Phase 1 : Heightmap
                 ResourceResult<float[,]> hm = await DownloadHeightmapAsync(tile, token, p => onProgress?.Invoke(1, p, null));
@@ -193,7 +194,7 @@ namespace FlightReLive.Core.Pipeline.API
         {
             if (await CacheManager.SatelliteTileExistsAsync(zoom, x, y))
             {
-                Texture2D cached = await CacheManager.LoadSatelliteTileAsync(zoom, x, y);
+                Texture2D cached = await CacheManager.LoadSatelliteTileAsync(TILE_SIZE, zoom, x, y);
                 return new ResourceResult<Texture2D>(cached, TileResourceSource.Cache);
             }
 
@@ -204,12 +205,20 @@ namespace FlightReLive.Core.Pipeline.API
                 url,
                 async data =>
                 {
-                    if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
+                    if (token.IsCancellationRequested)
+                    {
+                        tcs.TrySetCanceled(token);
+                        return;
+                    }
 
-                    Texture2D tex = new Texture2D(2, 2);
+                    Texture2D tex = new Texture2D(2, 2, TextureFormat.RGB24, false);
                     if (tex.LoadImage(data))
                     {
-                        await CacheManager.SaveSatelliteTileAsync(tex.EncodeToPNG(), zoom, x, y);
+                        tex.name = $"{zoom}_{x}_{y}";
+                        tex.filterMode = FilterMode.Trilinear;
+
+                        await CacheManager.SaveSatelliteTileAsync(tex, zoom, x, y);
+
                         tcs.TrySetResult(new ResourceResult<Texture2D>(tex, TileResourceSource.Download));
                     }
                     else
@@ -229,8 +238,7 @@ namespace FlightReLive.Core.Pipeline.API
         #endregion
 
         #region HEIGHTMAP
-        private static async Task<ResourceResult<float[,]>> DownloadHeightmapAsync(
-            TileDefinition tile, CancellationToken token, Action<float> onProgress)
+        private static async Task<ResourceResult<float[,]>> DownloadHeightmapAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
             if (await CacheManager.HeightmapExistsAsync(tile.X, tile.Y))
             {
@@ -434,7 +442,10 @@ namespace FlightReLive.Core.Pipeline.API
             using (token.Register(() => tcs.TrySetCanceled(token)))
             {
                 string json = await tcs.Task;
-                if (string.IsNullOrEmpty(json)) { return null; }
+                if (string.IsNullOrEmpty(json))
+                { 
+                    return null;
+                }
 
                 try
                 {
@@ -494,16 +505,17 @@ namespace FlightReLive.Core.Pipeline.API
 
             int width = (maxX - minX + 1) * TILE_SIZE;
             int height = (maxY - minY + 1) * TILE_SIZE;
-            Texture2D atlas = new Texture2D(width, height);
+
+            Texture2D atlas = new Texture2D(width, height, TextureFormat.RGB24, false);
 
             foreach (var kv in tiles)
             {
                 int offsetX = (kv.Key.Item1 - minX) * TILE_SIZE;
                 int offsetY = (maxY - kv.Key.Item2) * TILE_SIZE;
-                atlas.SetPixels(offsetX, offsetY, TILE_SIZE, TILE_SIZE, kv.Value.GetPixels());
+
+                Graphics.CopyTexture(kv.Value, 0, 0, 0, 0, TILE_SIZE, TILE_SIZE, atlas, 0, 0, offsetX, offsetY);
             }
 
-            atlas.Apply();
             return atlas;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace FlightReLive.Core
 {
@@ -53,6 +54,83 @@ namespace FlightReLive.Core
                 _actionsWrite.Enqueue(action);
                 Interlocked.Increment(ref _pendingCount);
             }
+        }
+
+        /// <summary>
+        /// Schedules a function to be executed on Unity's main thread and returns a Task that completes with the function's return value once execution is finished.
+        /// </summary>
+        /// <typeparam name="T">Return type of the function</typeparam>
+        /// <param name="func">The function to execute on the main thread</param>
+        /// <returns>A Task that completes with the function's result</returns>
+        public static Task<T> AwaitOnMainThread<T>(Func<T> func)
+        {
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+
+            AddActionInMainThread(() =>
+            {
+                try
+                {
+                    T result = func();
+                    tcs.SetResult(result);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Schedules an action to be executed on Unity's main thread and returns a Task that completes once the action has finished execution.
+        /// </summary>
+        /// <param name="action">The action to execute on the main thread</param>
+        /// <returns>A Task that completes when the action has executed</returns>
+        public static Task AwaitOnMainThread(Action action)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            AddActionInMainThread(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Schedules an asynchronous function to be executed on Unity's main thread and returns its awaited result.
+        /// </summary>
+        /// <typeparam name="T">Return type of the Task result</typeparam>
+        /// <param name="asyncFunc">The asynchronous function to execute on the main thread</param>
+        /// <returns>A Task that completes with the function's result</returns>
+        public static Task<T> AwaitOnMainThread<T>(Func<Task<T>> asyncFunc)
+        {
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+
+            AddActionInMainThread(async () =>
+            {
+                try
+                {
+                    T result = await asyncFunc();
+                    tcs.SetResult(result);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+
+            return tcs.Task;
         }
 
         /// <summary>

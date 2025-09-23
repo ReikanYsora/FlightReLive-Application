@@ -1,6 +1,4 @@
 using FlightReLive.Core.Cameras;
-using FlightReLive.Core.Environment;
-using FlightReLive.Core.Paths;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -49,7 +47,7 @@ namespace FlightReLive.UI.POVView
                 FuStyle.Unpadded.FramePadding,
                 FuStyle.Unpadded.WindowPadding);
 
-            using (FuPanel panel = new FuPanel("SceneSettings", customStyle, false, window.HeaderHeight, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
+            using (FuPanel panel = new FuPanel("POVSettings", customStyle, false, window.HeaderHeight, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
             {
                 Fugui.Push(ImGuiCol.MenuBarBg, Fugui.Themes.GetColor(FuColors.Border));
                 Fugui.MoveX(4f);
@@ -74,8 +72,8 @@ namespace FlightReLive.UI.POVView
                     Fugui.PushFont(14, FontType.Regular);
 
                     Fugui.MoveY(-3f);
-                    layout.SetNextElementToolTip("Post-processing settings");
-                    PopupButton(FlightReLiveIcons.PostProcess, () => DrawPOVCameraSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
+                    layout.SetNextElementToolTip("POV settings");
+                    PopupButton(FlightReLiveIcons.POV, () => DrawPOVCameraSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
                     layout.SameLine();
 
                     Fugui.PopFont();
@@ -111,7 +109,6 @@ namespace FlightReLive.UI.POVView
         public override void OnWindowCreated(FuWindow window)
         {
             POVCameraManipulator.Instance.CameraWindow = CameraWindow;
-            PathManager.Instance.Camera = CameraWindow;
             window.HeaderHeight = TOP_BAR_HEIGHT;
             window.HeaderUI = DrawPOVCameraWindowSettingBar;
         }

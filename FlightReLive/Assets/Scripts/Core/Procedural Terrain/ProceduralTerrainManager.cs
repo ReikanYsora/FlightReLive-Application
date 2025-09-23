@@ -10,7 +10,9 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region ATTRIBUTES
         private List<GameObject> _terrainsList;
-        [SerializeField] private GameObject _terrain;
+
+        [Header("Material Settings")]
+        [SerializeField] private Material _hdrpTerrainMaterial;
         #endregion
 
         #region PROPERTIES
@@ -29,7 +31,6 @@ namespace FlightReLive.Core.ProceduralTerrain
             Instance = this;
 
             _terrainsList = new List<GameObject>();
-            _terrain.SetActive(false);
         }
         #endregion
 
@@ -43,6 +44,7 @@ namespace FlightReLive.Core.ProceduralTerrain
         {
             List<TileDefinition> tiles = flightData.MapDefinition.GetSortedTiles();
             Texture2D armTexture = CreateARMTexture();
+            Dictionary<(int, int), Terrain> unityTerrains = new Dictionary<(int, int), Terrain>();
 
             if (tiles == null || tiles.Count == 0)
             {
@@ -54,7 +56,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             float scale = flightData.GlobalScale;
             int resTile = tiles[0].HeightMap.GetLength(0);
 
-            // Adjust tile size to match Unity's terrain compression
+            //Adjust tile size to match Unity's terrain compression
             float correctedTileSize = (float)(tileSizeM * ((resTile - 1.0) / resTile));
             float terrainSize = correctedTileSize * scale;
 
@@ -65,10 +67,25 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             foreach (TileDefinition tile in tiles)
             {
-                if (tile.X < minX) { minX = tile.X; }
-                if (tile.X > maxX) { maxX = tile.X; }
-                if (tile.Y < minY) { minY = tile.Y; }
-                if (tile.Y > maxY) { maxY = tile.Y; }
+                if (tile.X < minX)
+                { 
+                    minX = tile.X;
+                }
+
+                if (tile.X > maxX)
+                { 
+                    maxX = tile.X;
+                }
+
+                if (tile.Y < minY)
+                {
+                    minY = tile.Y;
+                }
+
+                if (tile.Y > maxY)
+                { 
+                    maxY = tile.Y;
+                }
             }
 
             int tilesX = (maxX - minX) + 1;
@@ -89,6 +106,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             foreach (TileDefinition tile in tiles)
             {
                 float[,] src = tile.HeightMap;
+
                 for (int y = 0; y < resTile; y++)
                 {
                     for (int x = 0; x < resTile; x++)
@@ -141,11 +159,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 TerrainData terrainData = new TerrainData();
                 terrainData.heightmapResolution = unityRes;
-                terrainData.size = new Vector3(
-                    terrainSize,
-                    (float)(heightRange * (double)scale),
-                    terrainSize
-                );
+                terrainData.size = new Vector3(terrainSize, (float)(heightRange * (double)scale), terrainSize);
                 terrainData.SetHeights(0, 0, normalized);
 
                 GameObject terrainGO = Terrain.CreateTerrainGameObject(terrainData);
@@ -153,8 +167,9 @@ namespace FlightReLive.Core.ProceduralTerrain
                 terrainGO.transform.SetParent(transform, false);
 
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
+                terrain.materialTemplate = _hdrpTerrainMaterial;
                 terrain.drawHeightmap = true;
-                terrain.drawTreesAndFoliage = false;
+                terrain.drawTreesAndFoliage = true;
                 terrain.enabled = true;
                 terrain.allowAutoConnect = true;
                 terrain.groupingID = 0;
@@ -163,13 +178,14 @@ namespace FlightReLive.Core.ProceduralTerrain
                 float posZ = (maxY - tile.Y) * terrainSize + centerOffsetZ;
                 float posY = (float)minH * scale;
                 terrainGO.transform.localPosition = new Vector3(posX, posY, posZ);
+                unityTerrains[(tile.X, tile.Y)] = terrain;
 
                 //Layers
-                Texture2D tex = tile.SatelliteTexture;
-                tex.filterMode = FilterMode.Bilinear;
+                Texture2D satelliteTexture = tile.SatelliteTexture;
+                satelliteTexture.filterMode = FilterMode.Bilinear;
 
                 TerrainLayer satelliteLayer = new TerrainLayer();
-                satelliteLayer.diffuseTexture = tex;
+                satelliteLayer.diffuseTexture = satelliteTexture;
                 satelliteLayer.maskMapTexture = armTexture;
                 satelliteLayer.tileSize = new Vector2(terrainSize, terrainSize);
 
@@ -189,6 +205,19 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 terrainData.SetAlphamaps(0, 0, alpha);
                 _terrainsList.Add(terrainGO);
+            }
+
+            foreach (KeyValuePair<(int, int), Terrain> kvp in unityTerrains)
+            {
+                (int x, int y) = kvp.Key;
+                Terrain current = kvp.Value;
+
+                unityTerrains.TryGetValue((x - 1, y), out Terrain left);
+                unityTerrains.TryGetValue((x, y + 1), out Terrain top);
+                unityTerrains.TryGetValue((x + 1, y), out Terrain right);
+                unityTerrains.TryGetValue((x, y - 1), out Terrain bottom);
+
+                current.SetNeighbors(left, top, right, bottom);  
             }
 
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)

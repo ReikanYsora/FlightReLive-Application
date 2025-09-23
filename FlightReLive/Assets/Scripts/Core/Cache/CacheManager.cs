@@ -72,14 +72,16 @@ namespace FlightReLive.Core.Cache
 
         internal static string GetSatelliteTilePath(int zoom, int tileX, int tileY)
         {
-            string tileFile = $"{zoom}_{tileX}_{tileY}.png";
-
+            string tileFile = $"satellite_{zoom}_{tileX}_{tileY}.raw";
             return Path.Combine(_cacheFolder, tileFile);
         }
 
-        internal static async Task SaveSatelliteTileAsync(byte[] pngBytes, int zoom, int tileX, int tileY)
+        /// <summary>
+        /// Save a satellite tile in RAW format (much faster than PNG).
+        /// </summary>
+        internal static async Task SaveSatelliteTileAsync(Texture2D tex, int zoom, int tileX, int tileY)
         {
-            if (pngBytes == null || pngBytes.Length == 0)
+            if (tex == null)
             {
                 return;
             }
@@ -88,9 +90,12 @@ namespace FlightReLive.Core.Cache
 
             try
             {
-                using (var stream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                // Get raw bytes
+                byte[] rawBytes = tex.GetRawTextureData();
+
+                using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
                 {
-                    await stream.WriteAsync(pngBytes, 0, pngBytes.Length);
+                    await stream.WriteAsync(rawBytes, 0, rawBytes.Length);
                 }
             }
             catch (Exception ex)
@@ -99,7 +104,10 @@ namespace FlightReLive.Core.Cache
             }
         }
 
-        internal static async Task<Texture2D> LoadSatelliteTileAsync(int zoom, int tileX, int tileY)
+        /// <summary>
+        /// Load a satellite tile from RAW format.
+        /// </summary>
+        internal static async Task<Texture2D> LoadSatelliteTileAsync(int tileSize, int zoom, int tileX, int tileY)
         {
             if (!await SatelliteTileExistsAsync(zoom, tileX, tileY))
             {
@@ -110,21 +118,20 @@ namespace FlightReLive.Core.Cache
 
             try
             {
-                byte[] imageData;
-                using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                byte[] rawData;
+                using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
                 {
-                    imageData = new byte[stream.Length];
-                    await stream.ReadAsync(imageData, 0, imageData.Length);
+                    rawData = new byte[stream.Length];
+                    await stream.ReadAsync(rawData, 0, rawData.Length);
                 }
 
-                Texture2D texture = new Texture2D(2, 2);
+                Texture2D texture = new Texture2D(tileSize, tileSize, TextureFormat.RGB24, false);
+                texture.LoadRawTextureData(rawData);
+                texture.Apply();
 
-                if (texture.LoadImage(imageData))
-                {
-                    texture.name = $"{zoom}_{tileX}_{tileY}";
-                    texture.filterMode = FilterMode.Trilinear;
-                    return texture;
-                }
+                texture.name = $"{zoom}_{tileX}_{tileY}";
+                texture.filterMode = FilterMode.Trilinear;
+                return texture;
             }
             catch (Exception ex)
             {

@@ -1,60 +1,66 @@
 using System;
 using System.Collections.Generic;
+using MessagePack;
 
 namespace FlightReLive.Core.Pipeline
 {
     [Serializable]
+    [MessagePackObject]
     public class FeatureCollection
     {
-        public string type;
-        public List<Feature> features;
+        [Key(0)] public string type;
+        [Key(1)] public List<Feature> features;
     }
 
     [Serializable]
+    [MessagePackObject]
     public class Feature
     {
-        public string type;
-        public Properties properties;
-        public Geometry geometry;
-        public List<float> bbox;
-        public List<float> center;
-        public string place_name;
-        public List<string> place_type;
-        public string id;
-        public string text;
-        public List<string> place_type_name;
-        public List<Context> context;
+        [Key(0)] public string type;
+        [Key(1)] public Properties properties;
+        [Key(2)] public Geometry geometry;
+        [Key(3)] public List<float> bbox;
+        [Key(4)] public List<float> center;
+        [Key(5)] public string place_name;
+        [Key(6)] public List<string> place_type;
+        [Key(7)] public string id;
+        [Key(8)] public string text;
+        [Key(9)] public List<string> place_type_name;
+        [Key(10)] public List<Context> context;
     }
 
     [Serializable]
+    [MessagePackObject]
     public class Properties
     {
-        public string refId;
-        public string country_code;
-        public string kind;
-        public List<string> place_type_name;
+        [Key(0)] public string refId;
+        [Key(1)] public string country_code;
+        [Key(2)] public string kind;
+        [Key(3)] public List<string> place_type_name;
     }
 
     [Serializable]
+    [MessagePackObject]
     public class Geometry
     {
-        public string type;
-        public List<float> coordinates;
+        [Key(0)] public string type;
+        [Key(1)] public List<float> coordinates;
     }
 
     [Serializable]
+    [MessagePackObject]
     public class Context
     {
-        public string refId;
-        public string id;
-        public string text;
-        public string country_code;
-        public string kind;
-        public string wikidata;
-        public string text_fr;
-        public string text_en;
-        public string language;
-        public string language_fr;
-        public string language_en;
+        [Key(0)] public string refId;
+        [Key(1)] public string id;
+        [Key(2)] public string text;
+        [Key(3)] public string country_code;
+        [Key(4)] public string kind;
+        [Key(5)] public string wikidata;
+        [Key(6)] public string text_fr;
+        [Key(7)] public string text_en;
+        [Key(8)] public string language;
+        [Key(9)] public string language_fr;
+        [Key(10)] public string language_en;
     }
 }

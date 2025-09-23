@@ -1,4 +1,5 @@
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.ProceduralTerrain;
 using Fu;
 using Fu.Framework;
 using MessagePack;
@@ -72,7 +73,7 @@ namespace FlightReLive.Core.Cache
 
         internal static string GetSatelliteTilePath(int zoom, int tileX, int tileY)
         {
-            string tileFile = $"satellite_{zoom}_{tileX}_{tileY}.raw";
+            string tileFile = $"s_{zoom}_{tileX}_{tileY}.raw";
             return Path.Combine(_cacheFolder, tileFile);
         }
 
@@ -90,7 +91,7 @@ namespace FlightReLive.Core.Cache
 
             try
             {
-                // Get raw bytes
+                //Get raw bytes
                 byte[] rawBytes = tex.GetRawTextureData();
 
                 using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
@@ -114,31 +115,42 @@ namespace FlightReLive.Core.Cache
                 return null;
             }
 
-            string imagePath = GetSatelliteTilePath(zoom, tileX, tileY);
+            string path = GetSatelliteTilePath(zoom, tileX, tileY);
 
             try
             {
                 byte[] rawData;
-                using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
                 {
                     rawData = new byte[stream.Length];
-                    await stream.ReadAsync(rawData, 0, rawData.Length);
+                    int read = 0;
+
+                    while (read < rawData.Length)
+                    {
+                        int r = await stream.ReadAsync(rawData, read, rawData.Length - read);
+
+                        if (r == 0)
+                        {
+                            break;
+                        }
+
+                        read += r;
+                    }
                 }
 
                 Texture2D texture = new Texture2D(tileSize, tileSize, TextureFormat.RGB24, false);
                 texture.LoadRawTextureData(rawData);
-                texture.Apply();
-
+                texture.Apply(false, false);
                 texture.name = $"{zoom}_{tileX}_{tileY}";
                 texture.filterMode = FilterMode.Trilinear;
+
                 return texture;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"Failed to load satellite tile {zoom}_{tileX}_{tileY} : {ex.Message}");
+                return null;
             }
-
-            return null;
         }
         #endregion
 
@@ -150,27 +162,27 @@ namespace FlightReLive.Core.Cache
 
         internal static string GetHeightmapPath(int tileX, int tileY)
         {
-            string baseName = $"topographic_{tileX}_{tileY}";
+            string baseName = $"h_{tileX}_{tileY}";
 
-            return Path.Combine(_cacheFolder, baseName + ".json");
+            return Path.Combine(_cacheFolder, baseName + ".raw");
         }
 
         internal static async Task SaveHeightmapAsync(float[,] tileHeightmap, int tileX, int tileY)
         {
-            string filePath = GetHeightmapPath(tileX, tileY);
+            string path = GetHeightmapPath(tileX, tileY);
 
             try
             {
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
+                int w = tileHeightmap.GetLength(0);
+                int h = tileHeightmap.GetLength(1);
+                int length = w * h;
 
-                string json = JsonHeightmapUtility.Serialize(tileHeightmap);
+                byte[] buffer = new byte[length * sizeof(float)];
+                Buffer.BlockCopy(tileHeightmap, 0, buffer, 0, buffer.Length);
 
-                using (var writer = new StreamWriter(filePath, false, Encoding.UTF8))
+                using (FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
                 {
-                    await writer.WriteAsync(json);
+                    await fs.WriteAsync(buffer, 0, buffer.Length);
                 }
             }
             catch (Exception ex)
@@ -179,24 +191,28 @@ namespace FlightReLive.Core.Cache
             }
         }
 
-        internal static async Task<float[,]> LoadHeightmapAsync(int tileX, int tileY)
+        internal static async Task<float[,]> LoadHeightmapAsync(int tileX, int tileY, int resolution = 512)
         {
-            if (!await HeightmapExistsAsync(tileX, tileY))
+            string path = GetHeightmapPath(tileX, tileY);
+            if (!File.Exists(path))
             {
                 return null;
             }
 
-            string filePath = GetHeightmapPath(tileX, tileY);
-
             try
             {
-                string json;
-                using (var reader = new StreamReader(filePath, Encoding.UTF8))
+                byte[] buffer;
+
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
                 {
-                    json = await reader.ReadToEndAsync();
+                    buffer = new byte[fs.Length];
+                    await fs.ReadAsync(buffer, 0, buffer.Length);
                 }
 
-                return JsonHeightmapUtility.Deserialize(json);
+                float[,] map = new float[resolution, resolution];
+                Buffer.BlockCopy(buffer, 0, map, 0, buffer.Length);
+
+                return map;
             }
             catch (Exception ex)
             {
@@ -216,7 +232,7 @@ namespace FlightReLive.Core.Cache
 
         internal static string GetBuildingTileDataPath(int zoom, int tileX, int tileY)
         {
-            string tileName = $"building_tile_{zoom}_{tileX}_{tileY}.frlb";
+            string tileName = $"b_{zoom}_{tileX}_{tileY}.mpack";
 
             return Path.Combine(_cacheFolder, tileName);
         }
@@ -274,13 +290,13 @@ namespace FlightReLive.Core.Cache
         internal static string GetGeoTileDataPath(int tileX, int tileY, string lang)
         {
             string safeLang = string.IsNullOrEmpty(lang) ? "en" : lang;
-            string tileName = $"geo_tile_{tileX}_{tileY}_{safeLang}.frlg";
+            string tileName = $"g_{tileX}_{tileY}_{safeLang}.mpack";
             return Path.Combine(_cacheFolder, tileName);
         }
 
         internal static async Task SaveGeoTileDataAsync(FeatureCollection geoData, int tileX, int tileY, string lang)
         {
-            if (geoData == null || geoData.features == null)
+            if (geoData == null)
             {
                 return;
             }
@@ -289,32 +305,32 @@ namespace FlightReLive.Core.Cache
 
             try
             {
-                string json = JsonConvert.SerializeObject(geoData);
-                await File.WriteAllTextAsync(path, json);
+                byte[] serialized = MessagePackSerializer.Serialize(geoData);
+                await File.WriteAllBytesAsync(path, serialized);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to save geo tile data {tileX}_{tileY}_{lang} : {ex.Message}");
+                Debug.LogWarning($"Failed to save geo tile {tileX}_{tileY}_{lang} : {ex.Message}");
             }
         }
 
         internal static async Task<FeatureCollection> LoadGeoTileDataAsync(int tileX, int tileY, string lang)
         {
-            if (!await GeoTileDataExistsAsync(tileX, tileY, lang))
+            string path = GetGeoTileDataPath(tileX, tileY, lang);
+
+            if (!File.Exists(path))
             {
                 return null;
             }
 
-            string path = GetGeoTileDataPath(tileX, tileY, lang);
-
             try
             {
-                string json = await File.ReadAllTextAsync(path);
-                return JsonConvert.DeserializeObject<FeatureCollection>(json);
+                byte[] bytes = await File.ReadAllBytesAsync(path);
+                return MessagePackSerializer.Deserialize<FeatureCollection>(bytes);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to load geo tile data {tileX}_{tileY}_{lang} : {ex.Message}");
+                Debug.LogWarning($"Failed to load geo tile {tileX}_{tileY}_{lang} : {ex.Message}");
                 return null;
             }
         }

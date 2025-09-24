@@ -22,6 +22,10 @@ namespace FlightReLive.Core.Loading
 {
     public class LoadingManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const int PADDING = 4;
+        #endregion
+
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
         private string _currentTile;
@@ -227,7 +231,6 @@ namespace FlightReLive.Core.Loading
             flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
 
-            int padding = 3;
 
             IEnumerable<(double Latitude, double Longitude)> allPoints;
             if (file.HasTakeOffPosition)
@@ -254,10 +257,10 @@ namespace FlightReLive.Core.Loading
             int originalMinTileY = baseMinTileY;
             int originalMaxTileY = baseMaxTileY;
 
-            int minTileX = originalMinTileX - padding;
-            int maxTileX = originalMaxTileX + padding;
-            int minTileY = originalMinTileY - padding;
-            int maxTileY = originalMaxTileY + padding;
+            int minTileX = originalMinTileX - PADDING;
+            int maxTileX = originalMaxTileX + PADDING;
+            int minTileY = originalMinTileY - PADDING;
+            int maxTileY = originalMaxTileY + PADDING;
 
             for (int x = minTileX; x <= maxTileX; x++)
             {
@@ -285,6 +288,11 @@ namespace FlightReLive.Core.Loading
 
                     //Define tile priority based on distance from original tile
                     int priority = Math.Max(dx, dy);
+
+                    if (priority > 3)
+                    {
+                        priority = 3;
+                    }
 
                     TileDefinition tileDefinition = new TileDefinition
                     {

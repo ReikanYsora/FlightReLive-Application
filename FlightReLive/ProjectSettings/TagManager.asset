@@ -8,11 +8,11 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - UIWorld
+  - 3DPath
   - Water
   - UI
-  - 3DPath
-  - PathLine
+  - 
+  - 
   - 
   - 
   - 

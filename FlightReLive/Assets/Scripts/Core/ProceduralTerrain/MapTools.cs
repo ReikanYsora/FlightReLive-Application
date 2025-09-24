@@ -1,5 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Pipeline;
+﻿using FlightReLive.Core.Pipeline;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,8 +13,8 @@ namespace FlightReLive.Core.ProceduralTerrain
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_1 = 17;
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_2 = 14;
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_3 = 14;
-        internal static readonly int ZOOM_LEVEL_TOPOGRAPHIC = 14;
-        internal static readonly int ZOOM_LEVEL_BUILDING = 14;
+        internal static readonly int ZOOM_LEVEL_HEIGHTMAP = 14;
+        internal static readonly int ZOOM_LEVEL_OPENTILEMAP = 14;
         #endregion
 
         #region METHODS
@@ -25,7 +24,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             latitude = Math.Clamp(latitude, -85.05112878, 85.05112878);
 
             double latRad = latitude * Math.PI / 180.0;
-            int numTiles = 1 << ZOOM_LEVEL_TOPOGRAPHIC;
+            int numTiles = 1 << ZOOM_LEVEL_HEIGHTMAP;
 
             double x = (longitude + 180.0) / 360.0 * numTiles;
             double y = (1.0 - Math.Log(Math.Tan(latRad) + 1.0 / Math.Cos(latRad)) / Math.PI) / 2.0 * numTiles;
@@ -35,7 +34,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         internal static GPSBoundingBox GetBoundingBoxFromTileXY(int xTile, int yTile)
         {
-            int n = 1 << ZOOM_LEVEL_TOPOGRAPHIC;
+            int n = 1 << ZOOM_LEVEL_HEIGHTMAP;
             double lonPerTile = 360.0 / n;
             double minLon = xTile * lonPerTile - 180.0;
             double maxLon = (xTile + 1) * lonPerTile - 180.0;
@@ -111,28 +110,20 @@ namespace FlightReLive.Core.ProceduralTerrain
             const double R = 6371000; //Earth radius in meters
             double dLat = Math.PI / 180 * (lat2 - lat1);
             double dLon = Math.PI / 180 * (lon2 - lon1);
-            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                       Math.Cos(Math.PI / 180 * lat1) * Math.Cos(Math.PI / 180 * lat2) *
-                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) + Math.Cos(Math.PI / 180 * lat1) * Math.Cos(Math.PI / 180 * lat2) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
             double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
             return R * c;
-        }
-
-        internal static FlightGPSData GetCenterOfBoundingBox(GPSBoundingBox bbox)
-        {
-            double centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2.0;
-            double centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2.0;
-
-            return new FlightGPSData(centerLatitude, centerLongitude);
         }
 
         internal static double GetTileSizeMeters(double latitude)
         {
             const double EarthCircumference = 40075016.68557849;
             double latitudeRad = latitude * Math.PI / 180.0;
-            double numTiles = Math.Pow(2, ZOOM_LEVEL_TOPOGRAPHIC);
+            double numTiles = Math.Pow(2, ZOOM_LEVEL_HEIGHTMAP);
             double metersPerTileEquator = EarthCircumference / numTiles;
             double metersPerTile = metersPerTileEquator * Math.Cos(latitudeRad);
+
             return metersPerTile;
         }
         #endregion

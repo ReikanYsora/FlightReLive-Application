@@ -1,25 +1,21 @@
-﻿using FlightReLive.Core.Building;
+﻿using FlightReLive.Core.OpenMapTile;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
-using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Workspace;
-using FlightReLive.UI;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
-using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Loading
@@ -150,7 +146,7 @@ namespace FlightReLive.Core.Loading
                             token,
                             (phase, progress, source) =>
                             {
-                                _tileProgress = (phase + progress) / 4f;
+                                _tileProgress = (phase + progress) / 3f;
 
                                 if (source == TileResourceSource.Cache)
                                 {
@@ -177,13 +173,10 @@ namespace FlightReLive.Core.Loading
                         flightData.InitializeAltitude();
                     }
 
-                    foreach (TileDefinition t in loadedTiles)
+                    //We need to call this method only when BuildTileLookup and InitializeAltitude has been executed
+                    foreach (TileDefinition tileDefinition in loadedTiles)
                     {
-                        if (t.Priority < 2)
-                        {
-                            BuildingManager.Instance.LoadTile(t, flightData);
-                            POIManager.Instance.LoadTile(t, flightData);
-                        }
+                        OpenMapTileManager.Instance.LoadTile(tileDefinition, flightData);
                     }
                 }
                 
@@ -296,7 +289,7 @@ namespace FlightReLive.Core.Loading
                     TileDefinition tileDefinition = new TileDefinition
                     {
                         BoundingBox = MapTools.GetBoundingBoxFromTileXY(x, y),
-                        ZoomLevel = MapTools.ZOOM_LEVEL_TOPOGRAPHIC,
+                        ZoomLevel = MapTools.ZOOM_LEVEL_HEIGHTMAP,
                         X = x,
                         Y = y,
                         SatelliteTexture = null,
@@ -324,8 +317,7 @@ namespace FlightReLive.Core.Loading
             ProceduralTerrainManager.Instance.Unload();
             PathManager.Instance.Unload();
             EnvironmentManager.Instance.Unload();
-            POIManager.Instance.Unload();
-            BuildingManager.Instance.Unload();
+            OpenMapTileManager.Instance.Unload();
             CurrentFlightData?.Dispose();
             CurrentFlightData = null;
             OnFlightUnloaded?.Invoke();

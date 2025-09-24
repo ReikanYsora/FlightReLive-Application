@@ -1,6 +1,5 @@
-using FlightReLive.Core.Building;
+using FlightReLive.Core.OpenMapTile;
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
@@ -461,21 +460,12 @@ namespace FlightReLive.Core.Environment
 
         internal void DrawSceneSettings(FuLayout layout)
         {
-            layout.FramedText("POI");
-            layout.Separator();
-
-            using (FuGrid gridPOI = new FuGrid("gridPOISettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
-            {
-                POIManager.Instance.DisplayWorldUISettings(gridPOI);
-            }
-
-            layout.Separator();
             layout.FramedText("Buildings");
             layout.Separator();
 
             using (FuGrid gridBuilding = new FuGrid("gridBuildingSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                BuildingManager.Instance.DisplayBuildingsSettings(gridBuilding);
+                OpenMapTileManager.Instance.DisplayBuildingsSettings(gridBuilding);
             }
         }
         #endregion

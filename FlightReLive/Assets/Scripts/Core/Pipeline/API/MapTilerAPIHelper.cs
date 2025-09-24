@@ -1,15 +1,11 @@
 ﻿using FlightReLive.Core.Cache;
-using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -23,13 +19,6 @@ namespace FlightReLive.Core.Pipeline.API
     {
         #region CONSTANTS
         private const int TILE_SIZE = 512;
-        #endregion
-
-        #region ATTRIBUTES
-        private static readonly HashSet<string> _supportedLanguages = new HashSet<string>
-    {
-        "fr", "en", "de", "it", "es", "ja", "zh", "pt", "ru"
-    };
         #endregion
 
         #region METHODS
@@ -71,21 +60,12 @@ namespace FlightReLive.Core.Pipeline.API
                 }
                 token.ThrowIfCancellationRequested();
 
-                //Phase 2 : Buildings
-                ResourceResult<List<BuildingData>> bld = await DownloadBuildingsAsync(tile, token, p => onProgress?.Invoke(2, p, null));
+                //Phase 2 : Open Map Tiles
+                ResourceResult<List<OpenMapTileFeature>> bld = await DownloadOpenMapTilesAsync(tile, token, p => onProgress?.Invoke(2, p, null));
                 if (bld != null)
                 {
-                    tile.Buildings = bld.Data;
+                    tile.Features = bld.Data;
                     onProgress?.Invoke(2, 1f, bld.Source);
-                }
-                token.ThrowIfCancellationRequested();
-
-                //Phase 3 : GeoData
-                ResourceResult<FeatureCollection> geo = await DownloadGeoDataAsync(tile, token, p => onProgress?.Invoke(3, p, null));
-                if (geo != null)
-                {
-                    tile.GeoData = geo.Data;
-                    onProgress?.Invoke(3, 1f, geo.Source);
                 }
                 token.ThrowIfCancellationRequested();
 
@@ -219,7 +199,7 @@ namespace FlightReLive.Core.Pipeline.API
                 return new ResourceResult<float[,]>(cached, TileResourceSource.Cache);
             }
 
-            string url = $"https://api.maptiler.com/tiles/terrain-rgb-v2/{MapTools.ZOOM_LEVEL_TOPOGRAPHIC}/{tile.X}/{tile.Y}.webp?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
+            string url = $"https://api.maptiler.com/tiles/terrain-rgb-v2/{MapTools.ZOOM_LEVEL_HEIGHTMAP}/{tile.X}/{tile.Y}.webp?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
             TaskCompletionSource<byte[]> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
             DownloadManager.EnqueueDownload(
@@ -272,11 +252,11 @@ namespace FlightReLive.Core.Pipeline.API
         }
         #endregion
 
-        #region BUILDINGS
-        private static async Task<ResourceResult<List<BuildingData>>> DownloadBuildingsAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+        #region OPEN MAP TILE FEATURES
+        private static async Task<ResourceResult<List<OpenMapTileFeature>>> DownloadOpenMapTilesAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
-            int zoom = MapTools.ZOOM_LEVEL_BUILDING;
-            List<BuildingData> all = new();
+            int zoom = MapTools.ZOOM_LEVEL_OPENTILEMAP;
+            List<OpenMapTileFeature> all = new List<OpenMapTileFeature>();
             HashSet<(int, int)> coords = MapTools.GetTilesFromZoomLevel(tile, zoom);
 
             int i = 0;
@@ -285,7 +265,7 @@ namespace FlightReLive.Core.Pipeline.API
             foreach ((int x, int y) in coords)
             {
                 token.ThrowIfCancellationRequested();
-                ResourceResult<List<BuildingData>> res = await DownloadAndParseOsmTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
+                ResourceResult<List<OpenMapTileFeature>> res = await DownloadAndParseOpenMapTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
                 i++;
 
                 if (res != null && res.Data != null)
@@ -298,16 +278,15 @@ namespace FlightReLive.Core.Pipeline.API
                 }
             }
 
-            return new ResourceResult<List<BuildingData>>(all, finalSource);
+            return new ResourceResult<List<OpenMapTileFeature>>(all, finalSource);
         }
 
-        private static async Task<ResourceResult<List<BuildingData>>> DownloadAndParseOsmTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
+        private static async Task<ResourceResult<List<OpenMapTileFeature>>> DownloadAndParseOpenMapTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
         {
-            if (await CacheManager.BuildingTileDataExistsAsync(zoom, x, y))
+            if (await CacheManager.OpenMapTileDataExistsAsync(zoom, x, y))
             {
-                List<BuildingData> cached = await CacheManager.LoadBuildingTileDataAsync(zoom, x, y);
-
-                return new ResourceResult<List<BuildingData>>(cached, TileResourceSource.Cache);
+                List<OpenMapTileFeature> cached = await CacheManager.LoadOpenMapTileDataAsync(zoom, x, y);
+                return new ResourceResult<List<OpenMapTileFeature>>(cached, TileResourceSource.Cache);
             }
 
             string url = $"https://api.maptiler.com/tiles/v3-openmaptiles/{zoom}/{x}/{y}.pbf?key={SettingsManager.CurrentSettings.MapTilerAPIKey}";
@@ -315,7 +294,7 @@ namespace FlightReLive.Core.Pipeline.API
 
             DownloadManager.EnqueueDownload(
                 url,
-                data => 
+                data =>
                 {
                     if (!token.IsCancellationRequested)
                     {
@@ -331,17 +310,17 @@ namespace FlightReLive.Core.Pipeline.API
                 byte[] pbf = await tcs.Task;
 
                 if (pbf == null)
-                { 
+                {
                     return null;
                 }
 
                 VectorTileReader reader = new VectorTileReader(pbf);
-                List<BuildingData> results = new();
+                List<OpenMapTileFeature> results = new List<OpenMapTileFeature>();
 
+                //Building
                 if (reader.LayerNames().Contains("building"))
                 {
                     VectorTileLayer layer = reader.GetLayer("building");
-
                     for (int i = 0; i < layer.FeatureCount(); i++)
                     {
                         VectorTileFeature feat = layer.GetFeature(i);
@@ -349,121 +328,124 @@ namespace FlightReLive.Core.Pipeline.API
 
                         float renderHeight = props.ContainsKey("render_height") ? Convert.ToSingle(props["render_height"]) : 10f;
                         float renderMinHeight = props.ContainsKey("render_min_height") ? Convert.ToSingle(props["render_min_height"]) : 0f;
-                        float extrude = renderHeight - renderMinHeight;
 
-                        List<List<Point2d<int>>> rawGeometry = feat.Geometry<int>();
-                        List<List<SerializablePoint2D>> convertedGeometry = rawGeometry.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
-
-                        results.Add(new BuildingData
+                        results.Add(new BuildingFeature
                         {
-                            Geometry = convertedGeometry,
-                            Height = extrude,
-                            Properties = props.ToDictionary(p => p.Key, p => p.Value?.ToString() ?? "")
+                            Geometry = ConvertGeometry(feat),
+                            RenderHeight = renderHeight,
+                            RenderMinHeight = renderMinHeight,
+                            LayerName = layer.Name
                         });
                     }
                 }
 
-                await CacheManager.SaveBuildingTileDataAsync(results, zoom, x, y);
+                //Landuse
+                if (reader.LayerNames().Contains("landuse"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("landuse");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
 
-                return new ResourceResult<List<BuildingData>>(results, TileResourceSource.Download);
+                        results.Add(new LanduseFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            LayerName = layer.Name,
+                            Class = props.TryGetValue("class", out var v) ? v?.ToString() : null
+                        });
+                    }
+                }
+
+                //Landcover
+                if (reader.LayerNames().Contains("landcover"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("landcover");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new LandcoverFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            LayerName = layer.Name,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null
+                        });
+                    }
+                }
+
+                //Water
+                if (reader.LayerNames().Contains("water"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("water");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new WaterFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            LayerName = layer.Name,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            IsIntermittent = props.TryGetValue("intermittent", out var it) && it?.ToString() == "1"
+                        });
+                    }
+                }
+
+                //Park
+                if (reader.LayerNames().Contains("park"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("park");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new ParkFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            LayerName = layer.Name,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null
+                        });
+                    }
+                }
+
+                //Aeroway 
+                if (reader.LayerNames().Contains("aeroway"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("aeroway");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new AerowayFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            LayerName = layer.Name,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null
+                        });
+                    }
+                }
+
+                await CacheManager.SaveOpenMapTileDataAsync(results, zoom, x, y);
+
+                return new ResourceResult<List<OpenMapTileFeature>>(results, TileResourceSource.Download);
             }
         }
-        #endregion
 
-        #region GEODATA
-        private static async Task<ResourceResult<FeatureCollection>> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+        /// <summary>
+        /// Helper to convert VexTile geometry to SerializablePoint2D.
+        /// </summary>
+        private static List<List<SerializablePoint2D>> ConvertGeometry(VectorTileFeature feat)
         {
-            string lang = GetPreferredLanguage();
+            List<List<Point2d<int>>> raw = feat.Geometry<int>();
 
-            if (await CacheManager.GeoTileDataExistsAsync(tile.X, tile.Y, lang))
-            {
-                FeatureCollection cached = await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
-                return new ResourceResult<FeatureCollection>(cached, TileResourceSource.Cache);
-            }
-
-            FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
-
-            string url = string.Format(
-                CultureInfo.InvariantCulture,
-                "https://api.maptiler.com/geocoding/{0},{1}.json?key={2}&bbox={3},{4},{5},{6}&language={7}",
-                center.Longitude,
-                center.Latitude,
-                SettingsManager.CurrentSettings.MapTilerAPIKey,
-                tile.BoundingBox.MinLongitude,
-                tile.BoundingBox.MinLatitude,
-                tile.BoundingBox.MaxLongitude,
-                tile.BoundingBox.MaxLatitude,
-                lang
-            );
-
-            TaskCompletionSource<string> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            DownloadManager.EnqueueDownload(
-                url,
-                data =>
-                { 
-                    if (!token.IsCancellationRequested)
-                    {
-                        tcs.TrySetResult(Encoding.UTF8.GetString(data));
-                    }
-                },
-                error => tcs.TrySetResult(null),
-                (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
-            );
-
-            using (token.Register(() => tcs.TrySetCanceled(token)))
-            {
-                string json = await tcs.Task;
-                if (string.IsNullOrEmpty(json))
-                { 
-                    return null;
-                }
-
-                try
-                {
-                    FeatureCollection raw = JsonConvert.DeserializeObject<FeatureCollection>(json);
-                    FeatureCollection filtered = FilterByBoundingBox(raw, tile.BoundingBox);
-
-                    if (filtered == null)
-                    {
-                        filtered = new FeatureCollection();
-                    }
-
-                    if (filtered.features == null)
-                    {
-                        filtered.features = new List<Feature>();
-                    }
-
-                    await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
-                    return new ResourceResult<FeatureCollection>(filtered, TileResourceSource.Download);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"Failed to parse GeoData for tile {tile.X}_{tile.Y}_{lang} : {ex.Message}");
-                    return null;
-                }
-            }
-        }
-
-        private static FeatureCollection FilterByBoundingBox(FeatureCollection collection, GPSBoundingBox bbox)
-        {
-            if (collection == null || collection.features == null)
-            {
-                return collection;
-            }
-
-            collection.features = collection.features
-                .Where(f =>
-                {
-                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2) { return false; }
-
-                    double lon = f.geometry.coordinates[0];
-                    double lat = f.geometry.coordinates[1];
-                    return lon >= bbox.MinLongitude && lon <= bbox.MaxLongitude && lat >= bbox.MinLatitude && lat <= bbox.MaxLatitude;
-                })
-                .ToList();
-
-            return collection;
+            return raw.Select(ring => ring.Select(pt => SerializablePoint2D.FromPoint2D(pt)).ToList()).ToList();
         }
         #endregion
 
@@ -489,42 +471,6 @@ namespace FlightReLive.Core.Pipeline.API
             }
 
             return atlas;
-        }
-
-        private static string GetPreferredLanguage()
-        {
-            SystemLanguage lang = Application.systemLanguage;
-            string isoLang = ConvertToIsoCode(lang);
-
-            return _supportedLanguages.Contains(isoLang) ? isoLang : "en";
-        }
-
-        private static string ConvertToIsoCode(SystemLanguage lang)
-        {
-            switch (lang)
-            {
-                default:
-                case SystemLanguage.English:
-                    return "en";
-                case SystemLanguage.French:
-                    return "fr";
-                case SystemLanguage.German:
-                    return "de";
-                case SystemLanguage.Italian:
-                    return "it";
-                case SystemLanguage.Spanish:
-                    return "es";
-                case SystemLanguage.Japanese:
-                    return "ja";
-                case SystemLanguage.ChineseSimplified:
-                case SystemLanguage.ChineseTraditional:
-                case SystemLanguage.Chinese:
-                    return "zh";
-                case SystemLanguage.Portuguese:
-                    return "pt";
-                case SystemLanguage.Russian:
-                    return "ru";
-            }
         }
         #endregion
     }

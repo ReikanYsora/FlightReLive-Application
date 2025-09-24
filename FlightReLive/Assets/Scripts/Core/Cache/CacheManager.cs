@@ -1,13 +1,11 @@
-using FlightReLive.Core.Pipeline;
-using FlightReLive.Core.ProceduralTerrain;
 using Fu;
 using Fu.Framework;
 using MessagePack;
-using Newtonsoft.Json;
+using MessagePack.Formatters;
+using MessagePack.Resolvers;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -21,7 +19,7 @@ namespace FlightReLive.Core.Cache
 
         #region ATTRIBUTES
         private static string _cacheFolder;
-        private static string _workspaceCacheFolder;
+        private static readonly MessagePackSerializerOptions _messagePackOptions = MessagePackSerializerOptions.Standard.WithResolver(CompositeResolver.Create( new IMessagePackFormatter[] { new OpenMapTileFeatureFormatter() }, new IFormatterResolver[] { CustomResolver.Instance, StandardResolverAllowPrivate.Instance }));
         #endregion
 
         #region METHODS
@@ -222,119 +220,60 @@ namespace FlightReLive.Core.Cache
         }
         #endregion
 
-        #region BUILDINGS (ASYNC)
-        internal static Task<bool> BuildingTileDataExistsAsync(int zoom, int tileX, int tileY)
+        #region OPEN MAP TILE FEATURES (ASYNC)
+        internal static Task<bool> OpenMapTileDataExistsAsync(int zoom, int tileX, int tileY)
         {
-            string path = GetBuildingTileDataPath(zoom, tileX, tileY);
+            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
             return Task.FromResult(File.Exists(path));
         }
 
-
-        internal static string GetBuildingTileDataPath(int zoom, int tileX, int tileY)
+        internal static string GetOpenMapTileDataPath(int zoom, int tileX, int tileY)
         {
-            string tileName = $"b_{zoom}_{tileX}_{tileY}.mpack";
-
+            string tileName = $"omt_{zoom}_{tileX}_{tileY}.mpack";
             return Path.Combine(_cacheFolder, tileName);
         }
 
-
-        internal static async Task SaveBuildingTileDataAsync(List<BuildingData> buildings, int zoom, int tileX, int tileY)
+        internal static async Task SaveOpenMapTileDataAsync(List<OpenMapTileFeature> features, int zoom, int tileX, int tileY)
         {
-            if (buildings == null)
+            if (features == null || features.Count == 0)
             {
                 return;
             }
 
-            string path = GetBuildingTileDataPath(zoom, tileX, tileY);
+            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
 
             try
             {
-                byte[] serialized = MessagePackSerializer.Serialize(buildings);
+                byte[] serialized = MessagePackSerializer.Serialize(features, _messagePackOptions);
                 await File.WriteAllBytesAsync(path, serialized);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to save building tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
+                Debug.LogWarning($"Failed to save OpenMapTile features tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
             }
         }
 
-        internal static async Task<List<BuildingData>> LoadBuildingTileDataAsync(int zoom, int tileX, int tileY)
+        internal static async Task<List<OpenMapTileFeature>> LoadOpenMapTileDataAsync(int zoom, int tileX, int tileY)
         {
-            if (!await BuildingTileDataExistsAsync(zoom, tileX, tileY))
+            if (!await OpenMapTileDataExistsAsync(zoom, tileX, tileY))
             {
                 return null;
             }
 
-            string path = GetBuildingTileDataPath(zoom, tileX, tileY);
+            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
 
             try
             {
                 byte[] bytes = await File.ReadAllBytesAsync(path);
-                return MessagePackSerializer.Deserialize<List<BuildingData>>(bytes);
+                return MessagePackSerializer.Deserialize<List<OpenMapTileFeature>>(bytes, _messagePackOptions);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to load building tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
+                Debug.LogWarning($"Failed to load OpenMapTile features tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
                 return null;
             }
         }
         #endregion
-
-        #region GEODATA (ASYNC)
-        internal static Task<bool> GeoTileDataExistsAsync(int tileX, int tileY, string lang)
-        {
-            string path = GetGeoTileDataPath(tileX, tileY, lang);
-            return Task.FromResult(File.Exists(path));
-        }
-
-        internal static string GetGeoTileDataPath(int tileX, int tileY, string lang)
-        {
-            string safeLang = string.IsNullOrEmpty(lang) ? "en" : lang;
-            string tileName = $"g_{tileX}_{tileY}_{safeLang}.mpack";
-            return Path.Combine(_cacheFolder, tileName);
-        }
-
-        internal static async Task SaveGeoTileDataAsync(FeatureCollection geoData, int tileX, int tileY, string lang)
-        {
-            if (geoData == null)
-            {
-                return;
-            }
-
-            string path = GetGeoTileDataPath(tileX, tileY, lang);
-
-            try
-            {
-                byte[] serialized = MessagePackSerializer.Serialize(geoData);
-                await File.WriteAllBytesAsync(path, serialized);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Failed to save geo tile {tileX}_{tileY}_{lang} : {ex.Message}");
-            }
-        }
-
-        internal static async Task<FeatureCollection> LoadGeoTileDataAsync(int tileX, int tileY, string lang)
-        {
-            string path = GetGeoTileDataPath(tileX, tileY, lang);
-
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            try
-            {
-                byte[] bytes = await File.ReadAllBytesAsync(path);
-                return MessagePackSerializer.Deserialize<FeatureCollection>(bytes);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Failed to load geo tile {tileX}_{tileY}_{lang} : {ex.Message}");
-                return null;
-            }
-        }
         #endregion
     }
-    #endregion
 }

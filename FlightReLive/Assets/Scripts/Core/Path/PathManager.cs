@@ -1,8 +1,6 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.ProceduralTerrain;
-using FlightReLive.Core.POI;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
@@ -30,9 +28,6 @@ namespace FlightReLive.Core.Paths
         [SerializeField] private float _glowDuration = 1f;
         [SerializeField] private Transform _droneAnchorTransform;
 
-        [Header("Line path settings")]
-        [SerializeField] private Material _linePathMaterial;
-
         private List<PathPoint> _fullPath;
         private List<FlightDataPoint> _interpolatedToFlightPoint;
 
@@ -49,7 +44,6 @@ namespace FlightReLive.Core.Paths
 
         //Path Line Renderer
         private GameObject _progressionPathLineGO;
-        private LineRenderer _progressionPathLine;
         #endregion
 
         #region PROPERTIES
@@ -244,7 +238,6 @@ namespace FlightReLive.Core.Paths
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                POIManager.Instance.Unload();
                 _interpolatedToFlightPoint.Clear();
                 _progressionPathFilter.sharedMesh = null;
                 _progressionPathCollider.enabled = false;
@@ -351,9 +344,6 @@ namespace FlightReLive.Core.Paths
             Mesh pathMesh = GeneratePathMesh(cleanedPath, uvProgress, MESH_PATH_RADIUS, MESH_PATH_RADIAL_SEGMENT);
             _progressionPathFilter.mesh = pathMesh;
             _progressionPathCollider.sharedMesh = pathMesh;
-
-            //Generate line renderer path
-            //GenerateLineRenderer(cleanedPath, _linePathMaterial, 0.01f, "PathLine");
         }
 
         private Mesh GeneratePathMesh(List<Vector3> pathPoints, List<float> uvProgression, float radius = 2f, int radialSegments = 4)
@@ -493,51 +483,6 @@ namespace FlightReLive.Core.Paths
             mesh.RecalculateBounds();
 
             return mesh;
-        }
-
-        /// <summary>
-        /// Generates a thin line renderer following the same cleanedPath as the 3D mesh path.
-        /// This line can be assigned to a different layer for alternative rendering.
-        /// </summary>
-        /// <param name="cleanedPath">List of world positions of the path.</param>
-        /// <param name="lineMaterial">Material to use for the line.</param>
-        /// <param name="lineWidth">Width of the line.</param>
-        /// <param name="layerName">Unity layer name to assign the line renderer object.</param>
-        private void GenerateLineRenderer(List<Vector3> cleanedPath, Material lineMaterial, float lineWidth = 0.01f, string layerName = "PathLine")
-        {
-            if (cleanedPath == null || cleanedPath.Count < 2)
-            {
-                return;
-            }
-
-            // Crée le GameObject s’il n’existe pas
-            if (_progressionPathLineGO == null)
-            {
-                _progressionPathLineGO = new GameObject("Progression path line");
-                _progressionPathLineGO.transform.parent = transform;
-
-                _progressionPathLine = _progressionPathLineGO.AddComponent<LineRenderer>();
-                _progressionPathLine.useWorldSpace = true;
-                _progressionPathLine.alignment = LineAlignment.View;
-                _progressionPathLine.textureMode = LineTextureMode.Stretch;
-                _progressionPathLine.numCapVertices = 0;
-                _progressionPathLine.numCornerVertices = 2; // lissage léger
-            }
-
-            // Assigne le layer
-            int layerIndex = LayerMask.NameToLayer(layerName);
-            if (layerIndex >= 0)
-            {
-                _progressionPathLineGO.layer = layerIndex;
-            }
-
-            // Configure le matériau et largeur
-            _progressionPathLine.material = lineMaterial;
-            _progressionPathLine.widthMultiplier = lineWidth;
-
-            // Assigne les positions
-            _progressionPathLine.positionCount = cleanedPath.Count;
-            _progressionPathLine.SetPositions(cleanedPath.ToArray());
         }
 
         private float GetProgressAtTime(DateTime targetTime)

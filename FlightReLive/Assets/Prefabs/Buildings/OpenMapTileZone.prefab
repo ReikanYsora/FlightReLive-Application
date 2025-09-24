@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 932171597645571537}
   - component: {fileID: 3591202319163923406}
   m_Layer: 0
-  m_Name: Building
+  m_Name: OpenMapTileZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

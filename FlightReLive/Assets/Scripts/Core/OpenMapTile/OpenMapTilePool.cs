@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace FlightReLive.Core.Building
+namespace FlightReLive.Core.OpenMapTile
 {
-    public class BuildingPool : MonoBehaviour
+    public class OpenMapTilePool : MonoBehaviour
     {
         #region ATTRIBUTES
-        [SerializeField] private GameObject _buildingPrefab;
+        [SerializeField] private GameObject _openMapTileZonePrefab;
         [SerializeField] private int _initialSize = 10000;
         private Queue<GameObject> _pool = new();
         #endregion
@@ -16,7 +16,7 @@ namespace FlightReLive.Core.Building
         {
             for (int i = 0; i < _initialSize; i++)
             {
-                GameObject obj = Instantiate(_buildingPrefab);
+                GameObject obj = Instantiate(_openMapTileZonePrefab);
                 obj.transform.SetParent(transform);
                 _pool.Enqueue(obj);
             }
@@ -32,7 +32,7 @@ namespace FlightReLive.Core.Building
                 return obj;
             }
 
-            GameObject newObj = Instantiate(_buildingPrefab);
+            GameObject newObj = Instantiate(_openMapTileZonePrefab);
 
             return newObj;
         }

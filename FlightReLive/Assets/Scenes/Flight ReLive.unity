@@ -343,7 +343,7 @@ Camera:
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 183
+    m_Bits: 151
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -989,7 +989,7 @@ Camera:
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 55
+    m_Bits: 31
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -1704,10 +1704,9 @@ MonoBehaviour:
   _progressionPathMaterial: {fileID: 2100000, guid: d65dcc345f59f6847bead9fbe7cfa98c, type: 2}
   _raycastMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 8
   _glowDuration: 1
   _droneAnchorTransform: {fileID: 283911657}
-  _linePathMaterial: {fileID: 2100000, guid: e42fe6339d96c9e4096937ba6d397f99, type: 2}
 --- !u!1 &1389988518
 GameObject:
   m_ObjectHideFlags: 0
@@ -1772,67 +1771,6 @@ MonoBehaviour:
     shadingChangeScale: 1
     accumulationAddedPerFrame: 0.33333334
     minDisocclusionAccumulation: -0.33333334
---- !u!1 &1531727481
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1531727482}
-  - component: {fileID: 1531727484}
-  - component: {fileID: 1531727483}
-  m_Layer: 0
-  m_Name: POIManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1531727482
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1531727481}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1896134859}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1531727483
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1531727481}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c1160b43617fb1d4a88fd39968a53143, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.POI.POIManager
-  _mainCamera: {fileID: 796242730}
---- !u!114 &1531727484
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1531727481}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb70eacff80b6a49b057b5f27b686ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.POI.POIPool
-  _mainCanvas: {fileID: 1721477100}
-  _poiPrefab: {fileID: 245362082703216664, guid: 4743d8e731bdeef4082a091545bac382, type: 3}
-  _initialSize: 100
 --- !u!1 &1721477096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1952,13 +1890,12 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2116168536}
   - {fileID: 289568083}
   - {fileID: 1092402792}
   - {fileID: 2125856383}
   - {fileID: 311396844}
+  - {fileID: 2116168536}
   - {fileID: 1289900097}
-  - {fileID: 1531727482}
   - {fileID: 739676617}
   - {fileID: 1389988519}
   m_Father: {fileID: 0}
@@ -1992,7 +1929,7 @@ GameObject:
   - component: {fileID: 2116168539}
   - component: {fileID: 2116168538}
   m_Layer: 0
-  m_Name: BuildingManager
+  m_Name: OpenMapTileManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2025,7 +1962,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ad18f3c8079c9d42a4784d2d3f7ab19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingPool
-  _buildingPrefab: {fileID: 547569354533486219, guid: 7994d44f06d00dd4c98601907cbb3b57, type: 3}
+  _openMapTileZonePrefab: {fileID: 547569354533486219, guid: 7994d44f06d00dd4c98601907cbb3b57, type: 3}
   _initialSize: 10000
 --- !u!114 &2116168539
 MonoBehaviour:
@@ -2036,10 +1973,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 2116168535}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 250065d41474ab14fa9d36357dffad9b, type: 3}
+  m_Script: {fileID: 11500000, guid: ace06e9ea9f002f41a8ae3182016ae84, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingManager
-  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.OpenMapTile.OpenMapTileManager
+  _zoneAltitude: 300
+  _minExtrusion: -500
+  _maxExtrusion: 500
+  _openMapTileBuildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
+  _openMapTileLandUseMaterial: {fileID: 2100000, guid: fd7f5a24f679fc241a74f2971cd72e30, type: 2}
+  _openMapTileWaterMaterial: {fileID: 2100000, guid: 91ae304a9de66ca4aafede829e712a9d, type: 2}
+  _openMapTileLandCoverMaterial: {fileID: 2100000, guid: e214437c8cd661942bbef3a7ed9907fc, type: 2}
+  _openMapTileParkMaterial: {fileID: 2100000, guid: 987d1916d1c7f7c44bf509f18907a926, type: 2}
+  _openMapTileAerowayMaterial: {fileID: 2100000, guid: 670db715b43ddbd4981ec8222ba1acb7, type: 2}
 --- !u!1 &2125856381
 GameObject:
   m_ObjectHideFlags: 0
@@ -2074,54 +2019,12 @@ MonoBehaviour:
   priority: 0
   customPasses:
   - rid: 1696480920264507453
-  - rid: 901995841906016329
-  - rid: 901995841906016370
   injectionPoint: 3
   m_TargetCamera: {fileID: 0}
   useTargetCamera: 0
   references:
     version: 2
     RefIds:
-    - rid: 901995841906016329
-      type: {class: RenderAfterUpscalingCustomPass, ns: FlightReLive.Core, asm: Assembly-CSharp}
-      data:
-        m_Name: Render After Upscaling
-        enabled: 1
-        targetColorBuffer: 0
-        targetDepthBuffer: 0
-        clearFlags: 0
-        passFoldout: 0
-        m_Version: 0
-        targetLayers:
-          serializedVersion: 2
-          m_Bits: 72
-        targetCamera: {fileID: 796242730}
-        drawOpaque: 1
-        drawTransparent: 1
-        overrideMaterial: {fileID: 0}
-        overrideMaterialPassIndex: 0
-        transparentSorting: 23
-        colorOnly: 0
-    - rid: 901995841906016370
-      type: {class: RenderAfterUpscalingCustomPass, ns: FlightReLive.Core, asm: Assembly-CSharp}
-      data:
-        m_Name: POV Render After Upscaling
-        enabled: 1
-        targetColorBuffer: 0
-        targetDepthBuffer: 0
-        clearFlags: 0
-        passFoldout: 0
-        m_Version: 0
-        targetLayers:
-          serializedVersion: 2
-          m_Bits: 128
-        targetCamera: {fileID: 137108794}
-        drawOpaque: 1
-        drawTransparent: 1
-        overrideMaterial: {fileID: 0}
-        overrideMaterialPassIndex: 0
-        transparentSorting: 23
-        colorOnly: 0
     - rid: 1696480920264507453
       type: {class: FuguiHDRPCustomPass, ns: Fu, asm: Fugui}
       data:

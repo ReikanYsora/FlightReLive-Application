@@ -572,14 +572,19 @@ namespace FlightReLive.Core.OpenMapTile
             float variation = UnityEngine.Random.Range(0.85f, 1.15f);
             return baseHeight * variation * flight.GlobalScale;
         }
-        #endregion
 
-        #region UI / API
-        private void OnBuildingVisibilityChanged(bool buildingVisible)
+        /// <summary>
+        /// Returns zone contours for a given zone type grouped by feature object.
+        /// </summary>
+        internal Dictionary<OpenMapTileFeature, List<List<Vector2>>> GetZoneContours(OpenMapTileZone zoneType)
         {
-            DisplayBuildingsFromSettings();
-        }
+            if (_zoneContours.TryGetValue(zoneType, out var dict))
+            {
+                return dict;
+            }
 
+            return null;
+        }
         private void DisplayBuildingsFromSettings()
         {
             bool enabled = SettingsManager.CurrentSettings.BuildingVisibility;
@@ -593,29 +598,25 @@ namespace FlightReLive.Core.OpenMapTile
                 }
             }
         }
+        #endregion
 
+        #region CALLBACKS
+        private void OnBuildingVisibilityChanged(bool buildingVisible)
+        {
+            DisplayBuildingsFromSettings();
+        }
+        #endregion
+
+        #region UI
         internal void DisplayBuildingsSettings(FuGrid grid)
         {
             bool buildingEnabled = SettingsManager.CurrentSettings.BuildingVisibility;
             grid.EnableNextElements();
 
-            if (grid.Toggle("Show Buildings", ref buildingEnabled))
+            if (grid.Toggle("Display buildings", ref buildingEnabled))
             {
                 SettingsManager.SaveBuildingVisibility(buildingEnabled);
             }
-        }
-
-        /// <summary>
-        /// Returns zone contours for a given zone type grouped by feature object.
-        /// </summary>
-        internal Dictionary<OpenMapTileFeature, List<List<Vector2>>> GetZoneContours(OpenMapTileZone zoneType)
-        {
-            if (_zoneContours.TryGetValue(zoneType, out var dict))
-            {
-                return dict;
-            }
-
-            return null;
         }
         #endregion
     }

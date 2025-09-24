@@ -1,3 +1,5 @@
+using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.ProceduralTerrain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,49 +85,6 @@ namespace FlightReLive.Core.Pipeline
                 .OrderBy(t => t.X)
                 .ThenByDescending(t => t.Y)
                 .ToList();
-        }
-
-        internal Vector2 GetSceneCenterGPS()
-        {
-            if (_tileDefinitions == null || _tileDefinitions.Count == 0)
-            {
-                return Vector2.zero;
-            }
-
-            double minLat = double.MaxValue;
-            double maxLat = double.MinValue;
-            double minLon = double.MaxValue;
-            double maxLon = double.MinValue;
-
-            foreach (var tile in _tileDefinitions)
-            {
-                var bbox = tile.BoundingBox;
-
-                if (bbox.MinLatitude < minLat)
-                {
-                    minLat = bbox.MinLatitude;
-                }
-
-                if (bbox.MaxLatitude > maxLat)
-                {
-                    maxLat = bbox.MaxLatitude;
-                }
-
-                if (bbox.MinLongitude < minLon)
-                {
-                    minLon = bbox.MinLongitude;
-                }
-
-                if (bbox.MaxLongitude > maxLon)
-                {
-                    maxLon = bbox.MaxLongitude;
-                }
-            }
-
-            double centerLat = (minLat + maxLat) / 2.0;
-            double centerLon = (minLon + maxLon) / 2.0;
-
-            return new Vector2((float)centerLat, (float)centerLon);
         }
         #endregion
     }

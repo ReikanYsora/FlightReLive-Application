@@ -949,9 +949,8 @@ MonoBehaviour:
   - {fileID: 1127992084609228112, guid: 34776a9356ed54141bf7fed4fded28a0, type: 3}
   - {fileID: 1722164173232303198, guid: 942660f4ebcf9cd438f45122b0ad63eb, type: 3}
   - {fileID: 8316334779356437779, guid: 35e087cfaa0f57244b67615777188d3e, type: 3}
-  _treeDensity: 0.05
+  _treeDensity: 0.005
   _randomScaleRange: {x: 0.8, y: 1.3}
-  _maxTreesPerContour: 5000
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0

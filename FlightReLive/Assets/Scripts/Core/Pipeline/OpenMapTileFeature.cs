@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlightReLive.Core.Pipeline;
 using MessagePack;
 using VexTile.Mapbox.VectorTile.Geometry;
 
@@ -13,7 +14,8 @@ namespace FlightReLive.Core
         [Key(1)]
         public string LayerName { get; set; }
 
-        [IgnoreMember] public Dictionary<string, string> Properties { get; set; }
+        [IgnoreMember]
+        internal TileDefinition TileDefinition { get; set; }
     }
 
     [MessagePackObject]
@@ -22,9 +24,6 @@ namespace FlightReLive.Core
         [Key(2)] public float RenderHeight { get; set; }
 
         [Key(3)] public float RenderMinHeight { get; set; }
-
-        [IgnoreMember]
-        public float ExtrudeHeight => RenderHeight - RenderMinHeight;
     }
 
     [MessagePackObject]

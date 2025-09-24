@@ -209,6 +209,26 @@ namespace FlightReLive.Core.FlightDefinition
         }
 
         /// <summary>
+        /// Converts a world position into GPS position (lat, lon).
+        /// </summary>
+        internal FlightGPSData ConvertWorldToGPSPosition(Vector3 worldPos)
+        {
+            float xMeters = worldPos.x / GlobalScale;
+            float zMeters = worldPos.z / GlobalScale;
+
+            double lat0 = SceneCenterGPS.x;
+            double lon0 = SceneCenterGPS.y;
+
+            const double metersPerDegLat = 111132.0;
+            double metersPerDegLon = 111320.0 * Mathf.Cos((float)(lat0 * Mathf.Deg2Rad));
+
+            double dLat = zMeters / metersPerDegLat;
+            double dLon = (metersPerDegLon != 0.0) ? xMeters / metersPerDegLon : 0.0;
+
+            return new FlightGPSData(lat0 + dLat, lon0 + dLon);
+        }
+
+        /// <summary>
         /// Generates a smoothed bezier flight path in world space.
         /// </summary>
         internal List<Vector3> CreateBezierFlightPath(float referenceAltitude, int samplesPerSegment = 10, float controlOffsetFactor = 0.3f)

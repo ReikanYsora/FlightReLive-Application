@@ -30,6 +30,8 @@ namespace FlightReLive.Core.Settings
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
+        public bool TreeVisibility;
+        public QualitySettings TreeQuality;
         public float VignettingIntensity;
         public float PostExposureIntensity;
         public float ContrastIntensity;

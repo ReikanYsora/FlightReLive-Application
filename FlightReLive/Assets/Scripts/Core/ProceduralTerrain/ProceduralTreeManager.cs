@@ -1,7 +1,5 @@
 ﻿using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Loading;
 using FlightReLive.Core.OpenMapTile;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -13,7 +11,6 @@ namespace FlightReLive.Core.ProceduralTerrain
     /// Procedural scattering of trees inside LandCover zones (e.g., "forest").
     /// Trees are painted into Unity Terrains via TreeInstances.
     /// </summary>
-    [RequireComponent(typeof(ProceduralTerrainManager))]
     internal class ProceduralTreeManager : MonoBehaviour
     {
         #region ATTRIBUTES
@@ -27,65 +24,67 @@ namespace FlightReLive.Core.ProceduralTerrain
         [Tooltip("Random scale factor (multiplied by GlobalScale).")]
         [SerializeField] private Vector2 _randomScaleRange = new Vector2(0.8f, 1.3f);
 
-        [Tooltip("Safety cap to avoid huge spawns per polygon.")]
-        [SerializeField] private int _maxTreesPerContour = 5000;
-
-        private Terrain[] _terrains;
         private TreePrototype[] _treePrototypes;
-        #endregion
-
-        #region PROPERTIES
-        public static ProceduralTreeManager Instance { get; private set; }
-        #endregion
-
-        #region UNITY METHODS
-        private void Awake()
-        {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-        }
-
-        private void Start()
-        {
-            LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
-        }
-
-        private void OnDestroy()
-        {
-            if (LoadingManager.Instance != null)
-            {
-                LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
-            }
-        }
         #endregion
 
         #region METHODS
         /// <summary>
-        /// Coroutine that scatters all trees much faster (bulk assignment).
+        /// Configures tree prototypes and triggers tree scattering directly.
         /// </summary>
-        private IEnumerator SpawnTreesAsync(FlightData flight)
+        internal void LoadTrees(FlightData flight, List<Terrain> terrains)
+        {
+            if (flight == null || _treePrefabs == null || _treePrefabs.Length == 0 || terrains.Count == 0)
+            {
+                return;
+            }
+
+            //Configure prototypes once
+            _treePrototypes = new TreePrototype[_treePrefabs.Length];
+
+            for (int i = 0; i < _treePrefabs.Length; i++)
+            {
+                _treePrototypes[i] = new TreePrototype { prefab = _treePrefabs[i] };
+            }
+
+            foreach (Terrain t in terrains)
+            {
+                t.terrainData.treePrototypes = _treePrototypes;
+                t.terrainData.treeInstances = new TreeInstance[0];
+            }
+
+            //Scatter immediately
+            SpawnTrees(flight, terrains);
+        }
+
+        /// <summary>
+        /// Scatters all trees with bulk assignment,
+        /// ordered by tile priority for faster and more logical loading.
+        /// </summary>
+        private void SpawnTrees(FlightData flight, List<Terrain> terrains)
         {
             Dictionary<OpenMapTileFeature, List<List<Vector2>>> landcoverZones = OpenMapTileManager.Instance.GetZoneContours(OpenMapTileManager.OpenMapTileZone.LandCover);
 
             if (landcoverZones == null || landcoverZones.Count == 0)
             {
-                Debug.LogWarning("No LandCover zones found for tree placement.");
-                yield break;
+                return;
             }
 
-            // Buffer of tree instances per terrain
+            // Buffer per terrain
             Dictionary<Terrain, List<TreeInstance>> terrainTrees = new Dictionary<Terrain, List<TreeInstance>>();
-            foreach (Terrain t in _terrains)
+            foreach (Terrain t in terrains)
             {
-                terrainTrees[t] = new List<TreeInstance>(1024);
+                terrainTrees[t] = new List<TreeInstance>(4096);
             }
 
-            foreach (KeyValuePair<OpenMapTileFeature, List<List<Vector2>>> featureEntry in landcoverZones)
+            // Order features by tile priority (only priority 0 and 1)
+            List<KeyValuePair<OpenMapTileFeature, List<List<Vector2>>>> orderedFeatures = landcoverZones
+                    .Where(x => x.Key.TileDefinition.Priority < 2)
+                    .OrderBy(x => x.Key.TileDefinition.Priority)
+                    .ToList();
+
+            int processed = 0;
+
+            foreach (KeyValuePair<OpenMapTileFeature, List<List<Vector2>>> featureEntry in orderedFeatures)
             {
                 if (featureEntry.Key is not LandcoverFeature lcf)
                 {
@@ -100,18 +99,15 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 foreach (List<Vector2> contour in featureEntry.Value)
                 {
-                    // Generate trees for this contour and store them
-                    foreach ((Terrain terrain, TreeInstance tree) in GenerateTreesInPolygon(flight, contour))
+                    foreach ((Terrain terrain, TreeInstance tree) in GenerateTreesInPolygon(flight, terrains, contour))
                     {
                         terrainTrees[terrain].Add(tree);
+                        processed++;
                     }
-
-                    // Small yield per contour (not per tree)
-                    yield return null;
                 }
             }
 
-            // Apply bulk assignment
+            //Bulk apply to each terrain
             foreach (KeyValuePair<Terrain, List<TreeInstance>> kvp in terrainTrees)
             {
                 TerrainData td = kvp.Key.terrainData;
@@ -121,32 +117,31 @@ namespace FlightReLive.Core.ProceduralTerrain
                 Debug.Log($"[ProceduralTreeManager] '{kvp.Key.name}' → prototypes: {td.treePrototypes.Length}, trees: {td.treeInstances.Length}");
             }
 
-            Debug.Log("[ProceduralTreeManager] All trees painted (bulk assignment).");
+            Debug.Log($"[ProceduralTreeManager] All trees painted (total: {processed}).");
         }
 
         /// <summary>
         /// Generate all tree instances for a polygon, returning the correct terrain and instance.
         /// </summary>
-        private IEnumerable<(Terrain, TreeInstance)> GenerateTreesInPolygon(FlightData flight, List<Vector2> contour)
+        private List<(Terrain, TreeInstance)> GenerateTreesInPolygon(FlightData flight, List<Terrain> terrains, List<Vector2> contour)
         {
+            List<(Terrain, TreeInstance)> result = new List<(Terrain, TreeInstance)>();
+
             Bounds bounds = ComputeBounds(contour);
 
             float areaWorld = bounds.size.x * bounds.size.z;
             float areaMeters = areaWorld / (flight.GlobalScale * flight.GlobalScale);
             int targetCount = Mathf.RoundToInt(areaMeters * _treeDensity);
 
-            if (_maxTreesPerContour > 0 && targetCount > _maxTreesPerContour)
-            {
-                targetCount = _maxTreesPerContour;
-            }
-
             int placed = 0;
             int attempts = targetCount * 3;
 
             for (int i = 0; i < attempts && placed < targetCount; i++)
             {
-                Vector2 rnd = new Vector2(Random.Range(bounds.min.x, bounds.max.x),
-                                          Random.Range(bounds.min.z, bounds.max.z));
+                Vector2 rnd = new Vector2(
+                    Random.Range(bounds.min.x, bounds.max.x),
+                    Random.Range(bounds.min.z, bounds.max.z)
+                );
 
                 if (!PointInPolygon(rnd, contour))
                 {
@@ -154,14 +149,16 @@ namespace FlightReLive.Core.ProceduralTerrain
                 }
 
                 Vector3 worldPos = new Vector3(rnd.x, 0, rnd.y);
-                FlightGPSData gps = WorldXZToGPSApprox(flight, worldPos);
+
+                //Convert world → GPS → altitude
+                FlightGPSData gps = flight.ConvertWorldToGPSPosition(worldPos);
                 float terrainAlt = flight.GetAltitudeAtPosition(gps) * flight.GlobalScale;
                 worldPos.y = terrainAlt;
 
                 int protoIndex = Random.Range(0, _treePrefabs.Length);
                 float scale = Random.Range(_randomScaleRange.x, _randomScaleRange.y) * flight.GlobalScale;
 
-                foreach (Terrain t in _terrains)
+                foreach (Terrain t in terrains)
                 {
                     if (!IsInsideTerrainBounds(t, worldPos))
                     {
@@ -187,11 +184,13 @@ namespace FlightReLive.Core.ProceduralTerrain
                         rotation = Random.Range(0f, 360f) * Mathf.Deg2Rad
                     };
 
-                    yield return (t, tree);
+                    result.Add((t, tree));
                     placed++;
                     break;
                 }
             }
+
+            return result;
         }
 
         /// <summary>
@@ -200,6 +199,7 @@ namespace FlightReLive.Core.ProceduralTerrain
         private bool IsInsideTerrainBounds(Terrain terrain, Vector3 worldPos)
         {
             Bounds b = new Bounds(terrain.transform.position + terrain.terrainData.size * 0.5f, terrain.terrainData.size);
+
             return b.Contains(worldPos);
         }
 
@@ -214,10 +214,25 @@ namespace FlightReLive.Core.ProceduralTerrain
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 p = contour[i];
-                if (p.x < minX) { minX = p.x; }
-                if (p.y < minZ) { minZ = p.y; }
-                if (p.x > maxX) { maxX = p.x; }
-                if (p.y > maxZ) { maxZ = p.y; }
+                if (p.x < minX)
+                { 
+                    minX = p.x;
+                }
+
+                if (p.y < minZ) 
+                {
+                    minZ = p.y;
+                }
+
+                if (p.x > maxX)
+                {
+                    maxX = p.x;
+                }
+
+                if (p.y > maxZ)
+                {
+                    maxZ = p.y;
+                }
             }
 
             Bounds b = new Bounds();
@@ -232,69 +247,18 @@ namespace FlightReLive.Core.ProceduralTerrain
         {
             bool inside = false;
             int j = polygon.Count - 1;
+
             for (int i = 0; i < polygon.Count; j = i++)
             {
                 Vector2 pi = polygon[i];
                 Vector2 pj = polygon[j];
 
-                if (((pi.y > point.y) != (pj.y > point.y)) &&
-                    (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y + 1e-12f) + pi.x))
+                if (((pi.y > point.y) != (pj.y > point.y)) && (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y + 1e-12f) + pi.x))
                 {
                     inside = !inside;
                 }
             }
             return inside;
-        }
-
-        /// <summary>
-        /// Approximate inverse of FlightData.ConvertGPSPositionToWorld for XZ (local around SceneCenterGPS).
-        /// </summary>
-        private static FlightGPSData WorldXZToGPSApprox(FlightData flight, Vector3 worldPos)
-        {
-            float xMeters = worldPos.x / flight.GlobalScale;
-            float zMeters = worldPos.z / flight.GlobalScale;
-
-            double lat0 = flight.SceneCenterGPS.x;
-            double lon0 = flight.SceneCenterGPS.y;
-
-            const double metersPerDegLat = 111132.0;
-            double metersPerDegLon = 111320.0 * Mathf.Cos((float)(lat0 * Mathf.Deg2Rad));
-
-            double dLat = zMeters / metersPerDegLat;
-            double dLon = (metersPerDegLon != 0.0) ? xMeters / metersPerDegLon : 0.0;
-
-            return new FlightGPSData(lat0 + dLat, lon0 + dLon);
-        }
-        #endregion
-
-        #region CALLBACKS
-        private void OnFlightEndLoading()
-        {
-            FlightData flight = LoadingManager.Instance.CurrentFlightData;
-            if (flight == null) { return; }
-
-            _terrains = ProceduralTerrainManager.Instance.UnityTerrains.ToArray();
-            if (_treePrefabs == null || _treePrefabs.Length == 0 || _terrains.Length == 0)
-            {
-                Debug.LogWarning("No tree prefabs or terrains available.");
-                return;
-            }
-
-            // Configure prototypes only once
-            _treePrototypes = new TreePrototype[_treePrefabs.Length];
-            for (int i = 0; i < _treePrefabs.Length; i++)
-            {
-                _treePrototypes[i] = new TreePrototype { prefab = _treePrefabs[i] };
-            }
-
-            foreach (Terrain t in _terrains)
-            {
-                t.terrainData.treePrototypes = _treePrototypes;
-                t.terrainData.treeInstances = new TreeInstance[0];
-            }
-
-            StopAllCoroutines();
-            StartCoroutine(SpawnTreesAsync(flight));
         }
         #endregion
     }

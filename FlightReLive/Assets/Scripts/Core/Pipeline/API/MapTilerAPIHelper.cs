@@ -274,7 +274,7 @@ namespace FlightReLive.Core.Pipeline.API
             foreach ((int x, int y) in coords)
             {
                 token.ThrowIfCancellationRequested();
-                ResourceResult<List<OpenMapTileFeature>> res = await DownloadAndParseOpenMapTileAsync(x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
+                ResourceResult<List<OpenMapTileFeature>> res = await DownloadAndParseOpenMapTileAsync(tile, x, y, zoom, token, p => onProgress?.Invoke((i + p) / coords.Count));
                 i++;
 
                 if (res != null && res.Data != null)
@@ -290,11 +290,13 @@ namespace FlightReLive.Core.Pipeline.API
             return new ResourceResult<List<OpenMapTileFeature>>(all, finalSource);
         }
 
-        private static async Task<ResourceResult<List<OpenMapTileFeature>>> DownloadAndParseOpenMapTileAsync(int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
+        private static async Task<ResourceResult<List<OpenMapTileFeature>>> DownloadAndParseOpenMapTileAsync(TileDefinition tile, int x, int y, int zoom, CancellationToken token, Action<float> onProgress)
         {
             if (await CacheManager.OpenMapTileDataExistsAsync(zoom, x, y))
             {
                 List<OpenMapTileFeature> cached = await CacheManager.LoadOpenMapTileDataAsync(zoom, x, y);
+                cached.ForEach(x => x.TileDefinition = tile);
+
                 return new ResourceResult<List<OpenMapTileFeature>>(cached, TileResourceSource.Cache);
             }
 
@@ -343,7 +345,8 @@ namespace FlightReLive.Core.Pipeline.API
                             Geometry = ConvertGeometry(feat),
                             RenderHeight = renderHeight,
                             RenderMinHeight = renderMinHeight,
-                            LayerName = layer.Name
+                            LayerName = layer.Name,
+                            TileDefinition = tile
                         });
                     }
                 }
@@ -361,7 +364,8 @@ namespace FlightReLive.Core.Pipeline.API
                         {
                             Geometry = ConvertGeometry(feat),
                             LayerName = layer.Name,
-                            Class = props.TryGetValue("class", out var v) ? v?.ToString() : null
+                            Class = props.TryGetValue("class", out var v) ? v?.ToString() : null,
+                            TileDefinition = tile
                         });
                     }
                 }
@@ -380,7 +384,8 @@ namespace FlightReLive.Core.Pipeline.API
                             Geometry = ConvertGeometry(feat),
                             LayerName = layer.Name,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
-                            Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null
+                            Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null,
+                            TileDefinition = tile
                         });
                     }
                 }
@@ -399,7 +404,8 @@ namespace FlightReLive.Core.Pipeline.API
                             Geometry = ConvertGeometry(feat),
                             LayerName = layer.Name,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
-                            IsIntermittent = props.TryGetValue("intermittent", out var it) && it?.ToString() == "1"
+                            IsIntermittent = props.TryGetValue("intermittent", out var it) && it?.ToString() == "1",
+                            TileDefinition = tile
                         });
                     }
                 }
@@ -418,7 +424,8 @@ namespace FlightReLive.Core.Pipeline.API
                             Geometry = ConvertGeometry(feat),
                             LayerName = layer.Name,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
-                            Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null
+                            Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null,
+                            TileDefinition = tile
                         });
                     }
                 }
@@ -436,7 +443,8 @@ namespace FlightReLive.Core.Pipeline.API
                         {
                             Geometry = ConvertGeometry(feat),
                             LayerName = layer.Name,
-                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            TileDefinition = tile
                         });
                     }
                 }

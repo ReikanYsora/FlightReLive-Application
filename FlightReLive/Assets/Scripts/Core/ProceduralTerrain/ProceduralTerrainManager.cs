@@ -1,15 +1,22 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.Settings;
+using Fu;
+using Fu.Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace FlightReLive.Core.ProceduralTerrain
 {
+    /// <summary>
+    /// Procedural terrain management
+    /// </summary>
+    [RequireComponent(typeof(ProceduralTreeManager))]
     public class ProceduralTerrainManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        private List<GameObject> _terrainsList;
+        private List<Terrain> _terrains;
 
         [Header("Material Settings")]
         [SerializeField] private Material _hdrpTerrainMaterial;
@@ -18,25 +25,7 @@ namespace FlightReLive.Core.ProceduralTerrain
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
 
-        internal IReadOnlyList<Terrain> UnityTerrains
-        {
-            get
-            {
-                List<Terrain> terrains = new List<Terrain>();
-
-                foreach (GameObject go in _terrainsList)
-                {
-                    Terrain t = go.GetComponent<Terrain>();
-
-                    if (t != null)
-                    {
-                        terrains.Add(t);
-                    }
-                }
-
-                return terrains;
-            }
-        }
+        internal ProceduralTreeManager TreeManager { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -50,7 +39,20 @@ namespace FlightReLive.Core.ProceduralTerrain
 
             Instance = this;
 
-            _terrainsList = new List<GameObject>();
+            TreeManager = GetComponent<ProceduralTreeManager>();
+            _terrains = new List<Terrain>();
+        }
+
+        private void Start()
+        {
+            SettingsManager.OnTreeVisibilityChanged += OnTreeVisibilityChanged;
+            SettingsManager.OnTreeQualityChanged += OnTreeQualityChanged;
+        }
+
+        private void OnDestroy()
+        {
+            SettingsManager.OnTreeVisibilityChanged -= OnTreeVisibilityChanged;
+            SettingsManager.OnTreeQualityChanged -= OnTreeQualityChanged;
         }
         #endregion
 
@@ -189,11 +191,6 @@ namespace FlightReLive.Core.ProceduralTerrain
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
                 terrain.materialTemplate = _hdrpTerrainMaterial;
                 terrain.drawHeightmap = true;
-                terrain.drawTreesAndFoliage = true;
-                terrain.treeDistance = Mathf.Max(terrain.treeDistance, 2000f);
-                terrain.treeBillboardDistance = Mathf.Max(terrain.treeBillboardDistance, 1000f);
-                terrain.treeCrossFadeLength = Mathf.Max(terrain.treeCrossFadeLength, 50f);
-                terrain.treeMaximumFullLODCount = Mathf.Max(terrain.treeMaximumFullLODCount, 10000);
                 terrain.allowAutoConnect = true;
                 terrain.groupingID = 0;
                 terrain.enabled = true;
@@ -228,7 +225,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 }
 
                 terrainData.SetAlphamaps(0, 0, alpha);
-                _terrainsList.Add(terrainGO);
+                _terrains.Add(terrain);
             }
 
             foreach (KeyValuePair<(int, int), Terrain> kvp in unityTerrains)
@@ -248,6 +245,10 @@ namespace FlightReLive.Core.ProceduralTerrain
             {
                 tile.SatelliteTexture = null;
             }
+
+            //Terrain is now ready, we can now start to paint tree
+            ApplyTreeQualitySettings();
+            TreeManager.LoadTrees(flightData, _terrains);
         }
 
         private Texture2D CreateARMTexture(int size = 64)
@@ -274,11 +275,93 @@ namespace FlightReLive.Core.ProceduralTerrain
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
-                for (int i = _terrainsList.Count - 1; i >= 0; i--)
+                for (int i = _terrains.Count - 1; i >= 0; i--)
                 {
-                    GameObject.Destroy(_terrainsList[i]);
+                    GameObject.Destroy(_terrains[i].gameObject);
                 }
+
+                _terrains.Clear();
             });
+        }
+
+        /// <summary>
+        /// Apply terrain tree quality settings (distance, LODs, billboard, fade length).
+        /// Values are tuned for Low → Ultra quality levels.
+        /// </summary>
+        private void ApplyTreeQualitySettings()
+        {
+            Settings.QualitySettings qualitySettings = SettingsManager.CurrentSettings.TreeQuality;
+
+            foreach (Terrain terrain in _terrains)
+            {
+                terrain.drawTreesAndFoliage = SettingsManager.CurrentSettings.TreeVisibility;
+
+                switch (qualitySettings)
+                {
+                    case Settings.QualitySettings.Low:
+                        terrain.treeDistance = 250f;
+                        terrain.treeBillboardDistance = 150f;
+                        terrain.treeCrossFadeLength = 5f;
+                        terrain.treeMaximumFullLODCount = 200;
+                        break;
+                    default:
+                    case Settings.QualitySettings.Normal:
+                        terrain.treeDistance = 1000f;
+                        terrain.treeBillboardDistance = 400f;
+                        terrain.treeCrossFadeLength = 20f;
+                        terrain.treeMaximumFullLODCount = 5000;
+                        break;
+
+                    case Settings.QualitySettings.High:
+                        terrain.treeDistance = 2000f;
+                        terrain.treeBillboardDistance = 800f;
+                        terrain.treeCrossFadeLength = 50f;
+                        terrain.treeMaximumFullLODCount = 20000;
+                        break;
+                }
+            }
+        }
+        #endregion
+
+        #region CALLBACKS
+        private void OnTreeVisibilityChanged(bool visibility)
+        {
+            bool treesEnabled = SettingsManager.CurrentSettings.TreeVisibility;
+
+            foreach (Terrain tempTerrain in _terrains)
+            {
+                tempTerrain.drawTreesAndFoliage = treesEnabled;
+            }
+        }
+
+        private void OnTreeQualityChanged(Settings.QualitySettings obj)
+        {
+            ApplyTreeQualitySettings();
+        }
+
+        #endregion
+
+        #region UI
+        internal void DisplayTreeSettings(FuGrid grid)
+        {
+            bool treesEnabled = SettingsManager.CurrentSettings.TreeVisibility;
+            grid.EnableNextElements();
+
+            if (grid.Toggle("Display trees", ref treesEnabled))
+            {
+                SettingsManager.SaveTreeVisibility(treesEnabled);
+            }
+
+            if (!treesEnabled)
+            {
+                grid.DisableNextElement();
+            }
+
+            grid.ButtonsGroup<Settings.QualitySettings>("Tree quality", (int newValue) =>
+            {
+                Settings.QualitySettings quality = (Settings.QualitySettings)newValue;
+                SettingsManager.SaveTreeQuality(quality);
+            }, () => SettingsManager.CurrentSettings.TreeQuality);
         }
         #endregion
     }

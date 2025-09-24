@@ -6,6 +6,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
+using FlightReLive.Core.ProceduralTerrain;
 
 namespace FlightReLive.Core.Environment
 {
@@ -311,10 +312,10 @@ namespace FlightReLive.Core.Environment
                 _contactShadows.length.Override(0.2f);
                 _contactShadows.distanceScaleFactor.Override(0.65f);
                 _contactShadows.minDistance.Override(0f);
-                _contactShadows.maxDistance.Override(1500f);
+                _contactShadows.maxDistance.Override(200f);
                 _contactShadows.fadeInDistance.overrideState = false;
                 _contactShadows.fadeDistance.overrideState = false;
-                _contactShadows.opacity.Override(0.9f);
+                _contactShadows.opacity.Override(0.8f);
                 _contactShadows.rayBias.overrideState = false;
                 _contactShadows.thicknessScale.overrideState = false;
                 _contactShadows.sampleCount = 10;
@@ -454,12 +455,13 @@ namespace FlightReLive.Core.Environment
 
         internal void DrawSceneSettings(FuLayout layout)
         {
-            layout.FramedText("Buildings");
+            layout.FramedText("Assets");
             layout.Separator();
 
-            using (FuGrid gridBuilding = new FuGrid("gridBuildingSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            using (FuGrid gridShowAssets = new FuGrid("gridAssetsSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                OpenMapTileManager.Instance.DisplayBuildingsSettings(gridBuilding);
+                OpenMapTileManager.Instance.DisplayBuildingsSettings(gridShowAssets);
+                ProceduralTerrainManager.Instance.DisplayTreeSettings(gridShowAssets);
             }
         }
         #endregion

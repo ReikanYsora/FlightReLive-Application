@@ -62,6 +62,8 @@ namespace FlightReLive.Core.Settings
         public static event Action<Color> OnPathRemainingColor1Changed;
         public static event Action<Color> OnPathRemainingColor2Changed;
         public static event Action<bool> OnBuildingVisibilityChanged;
+        public static event Action<bool> OnTreeVisibilityChanged;
+        public static event Action<QualitySettings> OnTreeQualityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnPostExposureIntensityChanged;
         public static event Action<float> OnContrastIntensityChanged;
@@ -179,6 +181,12 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
+
+        internal static void LoadTreeVisibility() =>
+            CurrentSettings.TreeVisibility = PlayerPrefs.GetInt(nameof(Settings.TreeVisibility), 1) == 1;
+
+        internal static void LoadTreeQuality() =>
+            CurrentSettings.TreeQuality = (QualitySettings)PlayerPrefs.GetInt(nameof(Settings.TreeQuality), (int)QualitySettings.Normal);
 
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
@@ -388,6 +396,22 @@ namespace FlightReLive.Core.Settings
             OnBuildingVisibilityChanged?.Invoke(value);
         }
 
+        internal static void SaveTreeVisibility(bool value)
+        {
+            CurrentSettings.TreeVisibility = value;
+            PlayerPrefs.SetInt(nameof(Settings.TreeVisibility), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnTreeVisibilityChanged?.Invoke(value);
+        }
+
+        internal static void SaveTreeQuality(QualitySettings value)
+        {
+            CurrentSettings.TreeQuality = value;
+            PlayerPrefs.SetInt(nameof(Settings.TreeQuality), (int)value);
+            PlayerPrefs.Save();
+            OnTreeQualityChanged?.Invoke(value);
+        }
+
         internal static void SaveVignettingIntensity(float value)
         {
             CurrentSettings.VignettingIntensity = value;
@@ -451,6 +475,8 @@ namespace FlightReLive.Core.Settings
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
             LoadBuildingVisibility();
+            LoadTreeVisibility();
+            LoadTreeQuality();
             LoadVignettingIntensity();
             LoadPostExposureIntensity();
             LoadContrastIntensity();
@@ -486,6 +512,8 @@ namespace FlightReLive.Core.Settings
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
             SaveBuildingVisibility(true);
+            SaveTreeVisibility(true);
+            SaveTreeQuality(QualitySettings.Normal);
             SaveVignettingIntensity(0.3f);
             SavePostExposureIntensity(0f);
             SaveContrastIntensity(40f);

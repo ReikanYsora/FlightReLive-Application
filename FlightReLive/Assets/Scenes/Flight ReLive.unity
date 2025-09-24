@@ -896,6 +896,7 @@ GameObject:
   m_Component:
   - component: {fileID: 739676617}
   - component: {fileID: 739676618}
+  - component: {fileID: 739676619}
   m_Layer: 0
   m_Name: ProceduralTerrainManager
   m_TagString: Untagged
@@ -931,6 +932,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.ProceduralTerrain.TerrainManager
   _hdrpTerrainMaterial: {fileID: 2100000, guid: 22ff8771d87ef27429e670136399094b, type: 2}
+--- !u!114 &739676619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 739676616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f233af002f2bce448ef9484d6a4f11d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.ProceduralTerrain.ProceduralTreeManager
+  _treePrefabs:
+  - {fileID: 2503636403554334455, guid: 451d860cead90b64bbbab1639909594c, type: 3}
+  - {fileID: 1127992084609228112, guid: 34776a9356ed54141bf7fed4fded28a0, type: 3}
+  - {fileID: 1722164173232303198, guid: 942660f4ebcf9cd438f45122b0ad63eb, type: 3}
+  - {fileID: 8316334779356437779, guid: 35e087cfaa0f57244b67615777188d3e, type: 3}
+  _treeDensity: 0.05
+  _randomScaleRange: {x: 0.8, y: 1.3}
+  _maxTreesPerContour: 5000
 --- !u!1 &796242729
 GameObject:
   m_ObjectHideFlags: 0
@@ -1655,6 +1676,7 @@ MonoBehaviour:
   _mainLight: {fileID: 954186476}
   _reliveCamera: {fileID: 796242730}
   _povCamera: {fileID: 137108794}
+  _lensFlare: {fileID: 954186474}
 --- !u!1 &1289900096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1976,15 +1998,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ace06e9ea9f002f41a8ae3182016ae84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.OpenMapTile.OpenMapTileManager
-  _zoneAltitude: 300
-  _minExtrusion: -500
-  _maxExtrusion: 500
   _openMapTileBuildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
-  _openMapTileLandUseMaterial: {fileID: 2100000, guid: fd7f5a24f679fc241a74f2971cd72e30, type: 2}
-  _openMapTileWaterMaterial: {fileID: 2100000, guid: 91ae304a9de66ca4aafede829e712a9d, type: 2}
-  _openMapTileLandCoverMaterial: {fileID: 2100000, guid: e214437c8cd661942bbef3a7ed9907fc, type: 2}
-  _openMapTileParkMaterial: {fileID: 2100000, guid: 987d1916d1c7f7c44bf509f18907a926, type: 2}
-  _openMapTileAerowayMaterial: {fileID: 2100000, guid: 670db715b43ddbd4981ec8222ba1acb7, type: 2}
 --- !u!1 &2125856381
 GameObject:
   m_ObjectHideFlags: 0

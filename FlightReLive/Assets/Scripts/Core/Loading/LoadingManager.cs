@@ -22,10 +22,6 @@ namespace FlightReLive.Core.Loading
 {
     public class LoadingManager : MonoBehaviour
     {
-        #region CONSTANTS
-        private const int PADDING = 4;
-        #endregion
-
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
         private string _currentTile;
@@ -207,6 +203,8 @@ namespace FlightReLive.Core.Loading
 
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {
+            int tilePadding = SettingsManager.CurrentSettings.TilePadding;
+
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
@@ -258,10 +256,10 @@ namespace FlightReLive.Core.Loading
             int originalMinTileY = baseMinTileY;
             int originalMaxTileY = baseMaxTileY;
 
-            int minTileX = originalMinTileX - PADDING;
-            int maxTileX = originalMaxTileX + PADDING;
-            int minTileY = originalMinTileY - PADDING;
-            int maxTileY = originalMaxTileY + PADDING;
+            int minTileX = originalMinTileX - tilePadding;
+            int maxTileX = originalMaxTileX + tilePadding;
+            int minTileY = originalMinTileY - tilePadding;
+            int maxTileY = originalMaxTileY + tilePadding;
 
             for (int x = minTileX; x <= maxTileX; x++)
             {

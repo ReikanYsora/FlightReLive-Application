@@ -17,6 +17,26 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
+
+        internal IReadOnlyList<Terrain> UnityTerrains
+        {
+            get
+            {
+                List<Terrain> terrains = new List<Terrain>();
+
+                foreach (GameObject go in _terrainsList)
+                {
+                    Terrain t = go.GetComponent<Terrain>();
+
+                    if (t != null)
+                    {
+                        terrains.Add(t);
+                    }
+                }
+
+                return terrains;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -170,9 +190,13 @@ namespace FlightReLive.Core.ProceduralTerrain
                 terrain.materialTemplate = _hdrpTerrainMaterial;
                 terrain.drawHeightmap = true;
                 terrain.drawTreesAndFoliage = true;
-                terrain.enabled = true;
+                terrain.treeDistance = Mathf.Max(terrain.treeDistance, 2000f);
+                terrain.treeBillboardDistance = Mathf.Max(terrain.treeBillboardDistance, 1000f);
+                terrain.treeCrossFadeLength = Mathf.Max(terrain.treeCrossFadeLength, 50f);
+                terrain.treeMaximumFullLODCount = Mathf.Max(terrain.treeMaximumFullLODCount, 10000);
                 terrain.allowAutoConnect = true;
                 terrain.groupingID = 0;
+                terrain.enabled = true;
 
                 float posX = (tile.X - minX) * terrainSize + centerOffsetX;
                 float posZ = (maxY - tile.Y) * terrainSize + centerOffsetZ;
@@ -226,13 +250,13 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
         }
 
-        private Texture2D CreateARMTexture(int size = 4)
+        private Texture2D CreateARMTexture(int size = 64)
         {
             //Small texture (4x4) since it is uniform, no need for full res
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
             tex.wrapMode = TextureWrapMode.Repeat;
             tex.filterMode = FilterMode.Bilinear;
-            Color arm = new Color(0.3f, 0.2f, 0.1f, 1.0f);
+            Color arm = new Color(0f, 0f, 0f, 0f);
             Color[] pixels = new Color[size * size];
 
             for (int i = 0; i < pixels.Length; i++)

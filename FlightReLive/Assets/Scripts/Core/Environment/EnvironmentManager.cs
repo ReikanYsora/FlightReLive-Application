@@ -11,15 +11,12 @@ namespace FlightReLive.Core.Environment
 {
     public class EnvironmentManager : MonoBehaviour
     {
-        #region CONSTANTS
-        private const float BASE_LIGHT_LUX = 10000f;
-        #endregion
-
         #region ATTRIBUTES
         [Header("Light & Camera")]
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
+        [SerializeField] private LensFlareComponentSRP _lensFlare;
 
         //HDRP volume overrides
         private Volume _globalVolume;
@@ -61,16 +58,16 @@ namespace FlightReLive.Core.Environment
 
         private void Start()
         {
-            SettingsManager.OnSunIntensityChanged += OnGlobalIntensityChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
             SettingsManager.OnPostExposureIntensityChanged += OnPostExposureIntensityChanged;
             SettingsManager.OnContrastIntensityChanged += OnContrastIntensityChanged;
             SettingsManager.OnSaturationIntensityChanged += OnSaturationIntensityChanged;
+
+            UninitializedVolumeProfile();
         }
 
         private void OnDestroy()
         {
-            SettingsManager.OnSunIntensityChanged -= OnGlobalIntensityChanged;
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
             SettingsManager.OnPostExposureIntensityChanged -= OnPostExposureIntensityChanged;
             SettingsManager.OnContrastIntensityChanged -= OnContrastIntensityChanged;
@@ -149,6 +146,12 @@ namespace FlightReLive.Core.Environment
             _colorAdjustments = null;
             _vignette = null;
             RenderSettings.sun = null;
+            
+            if (_lensFlare != null)
+            {
+                _lensFlare.enabled = false;
+            }
+
         }
 
         /// <summary>
@@ -187,6 +190,7 @@ namespace FlightReLive.Core.Environment
         {
             DateTime localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, SettingsManager.CurrentSettings.UserTimeZone);
             int hour = localTime.Hour;
+            float elevation = Mathf.Clamp01(sun.Elevation / 90f);
 
             if (_globalVolume == null)
             {
@@ -225,6 +229,8 @@ namespace FlightReLive.Core.Environment
             {
                 _exposure.mode.overrideState = true;
                 _exposure.mode.value = ExposureMode.Automatic;
+                _exposure.limitMin.Override(-2f);
+                _exposure.limitMax.Override(1f);
             }
 
             if (_visualEnvironment != null)
@@ -245,11 +251,11 @@ namespace FlightReLive.Core.Environment
                 _sky.atmosphericScattering.Override(true);
                 _sky.renderingMode.Override(PhysicallyBasedSky.RenderingMode.Default);
                 _sky.planetRotation.Override(Vector3.zero);
-                _sky.aerosolDensity.Override(0.012f);
                 _sky.aerosolTint.Override(Color.white);
                 _sky.aerosolAnisotropy.Override(0.8f);
                 _sky.aerosolMaximumAltitude.Override(8000f);
-                _sky.ozoneDensityDimmer.Override(1f);
+                _sky.aerosolDensity.Override(Mathf.Lerp(0.01f, 0.02f, elevation));
+                _sky.ozoneDensityDimmer.Override(Mathf.Lerp(0.8f, 1.2f, elevation));
                 _sky.colorSaturation.Override(1f);
                 _sky.alphaSaturation.Override(1f);
                 _sky.alphaMultiplier.Override(1f);
@@ -257,6 +263,7 @@ namespace FlightReLive.Core.Environment
                 _sky.horizonZenithShift.Override(0f);
                 _sky.updateMode.Override(EnvironmentUpdateMode.Realtime);
                 _sky.updatePeriod.Override(0f);
+
             }
 
             if (_fog != null)
@@ -340,6 +347,16 @@ namespace FlightReLive.Core.Environment
             {
                 RenderSettings.sun = _mainLight;
             }
+
+            if (_lensFlare != null)
+            {
+                _lensFlare.intensity = Mathf.Lerp(2f, 3f, Mathf.Pow(elevation, 3f));
+                _lensFlare.scale = Mathf.Lerp(0.5f, 1.5f, Mathf.Pow(elevation, 0.3f));
+                _lensFlare.occlusionRadius = Mathf.Lerp(0.3f, 1f, elevation);
+                _lensFlare.attenuationByLightShape = true;
+                _lensFlare.environmentOcclusion = true;
+                _lensFlare.enabled = true;
+            }
         }
 
         private void OrientMainLight(SunPosition sun)
@@ -351,24 +368,15 @@ namespace FlightReLive.Core.Environment
 
             float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
             float elevationRad = Mathf.Deg2Rad * sun.Elevation;
+            float elevation = Mathf.Clamp01(sun.Elevation / 90f);
             Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
             _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
-            _mainLight.intensity = SettingsManager.CurrentSettings.SunIntensity * BASE_LIGHT_LUX;
+            _mainLight.intensity = Mathf.Lerp(2f, 3f, Mathf.Pow(elevation, 3f));
             RenderSettings.sun = _mainLight;
         }
         #endregion
 
         #region CALLBACKS
-        private void OnGlobalIntensityChanged(float globalIntensity)
-        {
-            if (_mainLight == null)
-            {
-                return;
-            }
-
-            _mainLight.intensity = SettingsManager.CurrentSettings.SunIntensity * BASE_LIGHT_LUX;
-        }
-
         private void OnPostExposureIntensityChanged(float postExposure)
         {
             if (_colorAdjustments != null)
@@ -406,20 +414,6 @@ namespace FlightReLive.Core.Environment
         #region UI
         internal void DrawPostProcessingSettings(FuLayout layout)
         {
-            layout.FramedText("Scene");
-            layout.Separator();
-
-            using (FuGrid gridSunIntensity = new FuGrid("gridSunIntensitySettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
-            {
-                float sunIntensity = SettingsManager.CurrentSettings.SunIntensity;
-
-                if (gridSunIntensity.Slider("Sun intensity", ref sunIntensity, 0.6f, 1f, 0.01f))
-                {
-                    SettingsManager.SaveSunIntensity(sunIntensity);
-                }
-            }
-
-            layout.Separator();
             layout.FramedText("Vignetting");
             layout.Separator();
 

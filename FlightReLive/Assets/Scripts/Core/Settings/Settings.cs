@@ -17,6 +17,7 @@ namespace FlightReLive.Core.Settings
         public float CameraRotationSpeed;
         public float CameraZoomSpeed;
         public float CameraInertia;
+        public int TilePadding;
         public TimeZoneInfo UserTimeZone;
         public DateFormatStyle DateFormatStyle;
         public TimeFormatStyle TimeFormatStyle;
@@ -25,20 +26,15 @@ namespace FlightReLive.Core.Settings
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
         public float GlobalScale;
-        public Color CameraBackgroundColor;
         public float PathWidth;
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
-        public float POIScale;
-        public float POIHeight;
-        public bool POIVisibility;
         public float VignettingIntensity;
-        public string CurrentVersion;
-        public float SunIntensity;
         public float PostExposureIntensity;
         public float ContrastIntensity;
         public float SaturationIntensity;
+        public string CurrentVersion { set; get; }
         #endregion
     }
 }

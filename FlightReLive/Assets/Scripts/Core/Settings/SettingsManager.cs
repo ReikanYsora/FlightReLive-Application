@@ -7,7 +7,6 @@ using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using TND.Upscaling.Framework;
 using UnityEngine;
@@ -50,6 +49,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnCameraRotationSpeedChanged;
         public static event Action<float> OnCameraZoomSpeedChanged;
         public static event Action<float> OnCameraInertiaChanged;
+        public static event Action<int> OnTilePaddingChanged;
         public static event Action<TimeZoneInfo> OnTimeZoneChanged;
         public static event Action<DateFormatStyle> OnDateFormatStyleChanged;
         public static event Action<TimeFormatStyle> OnTimeFormatStyleChanged;
@@ -61,12 +61,8 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnPathWidthChanged;
         public static event Action<Color> OnPathRemainingColor1Changed;
         public static event Action<Color> OnPathRemainingColor2Changed;
-        public static event Action<bool> OnPOIVisibilityChanged;
-        public static event Action<float> OnPOIScaleChanged;
-        public static event Action<float> OnPOIHeightChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
-        public static event Action<float> OnSunIntensityChanged;
         public static event Action<float> OnPostExposureIntensityChanged;
         public static event Action<float> OnContrastIntensityChanged;
         public static event Action<float> OnSaturationIntensityChanged;
@@ -107,6 +103,11 @@ namespace FlightReLive.Core.Settings
         internal static void LoadCameraInertia()
         {
             CurrentSettings.CameraInertia = PlayerPrefs.GetFloat(nameof(Settings.CameraInertia), 0.1f);
+        }
+
+        internal static void LoadTilePadding()
+        {
+            CurrentSettings.TilePadding = PlayerPrefs.GetInt(nameof(Settings.TilePadding), 3);
         }
 
         internal static void LoadTimeZone()
@@ -176,15 +177,6 @@ namespace FlightReLive.Core.Settings
             }
         }
 
-        internal static void LoadPOIVisibility() =>
-            CurrentSettings.POIVisibility = PlayerPrefs.GetInt(nameof(Settings.POIVisibility), 1) == 1;
-
-        internal static void LoadPOIScale() =>
-            CurrentSettings.POIScale = PlayerPrefs.GetFloat(nameof(Settings.POIScale), 0.5f);
-
-        internal static void LoadPOIHeight() =>
-            CurrentSettings.POIHeight = PlayerPrefs.GetFloat(nameof(Settings.POIHeight), 5f);
-
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
 
@@ -193,9 +185,6 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadVignettingIntensity() =>
             CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), 0.3f);
-
-        internal static void LoadSunIntensity() =>
-            CurrentSettings.SunIntensity = PlayerPrefs.GetFloat(nameof(Settings.SunIntensity), 0.8f);
 
         internal static void LoadPostExposureIntensity() =>
             CurrentSettings.PostExposureIntensity = PlayerPrefs.GetFloat(nameof(Settings.PostExposureIntensity), 0);
@@ -284,6 +273,14 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetFloat(nameof(Settings.CameraInertia), value);
             PlayerPrefs.Save();
             OnCameraInertiaChanged?.Invoke(value);
+        }
+
+        internal static void SaveTilePadding(int value)
+        {
+            CurrentSettings.TilePadding = value;
+            PlayerPrefs.SetFloat(nameof(Settings.TilePadding), value);
+            PlayerPrefs.Save();
+            OnTilePaddingChanged?.Invoke(value);
         }
 
         internal static void SaveTimeZone(TimeZoneInfo timeZone)
@@ -383,30 +380,6 @@ namespace FlightReLive.Core.Settings
             OnPathRemainingColor2Changed?.Invoke(color);
         }
 
-        internal static void SavePOIScale(float value)
-        {
-            CurrentSettings.POIScale = value;
-            PlayerPrefs.SetFloat(nameof(Settings.POIScale), value);
-            PlayerPrefs.Save();
-            OnPOIScaleChanged?.Invoke(value);
-        }
-
-        internal static void SavePOIVisibility(bool value)
-        {
-            CurrentSettings.POIVisibility = value;
-            PlayerPrefs.SetInt(nameof(Settings.POIVisibility), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnPOIVisibilityChanged?.Invoke(value);
-        }
-
-        internal static void SavePOIHeight(float value)
-        {
-            CurrentSettings.POIHeight = value;
-            PlayerPrefs.SetFloat(nameof(Settings.POIHeight), value);
-            PlayerPrefs.Save();
-            OnPOIHeightChanged?.Invoke(value);
-        }
-
         internal static void SaveBuildingVisibility(bool value)
         {
             CurrentSettings.BuildingVisibility = value;
@@ -421,14 +394,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetFloat(nameof(Settings.VignettingIntensity), value);
             PlayerPrefs.Save();
             OnVignettingIntensityChanged?.Invoke(value);
-        }
-
-        internal static void SaveSunIntensity(float value)
-        {
-            CurrentSettings.SunIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.SunIntensity), value);
-            PlayerPrefs.Save();
-            OnSunIntensityChanged?.Invoke(value);
         }
 
         internal static void SavePostExposureIntensity(float value)
@@ -473,6 +438,7 @@ namespace FlightReLive.Core.Settings
             LoadCameraRotationSpeed();
             LoadCameraZoomSpeed();
             LoadCameraInertia();
+            LoadTilePadding();
             LoadTimeZone();
             LoadDateFormatStyle();
             LoadTimeFormatStyle();
@@ -484,12 +450,8 @@ namespace FlightReLive.Core.Settings
             LoadPathWidth();
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
-            LoadPOIVisibility();
-            LoadPOIScale();
-            LoadPOIHeight();
             LoadBuildingVisibility();
             LoadVignettingIntensity();
-            LoadSunIntensity();
             LoadPostExposureIntensity();
             LoadContrastIntensity();
             LoadSaturationIntensity();
@@ -508,6 +470,7 @@ namespace FlightReLive.Core.Settings
             SaveCameraRotationSpeed(1f);
             SaveCameraZoomSpeed(1f);
             SaveCameraInertia(0.1f);
+            SaveTilePadding(3);
             string timeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? "Romance Standard Time"
                 : "Europe/Paris";
@@ -522,12 +485,8 @@ namespace FlightReLive.Core.Settings
             SavePathWidth(0.15f);
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
-            SavePOIVisibility(true);
-            SavePOIScale(0.5f);
-            SavePOIHeight(5f);
             SaveBuildingVisibility(true);
             SaveVignettingIntensity(0.3f);
-            SaveSunIntensity(0.8f);
             SavePostExposureIntensity(0f);
             SaveContrastIntensity(40f);
             SaveSaturationIntensity(5f);
@@ -979,12 +938,21 @@ namespace FlightReLive.Core.Settings
 
                         string mapTilerAPIKey = CurrentSettings.MapTilerAPIKey;
                         apiGrid.SetNextElementToolTipWithLabel("MapTiler API key required for downloading satellite, topographic, buildings, hillshade images.\nA MapTiler account is required (free for less than 100,000 tile downloads per month).");
+                        
                         if (apiGrid.TextInput("MapTiler API key", ref mapTilerAPIKey, flags: FuInputTextFlags.Password))
                         {
                             SaveMapTilerApiKey(mapTilerAPIKey);
                         }
                         apiGrid.NextColumn();
                         apiGrid.TextURL("Follow this link to create a MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
+
+                        int tilePadding = CurrentSettings.TilePadding;
+                        apiGrid.SetNextElementToolTipWithLabel("Defines the number of additional tile rows around the flight area. Increases the realism of the scene but affects performance and the amount of resources downloaded.");
+                        
+                        if (apiGrid.Slider("TilePadding", ref tilePadding, 1, 5))
+                        {
+                            SaveTilePadding(tilePadding);
+                        }
                     }
 
                     Fugui.PopFont();

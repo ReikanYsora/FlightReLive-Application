@@ -3,6 +3,7 @@ using FlightReLive.Core.Settings;
 using FlightReLive.Core.Version;
 using Fu;
 using Fu.Framework;
+using System;
 using ImGuiNET;
 using TND.Upscaling.Framework;
 using UnityEngine;
@@ -53,6 +54,9 @@ namespace FlightReLive.Core
 
         private void Start()
         {
+            //Save current version
+            SettingsManager.SaveCurrentVersion(Application.version);
+
             //Initialize cache
             CacheManager.Initialize();
 
@@ -137,17 +141,25 @@ namespace FlightReLive.Core
 
             if (latestVersion == null)
             {
-                Debug.LogWarning("Impossible de récupérer la dernière version.");
+                Debug.LogWarning("Unable to retrieve the latest version.");
                 return;
             }
 
             string localVersion = Application.version;
             string remoteVersion = latestVersion.GetFullVersion();
 
-            if (localVersion != remoteVersion)
+            if (IsRemoteVersionNewer(localVersion, remoteVersion))
             {
                 Fugui.Notify("Update Available", $"A newer version of Flight ReLive is available for your system ({latestVersion.DisplayName}).\nWe recommend updating to enjoy the latest improvements and features.", StateType.Info);
             }
+        }
+
+        private bool IsRemoteVersionNewer(string localVersion, string remoteVersion)
+        {
+            System.Version local = new System.Version(localVersion);
+            System.Version remote = new System.Version(remoteVersion);
+
+            return remote > local;
         }
 
         internal void QuitApplication()

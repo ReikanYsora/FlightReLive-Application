@@ -1,6 +1,5 @@
 ﻿using Clipper2Lib;
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
@@ -78,13 +77,11 @@ namespace FlightReLive.Core.OpenMapTile
         private void Start()
         {
             SettingsManager.OnBuildingVisibilityChanged += OnBuildingVisibilityChanged;
-            LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
         }
 
         private void OnDestroy()
         {
             SettingsManager.OnBuildingVisibilityChanged -= OnBuildingVisibilityChanged;
-            LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
         }
         #endregion
 
@@ -96,11 +93,33 @@ namespace FlightReLive.Core.OpenMapTile
                 return;
             }
 
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
-            {
-                AccumulateFeatures(tile, flight);
-            });
+            AccumulateFeatures(tile, flight);
         }
+
+        internal void Load(FlightData data)
+        {
+            BuildMergedZones(data);
+            DisplayBuildingsFromSettings();
+        }
+
+        internal void Unload()
+        {
+            foreach (GameObject go in _openMapTileObjects)
+            {
+                _openMapTileZonePool.Return(go);
+            }
+
+            _openMapTileObjects.Clear();
+            _tileToOpenMapTileZones.Clear();
+
+            foreach (OpenMapTileZone z in _zoneContours.Keys)
+            {
+                _zoneContours[z].Clear();
+            }
+        }
+        #endregion
+
+        #region GLOBALS
 
         /// <summary>
         /// Accumulates features. Buildings are created immediately,
@@ -114,21 +133,25 @@ namespace FlightReLive.Core.OpenMapTile
             {
                 if (feature is BuildingFeature building)
                 {
-                    GenerateBuilding(building, tile, flight, createdForTile);
+                    //Building need to be on main thread to be created
+                    UnityMainThreadDispatcher.AddActionInMainThread(() =>
+                    {
+                        GenerateBuilding(building, tile, flight, createdForTile);
+                    });
                 }
                 else
                 {
                     List<List<SerializablePoint2D>> geometries = feature.Geometry;
 
                     if (geometries == null)
-                    { 
+                    {
                         continue;
                     }
 
                     foreach (List<SerializablePoint2D> ringRaw in geometries)
                     {
                         if (ringRaw == null || ringRaw.Count < 3)
-                        { 
+                        {
                             continue;
                         }
 
@@ -138,14 +161,14 @@ namespace FlightReLive.Core.OpenMapTile
                         ring = ClipRingToExtent(ring);
 
                         if (ring.Count < 3)
-                        { 
+                        {
                             continue;
                         }
 
                         List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
 
                         if (contour == null || contour.Count < 3)
-                        { 
+                        {
                             continue;
                         }
 
@@ -234,22 +257,6 @@ namespace FlightReLive.Core.OpenMapTile
                         CreateZone(zoneType, meshData, zonePosition);
                     }
                 }
-            }
-        }
-
-        internal void Unload()
-        {
-            foreach (GameObject go in _openMapTileObjects)
-            {
-                _openMapTileZonePool.Return(go);
-            }
-
-            _openMapTileObjects.Clear();
-            _tileToOpenMapTileZones.Clear();
-
-            foreach (OpenMapTileZone z in _zoneContours.Keys)
-            {
-                _zoneContours[z].Clear();
             }
         }
         #endregion
@@ -876,12 +883,6 @@ namespace FlightReLive.Core.OpenMapTile
         #region CALLBACKS / VISIBILITY
         private void OnBuildingVisibilityChanged(bool buildingVisible)
         {
-            DisplayBuildingsFromSettings();
-        }
-
-        private void OnFlightEndLoading()
-        {
-            BuildMergedZones(LoadingManager.Instance.CurrentFlightData);
             DisplayBuildingsFromSettings();
         }
 

@@ -86,13 +86,22 @@ namespace FlightReLive.Core.Pipeline.API
         #region SATELLITE
         private static async Task<ResourceResult<Texture2D>> DownloadSatelliteAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
-            int targetZoom = tile.Priority switch
+            int targetZoom;
+
+            switch (tile.Priority)
             {
-                0 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0,
-                1 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1,
-                2 => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_2,
-                _ => MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_3,
-            };
+                case 0:
+                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0;
+                    break;
+                case 1:
+                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1;
+                    break;
+                default:
+                case 2:
+                case 3:
+                    targetZoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_OTHER;
+                    break;
+            }
 
             HashSet<(int x, int y)> coords = MapTools.GetTilesFromZoomLevel(tile, targetZoom);
             Dictionary<(int, int), Texture2D> downloaded = new Dictionary<(int, int), Texture2D>(coords.Count);

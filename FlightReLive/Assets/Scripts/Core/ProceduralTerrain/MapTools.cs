@@ -11,8 +11,7 @@ namespace FlightReLive.Core.ProceduralTerrain
         internal static readonly int TILE_RESOLUTION = 512;
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_0 = 18;
         internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_1 = 17;
-        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_2 = 14;
-        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_3 = 14;
+        internal static readonly int ZOOM_LEVEL_SATELLITE_PRIORITY_OTHER = 14;
         internal static readonly int ZOOM_LEVEL_HEIGHTMAP = 14;
         internal static readonly int ZOOM_LEVEL_OPENTILEMAP = 14;
         #endregion

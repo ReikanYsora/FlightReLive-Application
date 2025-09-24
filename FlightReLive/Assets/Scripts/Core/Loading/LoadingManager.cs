@@ -189,6 +189,7 @@ namespace FlightReLive.Core.Loading
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
+                OpenMapTileManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}", StateType.Info);
                 OnFlightEndLoading?.Invoke();

@@ -31,6 +31,7 @@ namespace FlightReLive.Core.Environment
         private ContactShadows _contactShadows;
         private ColorAdjustments _colorAdjustments;
         private Vignette _vignette;
+        private Bloom _bloom;
         #endregion
 
         #region PROPERTIES
@@ -146,6 +147,7 @@ namespace FlightReLive.Core.Environment
             _contactShadows = null;
             _colorAdjustments = null;
             _vignette = null;
+            _bloom = null;
             RenderSettings.sun = null;
             
             if (_lensFlare != null)
@@ -211,6 +213,7 @@ namespace FlightReLive.Core.Environment
                 _contactShadows = _globalVolumeProfile.Add<ContactShadows>(true);
                 _colorAdjustments = _globalVolumeProfile.Add<ColorAdjustments>(true);
                 _vignette = _globalVolumeProfile.Add<Vignette>(true);
+                _bloom = _globalVolumeProfile.Add<Bloom>(true);
             }
 
             if (_reliveCamera != null)
@@ -340,6 +343,16 @@ namespace FlightReLive.Core.Environment
                 _vignette.smoothness.overrideState = false;
                 _vignette.roundness.overrideState = false;
                 _vignette.rounded.overrideState = false;
+            }
+
+            if (_bloom)
+            {
+                _bloom.threshold.Override(0.2f);
+                _bloom.intensity.Override(0.1f);
+                _bloom.tint.overrideState = false;
+                _bloom.scatter.overrideState = false;
+                _bloom.dirtIntensity.overrideState = false;
+                _bloom.dirtTexture.overrideState = false;
             }
 
             _globalVolume.enabled = true;

@@ -1977,7 +1977,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ace06e9ea9f002f41a8ae3182016ae84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.OpenMapTile.OpenMapTileManager
-  _openMapTileBuildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
+  _zoneExtrusionHeight: 2
+  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
+  _landUseMaterial: {fileID: 2100000, guid: 45805eb837424e34c893d01e4dcd772b, type: 2}
+  _landCoverMaterial: {fileID: 2100000, guid: cfff60ddf693cad4db86a838dfaa98d1, type: 2}
+  _waterMaterial: {fileID: 2100000, guid: c4a95e27124a44144ad342182604ac43, type: 2}
+  _parkMaterial: {fileID: 2100000, guid: 99f361c891f7730498ac32b7b1b0a2b6, type: 2}
+  _aerowayMaterial: {fileID: 2100000, guid: a7dcf8698ef48c645acd677557450b09, type: 2}
 --- !u!1 &2125856381
 GameObject:
   m_ObjectHideFlags: 0

@@ -6,16 +6,18 @@ using Fu.Framework;
 using LibTessDotNet;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
+using Clipper2Lib;
 
 namespace FlightReLive.Core.OpenMapTile
 {
     /// <summary>
     /// Manager responsible for collecting OpenMapTile features (buildings + zones).
-    /// Zones are stored only for semantic use (procedural assets), not rendered.
-    /// Buildings are extruded and displayed.
+    /// Buildings are extruded and displayed immediately.
+    /// Zones are collected, then fused and extruded on demand via GenerateZones().
     /// </summary>
     [RequireComponent(typeof(OpenMapTilePool))]
     internal class OpenMapTileManager : MonoBehaviour
@@ -25,14 +27,28 @@ namespace FlightReLive.Core.OpenMapTile
         #region CONSTANTS
         private const float OPENMAPTILE_EXTENT = 4096f;
         private const float BOTTOM_EXTRUSION = 1f;
+        private const double CLIP_SCALE = 1000.0; // scale factor for Clipper2 (int coordinates)
         #endregion
 
         #region ATTRIBUTES
-        [SerializeField] private Material _openMapTileBuildingMaterial;
+        [Header("Zone settings")]
+        [Tooltip("Constant extrusion height (in world units) for all zones except buildings.")]
+        [SerializeField] private float _zoneExtrusionHeight = 2f;
+
+        [Header("Materials")]
+        [SerializeField] private Material _buildingMaterial;
+        [SerializeField] private Material _landUseMaterial;
+        [SerializeField] private Material _landCoverMaterial;
+        [SerializeField] private Material _waterMaterial;
+        [SerializeField] private Material _parkMaterial;
+        [SerializeField] private Material _aerowayMaterial;
+
         private OpenMapTilePool _openMapTileZonePool;
         private readonly List<GameObject> _openMapTileObjects = new List<GameObject>();
-        private readonly Dictionary<(int, int), List<GameObject>> _tileToOpenMapTileZones = new Dictionary<(int, int), List<GameObject>>();
-        private readonly Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>> _zoneContours  = new Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>>();
+        private readonly Dictionary<(int, int), List<GameObject>> _tileToOpenMapTileZones =
+            new Dictionary<(int, int), List<GameObject>>();
+        private readonly Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>> _zoneContours =
+            new Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>>();
         #endregion
 
         #region PROPERTIES
@@ -72,17 +88,15 @@ namespace FlightReLive.Core.OpenMapTile
         internal void LoadTile(TileDefinition tile, FlightData flight)
         {
             if (tile == null || tile.Features == null || tile.Features.Count == 0)
-            {
-
-            }
+                return;
 
             AccumulateFeatures(tile, flight);
         }
 
         internal void Load(FlightData data)
         {
-            // Only buildings are generated.
             DisplayBuildingsFromSettings();
+            GenerateZones(data);
         }
 
         internal void Unload()
@@ -102,10 +116,10 @@ namespace FlightReLive.Core.OpenMapTile
         }
         #endregion
 
-        #region GLOBALS
+        #region ACCUMULATION
         /// <summary>
-        /// Accumulates features. Buildings are created immediately,
-        /// zones are stored (world-space) grouped by type → feature object.
+        /// Accumulates features. Buildings are created immediately.
+        /// Zones are only stored (contours).
         /// </summary>
         private void AccumulateFeatures(TileDefinition tile, FlightData flight)
         {
@@ -123,60 +137,29 @@ namespace FlightReLive.Core.OpenMapTile
                 else
                 {
                     List<List<SerializablePoint2D>> geometries = feature.Geometry;
-
-                    if (geometries == null)
-                    {
-                        continue;
-                    }
+                    if (geometries == null) continue;
 
                     foreach (List<SerializablePoint2D> ringRaw in geometries)
                     {
-                        if (ringRaw == null || ringRaw.Count < 3)
-                        {
-                            continue;
-                        }
+                        if (ringRaw == null || ringRaw.Count < 3) continue;
 
                         List<Point2d<int>> ring = new(ringRaw.Count);
-
-                        foreach (SerializablePoint2D pt in ringRaw)
-                        {
-                            ring.Add(pt.ToPoint2D());
-                        }
+                        foreach (SerializablePoint2D pt in ringRaw) ring.Add(pt.ToPoint2D());
 
                         ring = ClipRingToExtent(ring);
-                        if (ring.Count < 3)
-                        {
-                            continue;
-                        }
+                        if (ring.Count < 3) continue;
 
-                        List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
-                        if (contour == null || contour.Count < 3)
-                        {
-                            continue;
-                        }
+                        List<Vector2> contour = ConvertGeometryToContour(
+                            flight, ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+
+                        if (contour == null || contour.Count < 3) continue;
 
                         OpenMapTileZone? zoneType = null;
-
-                        if (feature is LanduseFeature)
-                        {
-                            zoneType = OpenMapTileZone.LandUse;
-                        }
-                        else if (feature is WaterFeature)
-                        {
-                            zoneType = OpenMapTileZone.Water;
-                        }
-                        else if (feature is LandcoverFeature)
-                        {
-                            zoneType = OpenMapTileZone.LandCover;
-                        }
-                        else if (feature is ParkFeature)
-                        {
-                            zoneType = OpenMapTileZone.Park;
-                        }
-                        else if (feature is AerowayFeature)
-                        {
-                            zoneType = OpenMapTileZone.Aeroway;
-                        }
+                        if (feature is LanduseFeature) zoneType = OpenMapTileZone.LandUse;
+                        else if (feature is WaterFeature) zoneType = OpenMapTileZone.Water;
+                        else if (feature is LandcoverFeature) zoneType = OpenMapTileZone.LandCover;
+                        else if (feature is ParkFeature) zoneType = OpenMapTileZone.Park;
+                        else if (feature is AerowayFeature) zoneType = OpenMapTileZone.Aeroway;
 
                         if (zoneType.HasValue)
                         {
@@ -184,7 +167,6 @@ namespace FlightReLive.Core.OpenMapTile
                             {
                                 _zoneContours[zoneType.Value][feature] = new List<List<Vector2>>();
                             }
-
                             _zoneContours[zoneType.Value][feature].Add(contour);
                         }
                     }
@@ -196,36 +178,101 @@ namespace FlightReLive.Core.OpenMapTile
         }
         #endregion
 
+        #region GENERATION
+        /// <summary>
+        /// Generates extruded meshes for all accumulated zones (after all tiles are loaded).
+        /// </summary>
+        internal void GenerateZones(FlightData flight)
+        {
+            foreach (var kvp in _zoneContours)
+            {
+                OpenMapTileZone zoneType = kvp.Key;
+                Material mat = GetMaterialForZone(zoneType);
+                if (mat == null) continue;
+
+                // Collect all contours for this zone type
+                List<List<Vector2>> allContours = new List<List<Vector2>>();
+                foreach (var featureContours in kvp.Value.Values)
+                    allContours.AddRange(featureContours);
+
+                if (allContours.Count == 0) continue;
+
+                // Convert to Clipper paths
+                Paths64 clipperPaths = new Paths64();
+                foreach (var contour in allContours)
+                {
+                    Path64 path = new Path64(contour.Count);
+                    foreach (var v in contour)
+                    {
+                        path.Add(new Point64(
+                            (long)(v.x * CLIP_SCALE),
+                            (long)(v.y * CLIP_SCALE)
+                        ));
+                    }
+                    clipperPaths.Add(path);
+                }
+
+                // Fusion via Clipper2
+                Paths64 solution = Clipper.Union(clipperPaths, FillRule.NonZero);
+
+                foreach (var poly in solution)
+                {
+                    List<Vector2> contour = poly
+                        .Select(p => new Vector2((float)(p.X / CLIP_SCALE), (float)(p.Y / CLIP_SCALE)))
+                        .ToList();
+
+                    if (contour.Count < 3) continue;
+
+                    // Barycentre world
+                    float cx = contour.Average(v => v.x);
+                    float cz = contour.Average(v => v.y);
+
+                    // Altitude via GPS conversion
+                    FlightGPSData gps = flight.ConvertWorldToGPSPosition(new Vector3(cx, 0, cz));
+                    float alt = flight.GetAltitudeAtPosition(gps) * flight.GlobalScale;
+                    Vector3 pos = new Vector3(cx, alt, cz);
+
+                    // Extrusion
+                    MeshData meshData = TriangulateAndExtrude(flight, contour, _zoneExtrusionHeight * flight.GlobalScale);
+                    GameObject zoneGO = CreateMeshGO(meshData, pos, mat);
+                    _openMapTileObjects.Add(zoneGO);
+                }
+            }
+        }
+
+
+        private Material GetMaterialForZone(OpenMapTileZone zoneType)
+        {
+            return zoneType switch
+            {
+                OpenMapTileZone.LandUse => _landUseMaterial,
+                OpenMapTileZone.LandCover => _landCoverMaterial,
+                OpenMapTileZone.Water => _waterMaterial,
+                OpenMapTileZone.Park => _parkMaterial,
+                OpenMapTileZone.Aeroway => _aerowayMaterial,
+                _ => null
+            };
+        }
+        #endregion
+
         #region BUILDINGS
         private void GenerateBuilding(BuildingFeature building, TileDefinition tile, FlightData flight, List<GameObject> createdForTile)
         {
             foreach (List<SerializablePoint2D> ringRaw in building.Geometry)
             {
-                if (ringRaw == null || ringRaw.Count < 3)
-                {
-                    continue;
-                }
+                if (ringRaw == null || ringRaw.Count < 3) continue;
 
                 List<Point2d<int>> ring = new(ringRaw.Count);
                 foreach (SerializablePoint2D pt in ringRaw) ring.Add(pt.ToPoint2D());
 
                 ring = ClipRingToExtent(ring);
-                if (ring.Count < 3)
-                {
-                    continue;
-                }
+                if (ring.Count < 3) continue;
 
                 List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
-                if (contour == null || contour.Count == 0)
-                {
-                    continue;
-                }
+                if (contour == null || contour.Count == 0) continue;
 
                 Vector2 center = ComputeRingBarycenterWorld(ring, flight, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
-                if (float.IsNaN(center.x) || float.IsNaN(center.y))
-                {
-                    continue;
-                }
+                if (float.IsNaN(center.x) || float.IsNaN(center.y)) continue;
 
                 FlightGPSData baryGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
                 float terrainAltitude = flight.GetAltitudeAtPosition(tile, baryGPS);
@@ -234,11 +281,13 @@ namespace FlightReLive.Core.OpenMapTile
                 float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
 
                 MeshData meshData = TriangulateAndExtrude(flight, contour, estimatedHeight);
-                GameObject buildingGO = CreateBuilding(meshData, position);
+                GameObject buildingGO = CreateMeshGO(meshData, position, _buildingMaterial);
                 createdForTile.Add(buildingGO);
             }
         }
         #endregion
+
+
 
         #region GEOMETRY HELPERS
         private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY, int zoom)
@@ -424,20 +473,55 @@ namespace FlightReLive.Core.OpenMapTile
 
             return Math.Atan(Math.Sinh(n)) * (180.0 / Math.PI);
         }
+
+        private float EstimateHeightFromFootprint(List<Vector2> contour, FlightData flight)
+        {
+            if (contour == null || contour.Count < 3)
+            {
+                return 6f;
+            }
+
+            double area = 0.0;
+
+            for (int i = 0; i < contour.Count; i++)
+            {
+                Vector2 p1 = contour[i], p2 = contour[(i + 1) % contour.Count];
+                area += (p1.x * p2.y - p2.x * p1.y);
+            }
+            area = Math.Abs(area) * 0.5;
+
+            float metersPerUnit = flight.GlobalScale;
+            double areaMeters = area / (metersPerUnit * metersPerUnit);
+
+            float baseHeight = 8f;
+
+            if (areaMeters < 80f)
+            {
+                baseHeight = 4f;
+            }
+            else if (areaMeters < 300f)
+            {
+                baseHeight = 8f;
+            }
+            else if (areaMeters < 2000f)
+            {
+                baseHeight = 14f;
+            }
+
+            float variation = UnityEngine.Random.Range(0.85f, 1.15f);
+            return baseHeight * variation * flight.GlobalScale;
+        }
         #endregion
 
         #region MESH HELPERS
         private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float topY)
         {
             float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
-
             Tess tess = new Tess();
             ContourVertex[] tessContour = new ContourVertex[contour.Count];
 
             for (int i = 0; i < contour.Count; i++)
-            {
                 tessContour[i].Position = new Vec3(contour[i].x, contour[i].y, 0.0f);
-            }
 
             tess.AddContour(tessContour, ContourOrientation.Clockwise);
             tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
@@ -460,7 +544,7 @@ namespace FlightReLive.Core.OpenMapTile
             int v = 0, t = 0;
             Vector2 uvScale = new Vector2(0.1f, 0.1f);
 
-            //Roof
+            // Roof
             for (int i = 0; i < roofVertexCount; i++)
             {
                 Vec3 vertex = tess.Vertices[i].Position;
@@ -477,7 +561,7 @@ namespace FlightReLive.Core.OpenMapTile
                 meshData.triangles[t++] = tess.Elements[i * 3 + 0];
             }
 
-            //Walls
+            // Walls
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 p0 = contour[i], p1 = contour[(i + 1) % contour.Count];
@@ -519,100 +603,43 @@ namespace FlightReLive.Core.OpenMapTile
             return meshData;
         }
 
-        private GameObject CreateBuilding(MeshData meshData, Vector3 position)
+        private GameObject CreateMeshGO(MeshData meshData, Vector3 position, Material mat)
         {
             Mesh mesh = meshData.ConvertToUnityMesh();
-            GameObject building = _openMapTileZonePool.Get();
-            MeshFilter meshFilter = building.GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = building.GetComponent<MeshRenderer>();
-            meshRenderer.enabled = false;
+            GameObject go = _openMapTileZonePool.Get();
+            MeshFilter meshFilter = go.GetComponent<MeshFilter>();
+            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = mat;
+            meshRenderer.enabled = true;
             meshFilter.sharedMesh = mesh;
-            building.transform.SetParent(transform);
-            building.transform.position = position;
-            building.transform.rotation = Quaternion.identity;
-            _openMapTileObjects.Add(building);
-
-            return building;
+            go.transform.SetParent(transform);
+            go.transform.position = position;
+            go.transform.rotation = Quaternion.identity;
+            _openMapTileObjects.Add(go);
+            return go;
         }
+        #endregion
 
-        private float EstimateHeightFromFootprint(List<Vector2> contour, FlightData flight)
-        {
-            if (contour == null || contour.Count < 3)
-            {
-                return 6f;
-            }
-
-            double area = 0.0;
-
-            for (int i = 0; i < contour.Count; i++)
-            {
-                Vector2 p1 = contour[i], p2 = contour[(i + 1) % contour.Count];
-                area += (p1.x * p2.y - p2.x * p1.y);
-            }
-            area = Math.Abs(area) * 0.5;
-
-            float metersPerUnit = flight.GlobalScale;
-            double areaMeters = area / (metersPerUnit * metersPerUnit);
-
-            float baseHeight = 8f;
-
-            if (areaMeters < 80f)
-            {
-                baseHeight = 4f;
-            }
-            else if (areaMeters < 300f)
-            {
-                baseHeight = 8f;
-            }
-            else if (areaMeters < 2000f)
-            {
-                baseHeight = 14f;
-            }
-
-            float variation = UnityEngine.Random.Range(0.85f, 1.15f);
-            return baseHeight * variation * flight.GlobalScale;
-        }
-
-        /// <summary>
-        /// Returns zone contours for a given zone type grouped by feature object.
-        /// </summary>
-        internal Dictionary<OpenMapTileFeature, List<List<Vector2>>> GetZoneContours(OpenMapTileZone zoneType)
-        {
-            if (_zoneContours.TryGetValue(zoneType, out var dict))
-            {
-                return dict;
-            }
-
-            return null;
-        }
+        #region CALLBACKS + UI
         private void DisplayBuildingsFromSettings()
         {
             bool enabled = SettingsManager.CurrentSettings.BuildingVisibility;
             foreach (GameObject go in _openMapTileObjects)
             {
                 MeshRenderer rend = go.GetComponent<MeshRenderer>();
-
-                if (rend != null)
-                {
-                    rend.enabled = enabled;
-                }
+                if (rend != null) rend.enabled = enabled;
             }
         }
-        #endregion
 
-        #region CALLBACKS
         private void OnBuildingVisibilityChanged(bool buildingVisible)
         {
             DisplayBuildingsFromSettings();
         }
-        #endregion
 
-        #region UI
         internal void DisplayBuildingsSettings(FuGrid grid)
         {
             bool buildingEnabled = SettingsManager.CurrentSettings.BuildingVisibility;
             grid.EnableNextElements();
-
             if (grid.Toggle("Display buildings", ref buildingEnabled))
             {
                 SettingsManager.SaveBuildingVisibility(buildingEnabled);

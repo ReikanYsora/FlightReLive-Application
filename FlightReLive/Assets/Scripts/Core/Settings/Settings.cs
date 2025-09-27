@@ -30,11 +30,17 @@ namespace FlightReLive.Core.Settings
         public Color PathRemainingColor1;
         public Color PathRemainingColor2;
         public bool BuildingVisibility;
+        public Color BuildingColor;
+        public float BuildingAO;
+        public bool ContactShadowsEnabled;
+        public float ContactShadowsMinDistance;
+        public float ContactShadowsMaxDistance;
+        public float ContactShadowsOpacity;
         public float VignettingIntensity;
         public float PostExposureIntensity;
         public float ContrastIntensity;
         public float SaturationIntensity;
-        public string CurrentVersion { set; get; }
+        public string CurrentVersion;
         #endregion
     }
 }

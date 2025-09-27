@@ -2267,7 +2267,7 @@ MonoBehaviour:
     _name: "\uE076  ReLive"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
@@ -2326,7 +2326,7 @@ MonoBehaviour:
     _name: "\uE087  POV View"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0

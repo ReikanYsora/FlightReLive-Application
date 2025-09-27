@@ -1,5 +1,4 @@
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.OpenMapTile;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
@@ -7,6 +6,7 @@ using Fu.Framework;
 using LibTessDotNet;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
@@ -27,6 +27,7 @@ namespace FlightReLive.Core.Building
 
         private BuildingPool _buildingPool;
         private List<GameObject> _buildingGameobjects;
+        private Material _buildingMaterialInstance;
         #endregion
 
         #region PROPERTIES
@@ -46,26 +47,25 @@ namespace FlightReLive.Core.Building
             Instance = this;
             _buildingPool = GetComponent<BuildingPool>();
             _buildingGameobjects = new List<GameObject>();
+            _buildingMaterialInstance = new Material(_buildingMaterial);
         }
 
         private void Start()
         {
             SettingsManager.OnBuildingVisibilityChanged += OnBuildingVisibilityChanged;
+            SettingsManager.OnBuildingColorChanged += OnBuildingColorChanged;
+            SettingsManager.OnBuildingAOChanged += OnBuildingAOChanged;
         }
 
         private void OnDestroy()
         {
             SettingsManager.OnBuildingVisibilityChanged -= OnBuildingVisibilityChanged;
+            SettingsManager.OnBuildingColorChanged -= OnBuildingColorChanged;
+            SettingsManager.OnBuildingAOChanged -= OnBuildingAOChanged;
         }
         #endregion
 
         #region METHODS
-
-        internal void Load(FlightData data)
-        {
-            DisplayBuildingsFromSettings();
-        }
-
         internal void LoadTile(TileDefinition tile, FlightData flight)
         {
             foreach (OpenMapTileFeature feature in tile.Features)
@@ -80,14 +80,27 @@ namespace FlightReLive.Core.Building
             }
         }
 
-        internal void Unload()
+        internal void Load(FlightData flight)
         {
-            foreach (GameObject tempBuilding in _buildingGameobjects)
-            {
-                _buildingPool.Return(tempBuilding);
-            }
+            bool displayBuilding = SettingsManager.CurrentSettings.BuildingVisibility;
 
-            _buildingGameobjects.Clear();
+            foreach (GameObject building in _buildingGameobjects)
+            {
+                building.GetComponent<MeshRenderer>().enabled = displayBuilding;
+            }
+        }
+
+        internal async Task Unload()
+        {
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
+            {
+                foreach (GameObject tempBuilding in _buildingGameobjects)
+                {
+                    _buildingPool.Return(tempBuilding);
+                }
+
+                _buildingGameobjects.Clear();
+            });
         }
 
         private void GenerateBuilding(BuildingFeature building, TileDefinition tile, FlightData flight)
@@ -128,9 +141,10 @@ namespace FlightReLive.Core.Building
                 Vector3 position = new(center.x, terrainAltitude * flight.GlobalScale, center.y);
                 float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
                 MeshData meshData = TriangulateAndExtrude(flight, contour, estimatedHeight);
-                CreateBuilding(meshData, position, _buildingMaterial);
+                CreateBuilding(meshData, position, _buildingMaterialInstance);
             }
         }
+
         private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float topY)
         {
             float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
@@ -229,14 +243,13 @@ namespace FlightReLive.Core.Building
             MeshFilter meshFilter = go.GetComponent<MeshFilter>();
             MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
             meshRenderer.sharedMaterial = mat;
-            meshRenderer.enabled = true;
+            meshRenderer.enabled = false;
             meshFilter.sharedMesh = mesh;
             go.transform.SetParent(transform);
             go.transform.position = position;
             go.transform.rotation = Quaternion.identity;
             _buildingGameobjects.Add(go);
         }
-
 
         private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY, int zoom)
         {
@@ -262,8 +275,7 @@ namespace FlightReLive.Core.Building
             return contour;
         }
 
-        private void ComputeTileWorldCorners(FlightData flight, int tileX, int tileY, int zoom,
-            out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE)
+        private void ComputeTileWorldCorners(FlightData flight, int tileX, int tileY, int zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE)
         {
             double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
             double lonE = (double)(tileX + 1) / (1 << zoom) * 360.0 - 180.0;
@@ -480,6 +492,18 @@ namespace FlightReLive.Core.Building
         {
             DisplayBuildingsFromSettings();
         }
+
+        private void OnBuildingAOChanged(float ao)
+        {
+            float ambientOcclusion = SettingsManager.CurrentSettings.BuildingAO;
+            _buildingMaterialInstance.SetFloat("_AmbientOcclusion", ambientOcclusion);
+        }
+
+        private void OnBuildingColorChanged(Color color)
+        {
+            Color buildingColor = SettingsManager.CurrentSettings.BuildingColor;
+            _buildingMaterialInstance.SetColor("_Color", buildingColor);
+        }
         #endregion
 
         #region UI
@@ -491,6 +515,25 @@ namespace FlightReLive.Core.Building
             if (grid.Toggle("Display buildings", ref buildingEnabled))
             {
                 SettingsManager.SaveBuildingVisibility(buildingEnabled);
+            }
+
+            if (!buildingEnabled)
+            {
+                grid.DisableNextElements();
+            }
+
+            Vector4 buildingColor = SettingsManager.CurrentSettings.BuildingColor;
+
+            if (grid.ColorPicker("Color", ref buildingColor))
+            {
+                SettingsManager.SaveBuildingColor(buildingColor);
+            }
+
+            float ambientOcclusion = SettingsManager.CurrentSettings.BuildingAO;
+
+            if (grid.Slider("Ambient occlusion", ref ambientOcclusion, 0f, 1f, 0.1f, format: "%.1f"))
+            {
+                SettingsManager.SaveBuildingAO(ambientOcclusion);
             }
         }
         #endregion

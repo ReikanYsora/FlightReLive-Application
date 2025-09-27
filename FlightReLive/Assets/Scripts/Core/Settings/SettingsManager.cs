@@ -62,6 +62,12 @@ namespace FlightReLive.Core.Settings
         public static event Action<Color> OnPathRemainingColor1Changed;
         public static event Action<Color> OnPathRemainingColor2Changed;
         public static event Action<bool> OnBuildingVisibilityChanged;
+        public static event Action<Color> OnBuildingColorChanged;
+        public static event Action<float> OnBuildingAOChanged;
+        public static event Action<bool> OnContactShadowsEnabledChanged;
+        public static event Action<float> OnContactShadowsMinDistanceChanged;
+        public static event Action<float> OnContactShadowsMaxDistanceChanged;
+        public static event Action<float> OnContactShadowsOpacityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnPostExposureIntensityChanged;
         public static event Action<float> OnContrastIntensityChanged;
@@ -179,6 +185,40 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadBuildingVisibility() =>
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
+
+        internal static void LoadBuildingColor()
+        {
+            string colorString = PlayerPrefs.GetString(nameof(Settings.BuildingColor), "0.65,0.65,0.65,1");
+            string[] rgba = colorString.Split(',');
+
+            if (rgba.Length == 4 &&
+                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
+                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
+                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
+                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
+            {
+                CurrentSettings.BuildingColor = new Color(r, g, b, a);
+            }
+            else
+            {
+                CurrentSettings.BuildingColor = new Color(0.65f, 0.65f, 0.65f, 1f);
+            }
+        }
+
+        internal static void LoadBuildingAO() =>
+            CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), 0.3f);
+
+        internal static void LoadContactShadowsEnabled() =>
+            CurrentSettings.ContactShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.ContactShadowsEnabled), 1) == 1;
+
+        internal static void LoadContactShadowsMinDistance() =>
+            CurrentSettings.ContactShadowsMinDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMinDistance), 0f);
+
+        internal static void LoadContactShadowsMaxDistance() =>
+            CurrentSettings.ContactShadowsMaxDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMaxDistance), 200f);
+
+        internal static void LoadContactShadowsOpacity() =>
+            CurrentSettings.ContactShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsOpacity), 0.7f);
 
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
@@ -388,6 +428,54 @@ namespace FlightReLive.Core.Settings
             OnBuildingVisibilityChanged?.Invoke(value);
         }
 
+        internal static void SaveBuildingColor(Color color)
+        {
+            CurrentSettings.BuildingColor = color;
+            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
+            PlayerPrefs.SetString(nameof(Settings.BuildingColor), colorString);
+            PlayerPrefs.Save();
+            OnBuildingColorChanged?.Invoke(color);
+        }
+
+        internal static void SaveBuildingAO(float value)
+        {
+            CurrentSettings.BuildingAO = value;
+            PlayerPrefs.SetFloat(nameof(Settings.BuildingAO), value);
+            PlayerPrefs.Save();
+            OnBuildingAOChanged?.Invoke(value);
+        }
+        internal static void SaveContactShadowsEnabled(bool value)
+        {
+            CurrentSettings.ContactShadowsEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.ContactShadowsEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnContactShadowsEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SaveContactShadowsMinDistance(float value)
+        {
+            CurrentSettings.ContactShadowsMinDistance = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsMinDistance), value);
+            PlayerPrefs.Save();
+            OnContactShadowsMinDistanceChanged?.Invoke(value);
+        }
+
+        internal static void SaveContactShadowsMaxDistance(float value)
+        {
+            CurrentSettings.ContactShadowsMaxDistance = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsMaxDistance), value);
+            PlayerPrefs.Save();
+            OnContactShadowsMaxDistanceChanged?.Invoke(value);
+        }
+
+        internal static void SaveContactShadowsOpacity(float value)
+        {
+            CurrentSettings.ContactShadowsOpacity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsOpacity), value);
+            PlayerPrefs.Save();
+            OnContactShadowsOpacityChanged?.Invoke(value);
+        }
+
         internal static void SaveVignettingIntensity(float value)
         {
             CurrentSettings.VignettingIntensity = value;
@@ -451,6 +539,12 @@ namespace FlightReLive.Core.Settings
             LoadPathRemainingColor1();
             LoadPathRemainingColor2();
             LoadBuildingVisibility();
+            LoadBuildingColor();
+            LoadBuildingAO();
+            LoadContactShadowsEnabled();
+            LoadContactShadowsMinDistance();
+            LoadContactShadowsMaxDistance();
+            LoadContactShadowsOpacity();
             LoadVignettingIntensity();
             LoadPostExposureIntensity();
             LoadContrastIntensity();
@@ -486,6 +580,12 @@ namespace FlightReLive.Core.Settings
             SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
             SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
             SaveBuildingVisibility(true);
+            SaveBuildingColor(new Color(0.65f, 0.65f, 0.65f, 1f));
+            SaveBuildingAO(0.3f);
+            SaveContactShadowsEnabled(true);
+            SaveContactShadowsMinDistance(0f);
+            SaveContactShadowsMaxDistance(200f);
+            SaveContrastIntensity(0.7f);
             SaveVignettingIntensity(0.3f);
             SavePostExposureIntensity(0f);
             SaveContrastIntensity(40f);
@@ -760,7 +860,7 @@ namespace FlightReLive.Core.Settings
                         upscalerGrid.SetNextElementToolTipWithLabel("Adjust how sharp the image appears after upscaling. Higher values increase detail, but may introduce noise.");
                         float sharpeness = CurrentSettings.UpscalerSharpeness;
 
-                        if (upscalerGrid.Slider("Upscaler sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.01f"))
+                        if (upscalerGrid.Slider("Upscaler sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.2f"))
                         {
                             SaveUpscalerSharpeness(sharpeness);
                         }

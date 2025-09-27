@@ -3,7 +3,6 @@ using FlightReLive.Core.Settings;
 using FlightReLive.Core.Version;
 using Fu;
 using Fu.Framework;
-using System;
 using ImGuiNET;
 using TND.Upscaling.Framework;
 using UnityEngine;
@@ -22,6 +21,15 @@ namespace FlightReLive.Core
         [SerializeField] private TNDUpscaler _povCameraUpscaler;
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
+
+#if UNITY_STANDALONE_WIN
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+
+        private const int SM_CXSCREEN = 0;
+        private const int SM_CYSCREEN = 1;
+        private const int SM_CYFULLSCREEN = 17;
+#endif
         #endregion
 
         #region PROPERTIES
@@ -175,8 +183,16 @@ namespace FlightReLive.Core
         {
             int width = 0;
             int height = 0;
-            Screen.fullScreenMode = FullScreenMode.Windowed;
 
+#if UNITY_STANDALONE_WIN
+            // Use native Windows API to get usable screen area (excluding taskbar)
+            width = GetSystemMetrics(SM_CXSCREEN);
+            int fullHeight = GetSystemMetrics(SM_CYFULLSCREEN);
+            int totalHeight = GetSystemMetrics(SM_CYSCREEN);
+            int taskbarHeight = totalHeight - fullHeight;
+            height = totalHeight - taskbarHeight;
+#else
+            // Fallback for macOS or other platforms
             if (Display.main != null && Display.main.systemWidth > 0 && Display.main.systemHeight > 0)
             {
                 width = Display.main.systemWidth;
@@ -200,6 +216,7 @@ namespace FlightReLive.Core
                 width = 1920;
                 height = 1080;
             }
+#endif
 
             Screen.fullScreenMode = FullScreenMode.Windowed;
             Screen.SetResolution(width, height, false);
@@ -215,8 +232,8 @@ namespace FlightReLive.Core
         {
             if (SettingsManager.CurrentSettings.UpscalerName == UpscalerName.None)
             {
-                ConfigureCameraForTAA(_reliveCamera);
-                ConfigureCameraForTAA(_povCamera);
+                ConfigureCameraForFAA(_reliveCamera);
+                ConfigureCameraForFAA(_povCamera);
 
                 _reliveUpscaler.SetQuality(UpscalerQuality.Off);
                 _povCameraUpscaler.SetQuality(UpscalerQuality.Off);
@@ -274,7 +291,7 @@ namespace FlightReLive.Core
         /// Configure a camera tbe used without upscaler and TAA antialiasing
         /// </summary>
         /// <param name="cam"></param>
-        private void ConfigureCameraForTAA(Camera cam)
+        private void ConfigureCameraForFAA(Camera cam)
         {
             if (cam == null)
             {
@@ -295,7 +312,7 @@ namespace FlightReLive.Core
             data.deepLearningSuperSamplingUseOptimalSettings = false;
 
             //Force TAA (and disable MSAA)
-            data.antialiasing = HDAdditionalCameraData.AntialiasingMode.TemporalAntialiasing;
+            data.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
             cam.allowMSAA = false;
         }
         #endregion

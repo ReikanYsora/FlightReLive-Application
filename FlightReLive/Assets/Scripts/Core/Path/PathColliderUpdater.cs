@@ -1,16 +1,18 @@
-﻿using UnityEngine;
+﻿using FlightReLive.Core.Settings;
+using UnityEngine;
 
 namespace FlightReLive.Core.Paths
 {
     [RequireComponent(typeof(MeshFilter), typeof(MeshCollider))]
     public class PathColliderUpdater : MonoBehaviour
     {
-        [Header("Displacement settings")]
-        public float baseThickness = 0.09f;
-        public float cameraDistanceFactor = 1.0f;
-
+        /// <summary>
+        /// Rebuilds the MeshCollider so that it matches the displaced mesh (BaseThickness).
+        /// </summary>
         public void UpdateColliderMesh()
         {
+            float baseThickness = SettingsManager.CurrentSettings.PathWidth;
+
             MeshFilter mf = GetComponent<MeshFilter>();
             Mesh original = mf != null ? mf.sharedMesh : null;
 
@@ -33,28 +35,28 @@ namespace FlightReLive.Core.Paths
 
             for (int i = 0; i < vertices.Length; i++)
             {
-                Vector3 offset = normals[i].normalized * (baseThickness * cameraDistanceFactor);
+                Vector3 offset = normals[i].normalized * (baseThickness + 0.2f);
                 displaced[i] = vertices[i] + offset;
             }
 
-            Mesh colliderMesh = new Mesh();
-            colliderMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-            colliderMesh.vertices = displaced;
-            colliderMesh.triangles = triangles;
-            colliderMesh.normals = normals;
-            colliderMesh.uv = uvs;
+            Mesh colliderMesh = new Mesh
+            {
+                indexFormat = UnityEngine.Rendering.IndexFormat.UInt32,
+                vertices = displaced,
+                triangles = triangles,
+                normals = normals,
+                uv = uvs
+            };
 
             colliderMesh.RecalculateBounds();
             colliderMesh.RecalculateNormals();
 
             MeshCollider mc = GetComponent<MeshCollider>();
-
             if (mc != null)
             {
                 mc.sharedMesh = null;
                 mc.sharedMesh = colliderMesh;
             }
         }
-
     }
 }

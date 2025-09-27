@@ -1,37 +1,49 @@
-﻿using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Pipeline;
+﻿using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
-using System;
+using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
 
 namespace FlightReLive.Core.OpenMapTile
 {
     /// <summary>
-    /// Manager responsible for collecting OpenMapTile features (zones except buildings).
+    /// Manages OpenMapTile loading, water contour extraction, and ARM texture generation for terrain shading.
     /// </summary>
     internal class OpenMapTileManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const double CLIP_SCALE = 1000.0;
         private const float OPENMAPTILE_EXTENT = 4096f;
         #endregion
 
-        #region ENUMS
-        internal enum OpenMapTileZone { LandUse, Water, LandCover, Park, Aeroway }
-        #endregion
-
         #region ATTRIBUTES
-        private readonly Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>> _zoneContours = new Dictionary<OpenMapTileZone, Dictionary<OpenMapTileFeature, List<List<Vector2>>>>();
-        private readonly Dictionary<(int, int), List<GameObject>> _tileToOpenMapTileZones = new Dictionary<(int, int), List<GameObject>>();
+        private readonly Dictionary<(int x, int y), List<List<Vector2>>> _waterContoursByTile = new Dictionary<(int x, int y), List<List<Vector2>>>();
+        private List<Edge>[] _edgeTablePool = new List<Edge>[512];
+        private readonly List<Edge> _activeEdgeList = new List<Edge>();
         #endregion
 
         #region PROPERTIES
-        public static OpenMapTileManager Instance { get; private set; }
+        internal static OpenMapTileManager Instance;
+        #endregion
+
+        #region STRUCTS
+        /// <summary>
+        /// Represents an edge used in scanline rasterization.
+        /// </summary>
+        private struct Edge
+        {
+            public int yMax;
+            public float x;
+            public float invSlope;
+        }
         #endregion
 
         #region UNITY METHODS
+        /// <summary>
+        /// Initializes the singleton instance of the OpenMapTileManager.
+        /// </summary>
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -41,66 +53,81 @@ namespace FlightReLive.Core.OpenMapTile
             }
 
             Instance = this;
-
-            foreach (OpenMapTileZone z in Enum.GetValues(typeof(OpenMapTileZone)))
-            {
-                _zoneContours[z] = new Dictionary<OpenMapTileFeature, List<List<Vector2>>>();
-            }
         }
         #endregion
 
-        #region LOAD / UNLOAD
-        internal void LoadTile(TileDefinition tile, FlightData flight)
+        #region METHODS
+        /// <summary>
+        /// Loads a tile, extracts water contours, and generates its ARM texture.
+        /// </summary>
+        internal void LoadTile(TileDefinition tile)
         {
             if (tile == null || tile.Features == null || tile.Features.Count == 0)
             {
                 return;
             }
 
-            AccumulateFeatures(tile, flight);
-        }
+            int zoom;
 
-        internal void Unload()
-        {
-            foreach (OpenMapTileZone z in _zoneContours.Keys)
+            switch (tile.Priority)
             {
-                _zoneContours[z].Clear();
+                case 0:
+                    zoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_0;
+                    break;
+                case 1:
+                    zoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_1;
+                    break;
+                default:
+                case 2:
+                    zoom = MapTools.ZOOM_LEVEL_SATELLITE_PRIORITY_OTHER;
+                    break;
             }
 
-            _tileToOpenMapTileZones.Clear();
+            AccumulateWaterContoursForTile(tile);
+            GenerateARMTextureForTile(tile, zoom);
         }
-        #endregion
 
-        #region ACCUMULATION
         /// <summary>
-        /// Accumulates features. Buildings are created immediately.
-        /// Zones are only stored (contours).
+        /// Clears all cached water contours.
         /// </summary>
-        private void AccumulateFeatures(TileDefinition tile, FlightData flight)
+        internal async Task Unload()
         {
-            List<GameObject> createdForTile = new List<GameObject>();
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
+            {
+                _waterContoursByTile.Clear();
+            });
+        }
 
-            //For now, we need only water feature to create ARM texture (reflects on water area)
+        /// <summary>
+        /// Extracts water feature contours from a tile and stores them in UV space.
+        /// </summary>
+        private void AccumulateWaterContoursForTile(TileDefinition tile)
+        {
+            (int x, int y) key = (tile.X, tile.Y);
+
+            if (!_waterContoursByTile.TryGetValue(key, out List<List<Vector2>> list))
+            {
+                list = new List<List<Vector2>>();
+                _waterContoursByTile[key] = list;
+            }
+
             foreach (OpenMapTileFeature feature in tile.Features)
             {
-                if (feature is WaterFeature)
+                if (feature is WaterFeature waterFeature && waterFeature.Geometry != null)
                 {
-                    List<List<SerializablePoint2D>> geometries = feature.Geometry;
-
-                    if (geometries == null)
-                    {
-                        continue;
-                    }
-
-                    foreach (List<SerializablePoint2D> ringRaw in geometries)
+                    foreach (List<SerializablePoint2D> ringRaw in waterFeature.Geometry)
                     {
                         if (ringRaw == null || ringRaw.Count < 3)
                         {
                             continue;
                         }
 
-                        List<Point2d<int>> ring = new(ringRaw.Count);
-                        foreach (SerializablePoint2D pt in ringRaw) ring.Add(pt.ToPoint2D());
+                        List<Point2d<int>> ring = new List<Point2d<int>>(ringRaw.Count);
+
+                        for (int i = 0; i < ringRaw.Count; i++)
+                        {
+                            ring.Add(ringRaw[i].ToPoint2D());
+                        }
 
                         ring = ClipRingToExtent(ring);
 
@@ -109,150 +136,285 @@ namespace FlightReLive.Core.OpenMapTile
                             continue;
                         }
 
-                        List<Vector2> contour = ConvertGeometryToContour(flight, ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+                        List<Vector2> contourUV = ConvertGeometryToUV_Flipped(ring);
 
-                        if (contour == null || contour.Count < 3)
+                        if (contourUV.Count >= 3)
                         {
-                            continue;
+                            list.Add(contourUV);
                         }
-
-                        OpenMapTileZone zoneType  = OpenMapTileZone.Water;
-
-
-                        if (!_zoneContours[zoneType].ContainsKey(feature))
-                        {
-                            _zoneContours[zoneType][feature] = new List<List<Vector2>>();
-                        }
-
-                        Debug.Log("Add water feature");
-                        _zoneContours[zoneType][feature].Add(contour);
                     }
                 }
             }
-
-            _tileToOpenMapTileZones[(tile.X, tile.Y)] = createdForTile;
         }
 
-        private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY, int zoom)
+        /// <summary>
+        /// Converts geometry from tile coordinates to flipped UV coordinates.
+        /// </summary>
+        private static List<Vector2> ConvertGeometryToUV_Flipped(List<Point2d<int>> ring)
         {
-            ComputeTileWorldCorners(flight, tileX, tileY, zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE);
             List<Vector2> contour = new List<Vector2>(ring.Count);
 
             for (int i = 0; i < ring.Count; i++)
             {
-                Point2d<int> p = ring[i];
-                float u = p.X / OPENMAPTILE_EXTENT;
-                float v = p.Y / OPENMAPTILE_EXTENT;
-
-                Vector3 top = Vector3.Lerp(worldNW, worldNE, u);
-                Vector3 bottom = Vector3.Lerp(worldSW, worldSE, u);
-                Vector3 world = Vector3.Lerp(top, bottom, v);
-
-                if (!float.IsNaN(world.x) && !float.IsNaN(world.z))
-                {
-                    contour.Add(new Vector2(world.x, world.z));
-                }
+                float u = (float)ring[i].X / OPENMAPTILE_EXTENT;
+                float v = 1f - ((float)ring[i].Y / OPENMAPTILE_EXTENT);
+                contour.Add(new Vector2(u, v));
             }
 
             return contour;
         }
 
-        private void ComputeTileWorldCorners(FlightData flight, int tileX, int tileY, int zoom,out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE)
-        {
-            double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
-            double lonE = (double)(tileX + 1) / (1 << zoom) * 360.0 - 180.0;
-            double latN = TileYToLat(tileY, zoom);
-            double latS = TileYToLat(tileY + 1, zoom);
-
-            worldNW = flight.ConvertGPSPositionToWorld(new Vector3((float)latN, 0f, (float)lonW));
-            worldNE = flight.ConvertGPSPositionToWorld(new Vector3((float)latN, 0f, (float)lonE));
-            worldSW = flight.ConvertGPSPositionToWorld(new Vector3((float)latS, 0f, (float)lonW));
-            worldSE = flight.ConvertGPSPositionToWorld(new Vector3((float)latS, 0f, (float)lonE));
-        }
-
-
+        /// <summary>
+        /// Clips geometry points to the tile extent.
+        /// </summary>
         private static List<Point2d<int>> ClipRingToExtent(List<Point2d<int>> ring)
         {
-            List<Vector2> input = new List<Vector2>(ring.Count);
+            List<Point2d<int>> clipped = new List<Point2d<int>>(ring.Count);
 
             for (int i = 0; i < ring.Count; i++)
             {
-                input.Add(new Vector2(ring[i].X, ring[i].Y));
-            }
-
-            float minX = 0f, minY = 0f, maxX = OPENMAPTILE_EXTENT, maxY = OPENMAPTILE_EXTENT;
-
-            List<Vector2> ClipAgainst(List<Vector2> subject, Func<Vector2, bool> inside, Func<Vector2, Vector2, Vector2> intersect)
-            {
-                List<Vector2> output = new List<Vector2>();
-
-                for (int i = 0; i < subject.Count; i++)
-                {
-                    Vector2 current = subject[i];
-                    Vector2 prev = subject[(i - 1 + subject.Count) % subject.Count];
-                    bool currInside = inside(current), prevInside = inside(prev);
-
-                    if (prevInside && currInside)
-                    {
-                        output.Add(current);
-                    }
-                    else if (prevInside && !currInside)
-                    {
-                        output.Add(intersect(prev, current));
-                    }
-                    else if (!prevInside && currInside)
-                    {
-                        output.Add(intersect(prev, current));
-                        output.Add(current);
-                    }
-                }
-                return output;
-            }
-
-            //Clip left
-            input = ClipAgainst(input, p => p.x >= minX, (a, b) =>
-            {
-                float t = (minX - a.x) / (b.x - a.x + 1e-6f);
-
-                return new Vector2(minX, a.y + t * (b.y - a.y));
-            });
-            //Clip right
-            input = ClipAgainst(input, p => p.x <= maxX, (a, b) =>
-            {
-                float t = (maxX - a.x) / (b.x - a.x + 1e-6f);
-
-                return new Vector2(maxX, a.y + t * (b.y - a.y));
-            });
-            //Clip bottom
-            input = ClipAgainst(input, p => p.y >= minY, (a, b) =>
-            {
-                float t = (minY - a.y) / (b.y - a.y + 1e-6f);
-
-                return new Vector2(a.x + t * (b.x - a.x), minY);
-            });
-            //Clip top
-            input = ClipAgainst(input, p => p.y <= maxY, (a, b) =>
-            {
-                float t = (maxY - a.y) / (b.y - a.y + 1e-6f);
-
-                return new Vector2(a.x + t * (b.x - a.x), maxY);
-            });
-
-            List<Point2d<int>> clipped = new List<Point2d<int>>(input.Count);
-
-            for (int i = 0; i < input.Count; i++)
-            {
-                clipped.Add(new Point2d<int>((int)input[i].x, (int)input[i].y));
+                clipped.Add(new Point2d<int>(
+                    Mathf.Clamp(ring[i].X, 0, (int)OPENMAPTILE_EXTENT),
+                    Mathf.Clamp(ring[i].Y, 0, (int)OPENMAPTILE_EXTENT)));
             }
 
             return clipped;
         }
 
-        private double TileYToLat(int tileY, int zoom)
+        /// <summary>
+        /// Generates the ARM texture for a tile using water contours and scanline rasterization.
+        /// </summary>
+        private void GenerateARMTextureForTile(TileDefinition tile, int zoom)
         {
-            double n = Math.PI - 2.0 * Math.PI * tileY / (1 << zoom);
+            if (tile.SatelliteTexture == null)
+            {
+                Debug.LogWarning($"[OpenMapTileManager] No satellite texture for tile {tile.X},{tile.Y}");
+                return;
+            }
 
-            return Math.Atan(Math.Sinh(n)) * (180.0 / Math.PI);
+            (int x, int y) key = (tile.X, tile.Y);
+            _waterContoursByTile.TryGetValue(key, out List<List<Vector2>> waterContoursUV);
+
+            int outW = tile.SatelliteTexture.width;
+            int outH = tile.SatelliteTexture.height;
+            int inW = Mathf.Max(4, outW);
+            int inH = Mathf.Max(4, outH);
+
+            Color32[] armPixels = ArrayPool<Color32>.Shared.Rent(outW * outH);
+            Color32 landARM = new Color32(0, 0, 0, 0);
+            Color32 waterARM = new Color32(0, 255, 0, 255);
+
+            Parallel.For(0, outW * outH, i =>
+            {
+                armPixels[i] = landARM;
+            });
+
+            if (waterContoursUV != null && waterContoursUV.Count > 0)
+            {
+                BitArray lowMask = new BitArray(inW * inH);
+                RasterizeContoursEvenOddUV(lowMask, inW, inH, waterContoursUV);
+
+                Parallel.For(0, outH, y =>
+                {
+                    int row = y * outW;
+
+                    for (int x = 0; x < outW; x++)
+                    {
+                        int i = row + x;
+
+                        if (lowMask.Get(i))
+                        {
+                            armPixels[i] = waterARM;
+                        }
+                    }
+                });
+            }
+
+            Texture2D armTex = new Texture2D(outW, outH, TextureFormat.RGBA32, false, true);
+            armTex.wrapMode = TextureWrapMode.Clamp;
+            armTex.filterMode = FilterMode.Bilinear;
+            armTex.SetPixels32(armPixels, 0);
+            armTex.Apply(false, false);
+            tile.ARMTexture = armTex;
+
+            ArrayPool<Color32>.Shared.Return(armPixels, clearArray: true);
+        }
+
+        /// <summary>
+        /// Rasterizes water contours using Even-Odd scanline fill in UV space.
+        /// </summary>
+        private void RasterizeContoursEvenOddUV(BitArray mask, int w, int h, List<List<Vector2>> contoursUV)
+        {
+            if (_edgeTablePool.Length < h)
+            {
+                System.Array.Resize(ref _edgeTablePool, h);
+            }
+
+            for (int i = 0; i < h; i++)
+            {
+                if (_edgeTablePool[i] == null)
+                {
+                    _edgeTablePool[i] = new List<Edge>();
+                }
+                else
+                {
+                    _edgeTablePool[i].Clear();
+                }
+            }
+
+            float wMinus1 = (float)(w - 1);
+            float hMinus1 = (float)(h - 1);
+
+            Parallel.For(0, contoursUV.Count, c =>
+            {
+                List<Vector2> contour = contoursUV[c];
+                int n = contour.Count;
+
+                if (n < 3)
+                {
+                    return;
+                }
+
+                int[] px = new int[n];
+                int[] py = new int[n];
+
+                for (int i = 0; i < n; i++)
+                {
+                    px[i] = Mathf.Clamp(Mathf.RoundToInt(contour[i].x * wMinus1), 0, w - 1);
+                    py[i] = Mathf.Clamp(Mathf.RoundToInt(contour[i].y * hMinus1), 0, h - 1);
+                }
+
+                for (int i = 0; i < n; i++)
+                {
+                    int j = (i + 1) % n;
+                    int x0 = px[i];
+                    int y0 = py[i];
+                    int x1 = px[j];
+                    int y1 = py[j];
+
+                    if (y0 == y1)
+                    {
+                        continue;
+                    }
+
+                    if (y0 > y1)
+                    {
+                        int tempX = x0;
+                        x0 = x1;
+                        x1 = tempX;
+
+                        int tempY = y0;
+                        y0 = y1;
+                        y1 = tempY;
+                    }
+
+                    float invSlope = (float)(x1 - x0) / (float)(y1 - y0);
+
+                    Edge edge = new Edge
+                    {
+                        yMax = y1,
+                        x = x0,
+                        invSlope = invSlope
+                    };
+
+                    lock (_edgeTablePool[y0])
+                    {
+                        _edgeTablePool[y0].Add(edge);
+                    }
+                }
+            });
+
+            _activeEdgeList.Clear();
+
+            for (int y = 0; y < h; y++)
+            {
+                if (_edgeTablePool[y].Count > 0)
+                {
+                    _activeEdgeList.AddRange(_edgeTablePool[y]);
+                }
+
+                int activeCount = 0;
+
+                for (int i = 0; i < _activeEdgeList.Count; i++)
+                {
+                    if (_activeEdgeList[i].yMax > y)
+                    {
+                        _activeEdgeList[activeCount++] = _activeEdgeList[i];
+                    }
+                }
+
+                if (activeCount == 0)
+                {
+                    _activeEdgeList.Clear();
+                    continue;
+                }
+
+                _activeEdgeList.RemoveRange(activeCount, _activeEdgeList.Count - activeCount);
+
+                if (_activeEdgeList.Count < 32)
+                {
+                    InsertionSortByX(_activeEdgeList);
+                }
+                else
+                {
+                    _activeEdgeList.Sort(CompareEdgesByX);
+                }
+
+                for (int i = 0; i + 1 < _activeEdgeList.Count; i += 2)
+                {
+                    int xStart = Mathf.CeilToInt(_activeEdgeList[i].x);
+                    int xEnd = Mathf.FloorToInt(_activeEdgeList[i + 1].x);
+
+                    if (xEnd < xStart)
+                    {
+                        continue;
+                    }
+
+                    int row = y * w;
+                    int xs = Mathf.Clamp(xStart, 0, w - 1);
+                    int xe = Mathf.Clamp(xEnd, 0, w - 1);
+
+                    for (int x = xs; x <= xe; x++)
+                    {
+                        mask.Set(row + x, true);
+                    }
+                }
+
+                for (int i = 0; i < _activeEdgeList.Count; i++)
+                {
+                    Edge edge = _activeEdgeList[i];
+                    edge.x += edge.invSlope;
+                    _activeEdgeList[i] = edge;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sorts a list of edges by their x-coordinate using insertion sort.
+        /// </summary>
+        private static void InsertionSortByX(List<Edge> edges)
+        {
+            for (int i = 1; i < edges.Count; i++)
+            {
+                Edge key = edges[i];
+                int j = i - 1;
+
+                while (j >= 0 && edges[j].x > key.x)
+                {
+                    edges[j + 1] = edges[j];
+                    j--;
+                }
+
+                edges[j + 1] = key;
+            }
+        }
+
+        /// <summary>
+        /// Compares two edges by their x-coordinate.
+        /// </summary>
+        private static int CompareEdgesByX(Edge a, Edge b)
+        {
+            return a.x.CompareTo(b.x);
         }
         #endregion
     }

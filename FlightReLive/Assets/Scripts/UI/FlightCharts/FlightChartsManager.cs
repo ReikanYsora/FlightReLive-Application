@@ -1,15 +1,17 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
-using FlightReLive.Core.Settings;
 using FlightReLive.Core.ProceduralTerrain;
+using FlightReLive.Core.Settings;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Video;
 
 namespace FlightReLive.UI.FlightCharts
 {
@@ -318,23 +320,26 @@ namespace FlightReLive.UI.FlightCharts
             return (min, max, range, isFlat);
         }
 
-        internal void Unload()
+        internal async Task Unload()
         {
-            foreach (KeyValuePair<FlightChartType, FlightChart> flightChart in _flightChartsBar)
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                flightChart.Value.ClearSteps();
-            }
+                foreach (KeyValuePair<FlightChartType, FlightChart> flightChart in _flightChartsBar)
+                {
+                    flightChart.Value.ClearSteps();
+                }
 
-            _flightChartsBar.Clear();
-            _speedChart = null;
-            _relativeAltitudeChart = null;
-            _absoluteAltitudeChart = null;
-            _apertureChart = null;
-            _shutterSpeedChart = null;
-            _focalChart = null;
-            _isoChart = null;
-            _exposureChart = null;
-            _digitalZoomChart = null;
+                _flightChartsBar.Clear();
+                _speedChart = null;
+                _relativeAltitudeChart = null;
+                _absoluteAltitudeChart = null;
+                _apertureChart = null;
+                _shutterSpeedChart = null;
+                _focalChart = null;
+                _isoChart = null;
+                _exposureChart = null;
+                _digitalZoomChart = null;
+            });
         }
 
         private float Normalize(float value, float min, float range, bool isFlat)

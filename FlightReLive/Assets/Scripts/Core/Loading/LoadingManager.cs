@@ -12,7 +12,6 @@ using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
-using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,7 +80,8 @@ namespace FlightReLive.Core.Loading
         #region METHODS
         private async void StartLoadingScene(FlightFile flightFile)
         {
-            CancelLoading();
+            await CancelLoading();
+
             _cancellationTokenSource = new CancellationTokenSource();
             CancellationToken token = _cancellationTokenSource.Token;
 
@@ -100,7 +100,7 @@ namespace FlightReLive.Core.Loading
             DisplayLoading();
             IsLoading = true;
             OnFlightStartLoading?.Invoke();
-            await Task.Delay(50);
+            await Task.Delay(1000);
 
             try
             {
@@ -179,7 +179,7 @@ namespace FlightReLive.Core.Loading
                     foreach (TileDefinition tileDefinition in loadedTiles)
                     {
                         BuildingManager.Instance.LoadTile(tileDefinition, flightData);
-                        OpenMapTileManager.Instance.LoadTile(tileDefinition, flightData);
+                        OpenMapTileManager.Instance.LoadTile(tileDefinition);
                     }
                 }
                 
@@ -196,7 +196,7 @@ namespace FlightReLive.Core.Loading
             catch (OperationCanceledException)
             {
                 Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning);
-                UnloadFlightDataInModules();
+                await UnloadFlightDataInModules();
             }
             finally
             {
@@ -320,20 +320,34 @@ namespace FlightReLive.Core.Loading
             IsLoading = false;
         }
 
-        private void UnloadFlightDataInModules()
+        private async Task UnloadFlightDataInModules()
         {
-            FlightChartsManager.Instance.Unload();
-            VideoPlayerManager.Instance.Unload();
-            ProceduralTerrainManager.Instance.Unload();
-            PathManager.Instance.Unload();
-            EnvironmentManager.Instance.Unload();
-            OpenMapTileManager.Instance.Unload();
+            List<Task> unloadTasks = new List<Task>
+            {
+                FlightChartsManager.Instance.Unload(),
+                VideoPlayerManager.Instance.Unload(),
+                ProceduralTerrainManager.Instance.Unload(),
+                PathManager.Instance.Unload(),
+                EnvironmentManager.Instance.Unload(),
+                OpenMapTileManager.Instance.Unload(),
+                BuildingManager.Instance.Unload()
+            };
+
+            try
+            {
+                await Task.WhenAll(unloadTasks);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"UnloadFlightDataInModules: Exception during unload {ex}");
+            }
+
             CurrentFlightData?.Dispose();
             CurrentFlightData = null;
             OnFlightUnloaded?.Invoke();
         }
 
-        private void CancelLoading()
+        private async Task CancelLoading()
         {
             _tileProgress = 0f;
             _tilesProcessed = 0;
@@ -344,17 +358,17 @@ namespace FlightReLive.Core.Loading
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource.Dispose();
                 _cancellationTokenSource = null;
-                UnloadFlightDataInModules();
+                await UnloadFlightDataInModules();
             }
         }
         #endregion
 
         #region CALLBACKS
-        private void OnFlightFileSelected(FlightFile flightFile)
+        private async void OnFlightFileSelected(FlightFile flightFile)
         {
             if (CurrentFlightData != null)
             {
-                UnloadFlightDataInModules();
+                await UnloadFlightDataInModules();
             }
 
             StartLoadingScene(flightFile);
@@ -424,7 +438,7 @@ namespace FlightReLive.Core.Loading
                 
             },
             FuModalSize.Medium,
-            new FuModalButton("Cancel loading", () => CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));
+            new FuModalButton("Cancel loading", async () => await CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));
         }
         #endregion
     }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace FlightReLive.Core.OpenMapTile
+namespace FlightReLive.Core.Building
 {
     public class BuildingPool : MonoBehaviour
     {

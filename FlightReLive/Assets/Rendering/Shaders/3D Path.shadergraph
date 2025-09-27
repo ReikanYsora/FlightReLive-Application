@@ -2361,8 +2361,8 @@
     "m_ObjectId": "1cd99f4cbd2041669625ef5433e50c22",
     "m_Title": "Hover disabled",
     "m_Position": {
-        "x": -3136.999755859375,
-        "y": 1939.9998779296875
+        "x": -3137.0,
+        "y": 1940.0
     }
 }
 
@@ -2676,7 +2676,7 @@
     "m_TessellationMaxDisplacement": 0.009999999776482582,
     "m_DebugSymbols": false,
     "m_Version": 2,
-    "inspectorFoldoutMask": 1
+    "inspectorFoldoutMask": 9
 }
 
 {
@@ -3079,7 +3079,7 @@
     "m_ObjectId": "2c053bc76041464795fb150d038aebf1",
     "m_Title": "IsPlayed",
     "m_Position": {
-        "x": -4447.99951171875,
+        "x": -4448.0,
         "y": 2379.0
     }
 }
@@ -3653,7 +3653,7 @@
     "m_ObjectId": "4ab2457d66a7441fbd34ba61fc261a96",
     "m_Title": "StripedColor",
     "m_Position": {
-        "x": -6729.9990234375,
+        "x": -6730.0,
         "y": 773.0
     }
 }
@@ -4993,8 +4993,8 @@
     "m_ObjectId": "73656740ea8e42ba9a613cef5c2f6e1e",
     "m_Title": "isPlayedSimple",
     "m_Position": {
-        "x": -5608.99951171875,
-        "y": 1393.9998779296875
+        "x": -5609.0,
+        "y": 1394.0
     }
 }
 
@@ -5067,8 +5067,8 @@
     "m_ObjectId": "764c793929d14d7eab4a4fc0f9540f4a",
     "m_Title": "displacedPos",
     "m_Position": {
-        "x": -2004.9998779296875,
-        "y": -1290.999755859375
+        "x": -2005.0,
+        "y": -1291.0
     }
 }
 
@@ -6285,8 +6285,8 @@
     "m_ObjectId": "9891602e77b543b7bcc7b264d1638bc3",
     "m_Title": "IsHovered",
     "m_Position": {
-        "x": -4454.99951171875,
-        "y": 1683.9998779296875
+        "x": -4455.0,
+        "y": 1684.0
     }
 }
 
@@ -6396,8 +6396,8 @@
     "m_ObjectId": "9d96faf45bfa4ada86574e303cea01dc",
     "m_Title": "Progress Mask",
     "m_Position": {
-        "x": -4847.99951171875,
-        "y": 4192.99951171875
+        "x": -4848.0,
+        "y": 4193.0
     }
 }
 
@@ -7817,7 +7817,7 @@
     "m_Title": "Hover Mask",
     "m_Position": {
         "x": -4839.0,
-        "y": 5076.99951171875
+        "y": 5077.0
     }
 }
 
@@ -9286,8 +9286,8 @@
     "m_ObjectId": "fc05dcc27d3e46c4a9689b26c2884a12",
     "m_Title": "Glow Strength",
     "m_Position": {
-        "x": -5985.99951171875,
-        "y": 3230.999755859375
+        "x": -5986.0,
+        "y": 3231.0
     }
 }
 

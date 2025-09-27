@@ -1,13 +1,13 @@
-using FlightReLive.Core.OpenMapTile;
+using FlightReLive.Core.Building;
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
-using FlightReLive.Core.ProceduralTerrain;
-using FlightReLive.Core.Building;
 
 namespace FlightReLive.Core.Environment
 {
@@ -65,6 +65,10 @@ namespace FlightReLive.Core.Environment
             SettingsManager.OnPostExposureIntensityChanged += OnPostExposureIntensityChanged;
             SettingsManager.OnContrastIntensityChanged += OnContrastIntensityChanged;
             SettingsManager.OnSaturationIntensityChanged += OnSaturationIntensityChanged;
+            SettingsManager.OnContactShadowsEnabledChanged += OnContactShadowsEnabledChanged;
+            SettingsManager.OnContactShadowsMinDistanceChanged += OnContactShadowsMinDistanceChanged;
+            SettingsManager.OnContactShadowsMaxDistanceChanged += OnContactShadowsMaxDistanceChanged;
+            SettingsManager.OnContactShadowsOpacityChanged += OnContactShadowsOpacityChanged;
 
             UninitializedVolumeProfile();
         }
@@ -75,6 +79,10 @@ namespace FlightReLive.Core.Environment
             SettingsManager.OnPostExposureIntensityChanged -= OnPostExposureIntensityChanged;
             SettingsManager.OnContrastIntensityChanged -= OnContrastIntensityChanged;
             SettingsManager.OnSaturationIntensityChanged -= OnSaturationIntensityChanged;
+            SettingsManager.OnContactShadowsEnabledChanged -= OnContactShadowsEnabledChanged;
+            SettingsManager.OnContactShadowsMinDistanceChanged -= OnContactShadowsMinDistanceChanged;
+            SettingsManager.OnContactShadowsMaxDistanceChanged -= OnContactShadowsMaxDistanceChanged;
+            SettingsManager.OnContactShadowsOpacityChanged -= OnContactShadowsOpacityChanged;
         }
         #endregion
 
@@ -161,9 +169,9 @@ namespace FlightReLive.Core.Environment
         /// <summary>
         /// Reset to a flat dark background, remove sky/fog/clouds until next Load.
         /// </summary>
-        internal void Unload()
+        internal async Task Unload()
         {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
                 UninitializedVolumeProfile();
             });
@@ -310,16 +318,21 @@ namespace FlightReLive.Core.Environment
 
             if (_contactShadows != null)
             {
-                _contactShadows.enable.overrideState = true;
-                _contactShadows.active = true;
-                _contactShadows.enable.Override(true);
+                bool contactShadowsEnabled = SettingsManager.CurrentSettings.ContactShadowsEnabled;
+                float contactShadowsMinDistance = SettingsManager.CurrentSettings.ContactShadowsMinDistance;
+                float contactShadowsMaxDistance = SettingsManager.CurrentSettings.ContactShadowsMaxDistance;
+                float contactShadowsOpacity = SettingsManager.CurrentSettings.ContactShadowsOpacity;
+
+                _contactShadows.enable.overrideState = contactShadowsEnabled;
+                _contactShadows.active = contactShadowsEnabled;
+                _contactShadows.enable.Override(contactShadowsEnabled);
                 _contactShadows.length.Override(0.2f);
                 _contactShadows.distanceScaleFactor.Override(0.65f);
-                _contactShadows.minDistance.Override(0f);
-                _contactShadows.maxDistance.Override(200f);
+                _contactShadows.minDistance.Override(contactShadowsMinDistance);
+                _contactShadows.maxDistance.Override(contactShadowsMaxDistance);
                 _contactShadows.fadeInDistance.overrideState = false;
                 _contactShadows.fadeDistance.overrideState = false;
-                _contactShadows.opacity.Override(0.8f);
+                _contactShadows.opacity.Override(contactShadowsOpacity);
                 _contactShadows.rayBias.overrideState = false;
                 _contactShadows.thicknessScale.overrideState = false;
                 _contactShadows.sampleCount = 10;
@@ -424,6 +437,44 @@ namespace FlightReLive.Core.Environment
                 _vignette.active = true;
             }
         }
+
+        private void OnContactShadowsEnabledChanged(bool state)
+        {
+            if (_contactShadows != null)
+            {
+                bool contactShadowsEnabled = SettingsManager.CurrentSettings.ContactShadowsEnabled;
+                _contactShadows.enable.overrideState = contactShadowsEnabled;
+                _contactShadows.active = contactShadowsEnabled;
+                _contactShadows.enable.Override(contactShadowsEnabled);
+            }
+        }
+
+        private void OnContactShadowsMinDistanceChanged(float min)
+        {
+            if (_contactShadows != null)
+            {
+                float minDistance = SettingsManager.CurrentSettings.ContactShadowsMinDistance;
+                _contactShadows.minDistance.Override(minDistance);
+            }
+        }
+
+        private void OnContactShadowsMaxDistanceChanged(float max)
+        {
+            if (_contactShadows != null)
+            {
+                float maxDistance = SettingsManager.CurrentSettings.ContactShadowsMaxDistance;
+                _contactShadows.maxDistance.Override(maxDistance);
+            }
+        }
+
+        private void OnContactShadowsOpacityChanged(float op)
+        {
+            if (_contactShadows != null)
+            {
+                float opacity = SettingsManager.CurrentSettings.ContactShadowsOpacity;
+                _contactShadows.opacity.Override(opacity);
+            }
+        }
         #endregion
 
         #region UI
@@ -448,7 +499,7 @@ namespace FlightReLive.Core.Environment
             using (FuGrid gridColorAdjustment = new FuGrid("gridColorAdjustmentSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
                 float postExposure = SettingsManager.CurrentSettings.PostExposureIntensity;
-                if (gridColorAdjustment.Slider("Post-exposure", ref postExposure, 0f, 3f, 0.01f))
+                if (gridColorAdjustment.Slider("Post-exposure", ref postExposure, 0f, 3f, 0.01f, format: "%.2f"))
                 {
                     SettingsManager.SavePostExposureIntensity(postExposure);
                 }
@@ -465,17 +516,49 @@ namespace FlightReLive.Core.Environment
                     SettingsManager.SaveSaturationIntensity(saturation);
                 }
             }
+
+            layout.Separator();
+            layout.FramedText("Contact shadows");
+            layout.Separator();
+
+            using (FuGrid gridContactShadows = new FuGrid("gridContactShadowsSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            {
+                bool contactShadowsEnabled = SettingsManager.CurrentSettings.ContactShadowsEnabled;
+                if (gridContactShadows.Toggle("Contact shadows", ref contactShadowsEnabled))
+                {
+                    SettingsManager.SaveContactShadowsEnabled(contactShadowsEnabled);
+                }
+
+                if (!contactShadowsEnabled)
+                {
+                    gridContactShadows.DisableNextElements();
+                }
+
+                float minDistance = SettingsManager.CurrentSettings.ContactShadowsMinDistance;
+                float maxDistance = SettingsManager.CurrentSettings.ContactShadowsMaxDistance;
+
+                if (gridContactShadows.Range("Min / Max distances", ref minDistance, ref maxDistance, 0f, 1000f, 1f))
+                {
+                    SettingsManager.SaveContactShadowsMinDistance(minDistance);
+                    SettingsManager.SaveContactShadowsMaxDistance(maxDistance);
+                }
+
+                float opacity = SettingsManager.CurrentSettings.ContactShadowsOpacity;
+                if (gridContactShadows.Slider("Opacity", ref opacity, 0f, 1f, 0.01f, format: "%.2f"))
+                {
+                    SettingsManager.SaveContactShadowsOpacity(opacity);
+                }
+            }
         }
 
         internal void DrawSceneSettings(FuLayout layout)
         {
-            layout.FramedText("Assets");
+            layout.FramedText("Buildings");
             layout.Separator();
 
             using (FuGrid gridShowAssets = new FuGrid("gridAssetsSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
                 BuildingManager.Instance.DisplayBuildingsSettings(gridShowAssets);
-                ProceduralTerrainManager.Instance.DisplayTreeSettings(gridShowAssets);
             }
         }
         #endregion

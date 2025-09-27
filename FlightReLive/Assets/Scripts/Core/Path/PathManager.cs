@@ -7,6 +7,7 @@ using Fu.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -94,6 +95,7 @@ namespace FlightReLive.Core.Paths
             _progressionPathFilter = _progressionPath.AddComponent<MeshFilter>();
             _progressionPathCollider = _progressionPath.AddComponent<MeshCollider>();
             _progressionPathRenderer = _progressionPath.AddComponent<MeshRenderer>();
+            _progressionPathRenderer.shadowCastingMode = ShadowCastingMode.Off;
             _progressionPathMaterialInstance = new Material(_progressionPathMaterial);
             _progressionPathColliderUpdater = _progressionPath.AddComponent<PathColliderUpdater>();
             _progressionPathRenderer.material = _progressionPathMaterialInstance;
@@ -234,9 +236,9 @@ namespace FlightReLive.Core.Paths
             return _fullPath[_fullPath.Count - 1].Position;
         }
 
-        internal void Unload()
+        internal async Task Unload()
         {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
                 _interpolatedToFlightPoint.Clear();
                 _progressionPathFilter.sharedMesh = null;

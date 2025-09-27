@@ -4700,6 +4700,250 @@ MonoBehaviour:
   chromaticAbberationSampleCount:
     m_OverrideState: 1
     m_Value: 3
+--- !u!114 &5918338668473144378
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da041a68aff26474c8b3e17b03239d55, type: 3}
+  m_Name: MKEdgeDetection
+  m_EditorClassIdentifier: MKEdgeDetectionComponents::MK.EdgeDetection.HighDefinitionVolumeComponents.MKEdgeDetection
+  active: 1
+  <displayName>k__BackingField: 
+  m_IsInitialized: 0
+  typeName: 
+  <passName>k__BackingField: 
+  _propertiesInitialized: 1
+  precision:
+    <fieldHash>k__BackingField: 1774891352
+    m_OverrideState: 1
+    m_Value:
+      _value: 1
+  largeKernel:
+    <fieldHash>k__BackingField: 2014241744
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  mediumKernel:
+    <fieldHash>k__BackingField: -1802024768
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  smallKernel:
+    <fieldHash>k__BackingField: -844623200
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  inputData:
+    <fieldHash>k__BackingField: -605272808
+    m_OverrideState: 1
+    m_Value:
+      _value: 3
+  lineHardness:
+    <fieldHash>k__BackingField: -365922416
+    m_OverrideState: 1
+    m_Value:
+      _value: 0.5
+      _minValue: 0
+      _maxValue: 1
+  fade:
+    <fieldHash>k__BackingField: 112778368
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  lineSizeMatchFactor:
+    <fieldHash>k__BackingField: 1070179936
+    m_OverrideState: 1
+    m_Value:
+      _value: 0.5
+      _minValue: 0
+      _maxValue: 1
+  globalLineSize:
+    <fieldHash>k__BackingField: 1309530328
+    m_OverrideState: 1
+    m_Value:
+      _value: 1
+      _minValue: 0
+      _maxValue: 3
+  depthLineSize:
+    <fieldHash>k__BackingField: 1788231112
+    m_OverrideState: 1
+    m_Value:
+      _value: 1
+      _minValue: 0
+      _maxValue: 2
+  normalLineSize:
+    <fieldHash>k__BackingField: -2028035400
+    m_OverrideState: 1
+    m_Value:
+      _value: 1
+      _minValue: 0
+      _maxValue: 2
+  depthFadeLimits:
+    <fieldHash>k__BackingField: -1309984224
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  normalFadeLimits:
+    <fieldHash>k__BackingField: -1070633832
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  depthThreshold:
+    <fieldHash>k__BackingField: -831283440
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0.1
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  lineColor:
+    <fieldHash>k__BackingField: -591933048
+    m_OverrideState: 1
+    m_Value:
+      _value:
+        r: 0
+        g: 0
+        b: 0
+        a: 1
+      _useAlpha: 1
+      _useHDR: 0
+  overlayColor:
+    <fieldHash>k__BackingField: 1466546296
+    m_OverrideState: 1
+    m_Value:
+      _value:
+        r: 1
+        g: 1
+        b: 1
+        a: 0
+      _useAlpha: 1
+      _useHDR: 0
+  depthNearFade:
+    <fieldHash>k__BackingField: 1705896688
+    m_OverrideState: 1
+    m_Value:
+      _value: 10
+  depthFarFade:
+    <fieldHash>k__BackingField: 1945247080
+    m_OverrideState: 1
+    m_Value:
+      _value: 30
+  normalNearFade:
+    <fieldHash>k__BackingField: -2110369824
+    m_OverrideState: 1
+    m_Value:
+      _value: 5
+  normalsFarFade:
+    <fieldHash>k__BackingField: -1871019432
+    m_OverrideState: 1
+    m_Value:
+      _value: 20
+  normalThreshold:
+    <fieldHash>k__BackingField: -1631669040
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0.1
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  sceneColorThreshold:
+    <fieldHash>k__BackingField: -1392318648
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0.1
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  sceneColorLineSize:
+    <fieldHash>k__BackingField: -1152968256
+    m_OverrideState: 1
+    m_Value:
+      _value: 1
+      _minValue: 0
+      _maxValue: 2
+  sceneColorNearFade:
+    <fieldHash>k__BackingField: -913617864
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  sceneColorFarFade:
+    <fieldHash>k__BackingField: -674267472
+    m_OverrideState: 1
+    m_Value:
+      _value: 10
+  sceneColorFadeLimits:
+    <fieldHash>k__BackingField: -434917080
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  visualizeEdges:
+    <fieldHash>k__BackingField: -195566688
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  enhanceDetails:
+    <fieldHash>k__BackingField: 43783704
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  sketch:
+    <fieldHash>k__BackingField: 283134096
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
+  sketchIntensity:
+    <fieldHash>k__BackingField: 761834880
+    m_OverrideState: 1
+    m_Value:
+      _value: 0.333
+      _minValue: 0
+      _maxValue: 1
+  sketchFrequency:
+    <fieldHash>k__BackingField: 1001185272
+    m_OverrideState: 1
+    m_Value:
+      _value: 4
+  sketchAdditionalNoiseMap:
+    <fieldHash>k__BackingField: 1479886056
+    m_OverrideState: 1
+    m_Value: {_value: {fileID: 0}}
+  sketchFadeLimits:
+    <fieldHash>k__BackingField: 1719236448
+    m_OverrideState: 1
+    m_Value:
+      _minValue: 0
+      _maxValue: 1
+      _minLimit: 0
+      _maxLimit: 1
+  sketchNearFade:
+    <fieldHash>k__BackingField: 1958586840
+    m_OverrideState: 1
+    m_Value:
+      _value: 10
+  sketchFarFade:
+    <fieldHash>k__BackingField: -2097030064
+    m_OverrideState: 1
+    m_Value:
+      _value: 30
+  workflow:
+    <fieldHash>k__BackingField: -1857679672
+    m_OverrideState: 1
+    m_Value:
+      _value: 0
 --- !u!114 &6685914001584055003
 MonoBehaviour:
   m_ObjectHideFlags: 3

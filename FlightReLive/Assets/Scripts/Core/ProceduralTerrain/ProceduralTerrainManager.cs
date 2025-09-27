@@ -5,6 +5,7 @@ using Fu;
 using Fu.Framework;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core.ProceduralTerrain
@@ -48,7 +49,6 @@ namespace FlightReLive.Core.ProceduralTerrain
         internal void Load(FlightData flightData)
         {
             List<TileDefinition> tiles = flightData.MapDefinition.GetSortedTiles();
-            Texture2D armTexture = CreateARMTexture();
             Dictionary<(int, int), Terrain> unityTerrains = new Dictionary<(int, int), Terrain>();
 
             if (tiles == null || tiles.Count == 0)
@@ -200,7 +200,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 TerrainLayer satelliteLayer = new TerrainLayer();
                 satelliteLayer.diffuseTexture = satelliteTexture;
-                satelliteLayer.maskMapTexture = armTexture;
+                //satelliteLayer.maskMapTexture = tile.ARMTexture;
                 satelliteLayer.tileSize = new Vector2(terrainSize, terrainSize);
 
                 terrainData.terrainLayers = new TerrainLayer[] { satelliteLayer };
@@ -240,29 +240,9 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
         }
 
-        private Texture2D CreateARMTexture(int size = 64)
+        internal async Task Unload()
         {
-            //Small texture (4x4) since it is uniform, no need for full res
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.filterMode = FilterMode.Bilinear;
-            Color arm = new Color(0f, 0f, 0f, 0f);
-            Color[] pixels = new Color[size * size];
-
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                pixels[i] = arm;
-            }
-
-            tex.SetPixels(pixels);
-            tex.Apply();
-
-            return tex;
-        }
-
-        internal void Unload()
-        {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
                 for (int i = _terrains.Count - 1; i >= 0; i--)
                 {
@@ -271,16 +251,6 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 _terrains.Clear();
             });
-        }
-        #endregion
-
-        #region CALLBACKS
-        #endregion
-
-        #region UI
-        internal void DisplayTreeSettings(FuGrid grid)
-        {
-
         }
         #endregion
     }

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.UI.VideoPlayer
@@ -198,9 +199,9 @@ namespace FlightReLive.UI.VideoPlayer
             });
         }
 
-        internal void Unload()
+        internal async Task Unload()
         {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
                 if (_videoPlayer == null)
                 {

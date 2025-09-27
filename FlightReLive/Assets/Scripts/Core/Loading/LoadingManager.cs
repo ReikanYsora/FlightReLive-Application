@@ -1,6 +1,7 @@
-﻿using FlightReLive.Core.OpenMapTile;
+﻿using FlightReLive.Core.Building;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.OpenMapTile;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
@@ -11,6 +12,7 @@ using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
+using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -176,16 +178,17 @@ namespace FlightReLive.Core.Loading
                     //We need to call this method only when BuildTileLookup and InitializeAltitude has been executed
                     foreach (TileDefinition tileDefinition in loadedTiles)
                     {
+                        BuildingManager.Instance.LoadTile(tileDefinition, flightData);
                         OpenMapTileManager.Instance.LoadTile(tileDefinition, flightData);
                     }
                 }
                 
                 ProceduralTerrainManager.Instance.Load(flightData);
+                BuildingManager.Instance.Load(flightData);
                 VideoPlayerManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
-                OpenMapTileManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}", StateType.Info);
                 OnFlightEndLoading?.Invoke();

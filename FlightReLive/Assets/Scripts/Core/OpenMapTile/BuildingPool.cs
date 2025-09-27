@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace FlightReLive.Core.OpenMapTile
 {
-    public class OpenMapTilePool : MonoBehaviour
+    public class BuildingPool : MonoBehaviour
     {
         #region ATTRIBUTES
         [SerializeField] private GameObject _openMapTileZonePrefab;

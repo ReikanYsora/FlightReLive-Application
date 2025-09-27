@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using FlightReLive.Core.ProceduralTerrain;
+using FlightReLive.Core.Building;
 
 namespace FlightReLive.Core.Environment
 {
@@ -473,7 +474,7 @@ namespace FlightReLive.Core.Environment
 
             using (FuGrid gridShowAssets = new FuGrid("gridAssetsSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
             {
-                OpenMapTileManager.Instance.DisplayBuildingsSettings(gridShowAssets);
+                BuildingManager.Instance.DisplayBuildingsSettings(gridShowAssets);
                 ProceduralTerrainManager.Instance.DisplayTreeSettings(gridShowAssets);
             }
         }

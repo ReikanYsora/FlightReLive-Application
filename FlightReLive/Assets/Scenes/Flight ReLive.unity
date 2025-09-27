@@ -1772,6 +1772,66 @@ MonoBehaviour:
     shadingChangeScale: 1
     accumulationAddedPerFrame: 0.33333334
     minDisocclusionAccumulation: -0.33333334
+--- !u!1 &1618281187
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1618281188}
+  - component: {fileID: 1618281190}
+  - component: {fileID: 1618281189}
+  m_Layer: 0
+  m_Name: BuildingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1618281188
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1618281187}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1896134859}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1618281189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1618281187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ad18f3c8079c9d42a4784d2d3f7ab19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingPool
+  _openMapTileZonePrefab: {fileID: 547569354533486219, guid: 7994d44f06d00dd4c98601907cbb3b57, type: 3}
+  _initialSize: 10000
+--- !u!114 &1618281190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1618281187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 126c05bd4818b094690c736a2650cba4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingManager
+  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
 --- !u!1 &1721477096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1891,6 +1951,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1618281188}
   - {fileID: 289568083}
   - {fileID: 1092402792}
   - {fileID: 2125856383}
@@ -1928,7 +1989,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2116168536}
   - component: {fileID: 2116168539}
-  - component: {fileID: 2116168538}
   m_Layer: 0
   m_Name: OpenMapTileManager
   m_TagString: Untagged
@@ -1951,20 +2011,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2116168538
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2116168535}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2ad18f3c8079c9d42a4784d2d3f7ab19, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Building.BuildingPool
-  _openMapTileZonePrefab: {fileID: 547569354533486219, guid: 7994d44f06d00dd4c98601907cbb3b57, type: 3}
-  _initialSize: 10000
 --- !u!114 &2116168539
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1977,13 +2023,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ace06e9ea9f002f41a8ae3182016ae84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.OpenMapTile.OpenMapTileManager
-  _zoneExtrusionHeight: 2
-  _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
-  _landUseMaterial: {fileID: 2100000, guid: 45805eb837424e34c893d01e4dcd772b, type: 2}
-  _landCoverMaterial: {fileID: 2100000, guid: cfff60ddf693cad4db86a838dfaa98d1, type: 2}
-  _waterMaterial: {fileID: 2100000, guid: c4a95e27124a44144ad342182604ac43, type: 2}
-  _parkMaterial: {fileID: 2100000, guid: 99f361c891f7730498ac32b7b1b0a2b6, type: 2}
-  _aerowayMaterial: {fileID: 2100000, guid: a7dcf8698ef48c645acd677557450b09, type: 2}
 --- !u!1 &2125856381
 GameObject:
   m_ObjectHideFlags: 0

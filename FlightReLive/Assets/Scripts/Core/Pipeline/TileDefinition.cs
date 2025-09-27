@@ -18,6 +18,8 @@ namespace FlightReLive.Core.Pipeline
 
         internal Texture2D SatelliteTexture { get; set; }
 
+        internal Texture2D ARMTexture { get;  set; }
+
         internal float[,] HeightMap { set; get; }
 
         internal List<OpenMapTileFeature> Features { get; set; }

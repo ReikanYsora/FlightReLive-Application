@@ -200,9 +200,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 TerrainLayer satelliteLayer = new TerrainLayer();
                 satelliteLayer.diffuseTexture = satelliteTexture;
-                //satelliteLayer.maskMapTexture = tile.ARMTexture;
                 satelliteLayer.tileSize = new Vector2(terrainSize, terrainSize);
-
                 terrainData.terrainLayers = new TerrainLayer[] { satelliteLayer };
 
                 //Blend

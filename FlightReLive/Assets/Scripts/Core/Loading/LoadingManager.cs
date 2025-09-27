@@ -1,7 +1,6 @@
 ﻿using FlightReLive.Core.Building;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.OpenMapTile;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
@@ -32,6 +31,8 @@ namespace FlightReLive.Core.Loading
         private int _tilesTotal;
         private int _filesFromCache;
         private int _filesDownloaded;
+        private Texture2D _thumbnail;
+        private string _fileName;
         #endregion
 
         #region PROPERTIES
@@ -96,6 +97,8 @@ namespace FlightReLive.Core.Loading
             _filesDownloaded = 0;
             _currentTile = "";
             _currentTilePriority = -1;
+            _fileName = flightFile.Name;
+            _thumbnail = flightFile.Thumbnail;
 
             DisplayLoading();
             IsLoading = true;
@@ -179,7 +182,6 @@ namespace FlightReLive.Core.Loading
                     foreach (TileDefinition tileDefinition in loadedTiles)
                     {
                         BuildingManager.Instance.LoadTile(tileDefinition, flightData);
-                        OpenMapTileManager.Instance.LoadTile(tileDefinition);
                     }
                 }
                 
@@ -190,7 +192,7 @@ namespace FlightReLive.Core.Loading
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded. Cache: {_filesFromCache}, Downloaded: {_filesDownloaded}", StateType.Info);
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loade.", StateType.Info);
                 OnFlightEndLoading?.Invoke();
             }
             catch (OperationCanceledException)
@@ -329,7 +331,6 @@ namespace FlightReLive.Core.Loading
                 ProceduralTerrainManager.Instance.Unload(),
                 PathManager.Instance.Unload(),
                 EnvironmentManager.Instance.Unload(),
-                OpenMapTileManager.Instance.Unload(),
                 BuildingManager.Instance.Unload()
             };
 
@@ -382,20 +383,25 @@ namespace FlightReLive.Core.Loading
 
             Fugui.ShowModal("  ", (layout) =>
             {
+                Fugui.PushFont(14, FontType.Bold);
                 float paddingX = 10f;
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
                 float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
-                Vector2 progressBarSize = new Vector2(availableX, 20f * scale);
-                string loading = "Loading resources...";
+                string loading = $"Loading resources for {_fileName}";
                 layout.CenterNextItemH(loading);
                 layout.Text(loading);
-                layout.CenterNextItemH(availableX);
+                Fugui.PopFont();
+                layout.Spacing();
+                Fugui.MoveX((availableX - _thumbnail.width) / 2f);
+                layout.Image("thumbnailLoading", _thumbnail, new FuElementSize(_thumbnail.width, _thumbnail.height), true, false);
+                layout.Spacing();
+                Vector2 progressBarSize = new Vector2(_thumbnail.width, 20f);
+                Fugui.MoveX((availableX - _thumbnail.width) / 2f);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
                 layout.Spacing();
 
                 layout.Collapsable("Loading details##collapsable", () =>
                 {
-
                     string priorityStr = "";
 
                     switch (_currentTilePriority)
@@ -434,7 +440,7 @@ namespace FlightReLive.Core.Loading
                         loadingDetailsGrid.Text("Files downloaded");
                         loadingDetailsGrid.FramedText($"{_filesDownloaded}");
                     }
-                }, FuButtonStyle.Collapsable, defaultOpen: false);
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
                 
             },
             FuModalSize.Medium,

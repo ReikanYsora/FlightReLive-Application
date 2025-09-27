@@ -7,6 +7,7 @@ namespace FlightReLive.Core.Settings
     public class Settings
     {
         #region ATTRIBUTES
+        public bool DisplayWizard;
         public UpscalerName UpscalerName;
         public UpscalerQuality UpscalerQuality;
         public bool UpscalerSharpeningEnabled;

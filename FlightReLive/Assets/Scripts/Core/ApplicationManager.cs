@@ -1,9 +1,11 @@
 ﻿using FlightReLive.Core.Cache;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Version;
+using FlightReLive.UI;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
+using System;
 using TND.Upscaling.Framework;
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
@@ -83,9 +85,15 @@ namespace FlightReLive.Core
             SettingsManager.OnUpscalerSharpenessChanged += OnUpscalerSharpenessChanged;
 
             //Check if welcome panel need do be displayed
+            bool displayWizard = SettingsManager.CurrentSettings.DisplayWizard;
             bool displayWelcomePanel = CheckIfDisplayWelcomePanelNeedToBeDisplayed();
 
-            if (displayWelcomePanel)
+            if (displayWizard)
+            {
+                //Display wizard (first start))
+                DisplayUIScaleSettings();
+            }
+            else if (displayWelcomePanel)
             {
                 //Display welcome panel
                 DisplayWelcomePanel();
@@ -318,6 +326,165 @@ namespace FlightReLive.Core
         #endregion
 
         #region UI
+
+        private void DisplayUIScaleSettings()
+        {
+            float paddingX = 10f;
+
+            Fugui.ShowModal(" ", (layout) =>
+            {
+                layout.BeginGroup();
+                layout.Image("Global settings", _welcome, new FuElementSize(496, 195), true, false);
+
+                ImGui.Indent(10f);
+                //Title
+                Fugui.PushFont(16, FontType.Bold);
+                string title = "Welcome to Flight ReLive. Your journey starts here.";
+                layout.CenterNextItemH(title);
+                layout.Text(title);
+                Fugui.PopFont();
+                layout.Spacing();
+
+                //Introduction
+
+                Fugui.PushFont(16, FontType.Regular);
+                string message = "Before you take off, we recommend adjusting a few key settings to ensure the smoothest and most immersive experience. It only takes a moment, and it makes all the difference.";
+                layout.CenterNextItemH(message);
+                layout.Text(message, FuTextWrapping.Wrap);
+                Fugui.PopFont();
+                ImGui.Unindent(10);
+
+                Fugui.PushFont(14, FontType.Regular);
+                layout.Spacing();
+                layout.Separator();
+                layout.Spacing();
+                using (FuGrid uiGrid = new FuGrid("wizardUiGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.Default, 2, 2, paddingX))
+                {
+                    uiGrid.SetNextElementToolTipWithLabel("Global UI scale. You can always change this setting later via the ‘Preferences’ menu.");
+                    uiGrid.Combobox("Global UI Scale##UIScaleCombobox", (int)(Fugui.DefaultContext.Scale * 100f) + "%", () =>
+                    {
+                        foreach (float scale in SettingsManager.AvailableUIScale)
+                        {
+                            if (ImGui.Selectable((scale == Fugui.DefaultContext.Scale ? FlightReLiveIcons.Check : " ") + "  " + scale * 100f + "%"))
+                            {
+                                SettingsManager.SaveGlobalScale(scale);
+                            }
+                        }
+                    });
+                }
+
+                layout.Spacing();
+                layout.Separator();
+                layout.Spacing();
+
+                using (FuGrid apiGrid = new FuGrid("wizardApiGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.Default, 2, 2, paddingX))
+                {
+
+                    string mapTilerAPIKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
+                    apiGrid.SetNextElementToolTipWithLabel("MapTiler API key required for downloading satellite, topographic, buildings, hillshade images.\nA MapTiler account is required (free for less than 100,000 tile downloads per month).");
+
+                    if (apiGrid.TextInput("MapTiler API key", ref mapTilerAPIKey, flags: FuInputTextFlags.Password))
+                    {
+                        SettingsManager.SaveMapTilerApiKey(mapTilerAPIKey);
+                    }
+                    apiGrid.NextColumn();
+                    apiGrid.TextURL("Follow this link to create a free MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
+                }
+
+                layout.Spacing();
+                layout.Separator();
+                layout.Spacing();
+
+                using (FuGrid timeZoneGrid = new FuGrid("timeZoneGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.Default, 2, 2, paddingX))
+                {
+                    timeZoneGrid.SetNextElementToolTipWithLabel("The time zone is used to accurately calculate the lighting and position of the sun in the scene.");
+
+                    TimeZoneInfo currentTz = SettingsManager.CurrentSettings.UserTimeZone;
+                    string currentTzId = currentTz.Id;
+                    string comboLabel = currentTz.DisplayName.StartsWith("(UTC") ? currentTz.DisplayName : $"(UTC{SettingsManager.FormatUtcOffset(currentTz.BaseUtcOffset)}) {currentTz.DisplayName}";
+
+                    timeZoneGrid.Combobox("TimeZone##TZCombobox", comboLabel, () =>
+                    {
+                        foreach (TimeZoneInfo tz in TimeZoneInfo.GetSystemTimeZones())
+                        {
+                            bool isSelected = tz.Id == currentTzId;
+
+                            string label = tz.DisplayName.StartsWith("(UTC")
+                                ? $"{(isSelected ? FlightReLiveIcons.Check : " ")} {tz.DisplayName}"
+                                : $"{(isSelected ? FlightReLiveIcons.Check : " ")} (UTC{SettingsManager.FormatUtcOffset(tz.BaseUtcOffset)}) {tz.DisplayName}";
+
+                            if (ImGui.Selectable(label))
+                            {
+                                SettingsManager.SaveTimeZone(tz);
+                            }
+                        }
+                    });
+
+                    timeZoneGrid.SetNextElementToolTipWithLabel("Choose how dates are displayed throughout the application.");
+
+                    DateFormatStyle currentFormat = SettingsManager.CurrentSettings.DateFormatStyle;
+                    string formatLabel = SettingsManager.GetDateFormatLabel(currentFormat);
+
+                    timeZoneGrid.Combobox("DateFormat##DateFormatCombobox", formatLabel, () =>
+                    {
+                        foreach (DateFormatStyle format in Enum.GetValues(typeof(DateFormatStyle)))
+                        {
+                            bool isSelected = format == currentFormat;
+                            string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {SettingsManager.GetDateFormatLabel(format)}";
+
+                            if (ImGui.Selectable(label))
+                            {
+                                SettingsManager.SaveDateFormatStyle(format);
+                            }
+                        }
+                    });
+
+                    timeZoneGrid.SetNextElementToolTipWithLabel("Choose between 12-hour or 24-hour time format.");
+
+                    TimeFormatStyle currentTimeFormat = SettingsManager.CurrentSettings.TimeFormatStyle;
+                    string timeFormatLabel = SettingsManager.GetTimeFormatLabel(currentTimeFormat);
+
+                    timeZoneGrid.Combobox("TimeFormat##TimeFormatCombobox", timeFormatLabel, () =>
+                    {
+                        foreach (TimeFormatStyle format in Enum.GetValues(typeof(TimeFormatStyle)))
+                        {
+                            bool isSelected = format == currentTimeFormat;
+                            string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {SettingsManager.GetTimeFormatLabel(format)}";
+
+                            if (ImGui.Selectable(label))
+                            {
+                                SettingsManager.SaveTimeFormatStyle(format);
+                            }
+                        }
+                    });
+
+                    timeZoneGrid.SetNextElementToolTipWithLabel("Select your preferred unit system for altitude and speed display.");
+
+                    UnitSystemType currentUnitSystem = SettingsManager.CurrentSettings.UnitSystemType;
+                    string unitSystemLabel = SettingsManager.GetUnitSystemLabel(currentUnitSystem);
+
+                    timeZoneGrid.Combobox("UnitSystem##UnitSystemCombobox", unitSystemLabel, () =>
+                    {
+                        foreach (UnitSystemType system in Enum.GetValues(typeof(UnitSystemType)))
+                        {
+                            bool isSelected = system == currentUnitSystem;
+                            string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {SettingsManager.GetUnitSystemLabel(system)}";
+
+                            if (ImGui.Selectable(label))
+                            {
+                                SettingsManager.SaveUnitSystemType(system);
+                            }
+                        }
+                    });
+                }
+
+                Fugui.PopFont();
+                layout.EndGroup();
+
+            }, FuModalSize.Medium, new FuModalButton("OK", () => { SettingsManager.SaveDisplayWizard(false); }, FuButtonStyle.Highlight));
+           
+        }
+
         private void DisplayWelcomePanel()
         {
             Fugui.ShowModal(" ", (layout) =>

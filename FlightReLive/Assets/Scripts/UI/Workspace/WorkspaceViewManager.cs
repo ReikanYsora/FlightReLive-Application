@@ -9,6 +9,7 @@ using ImGuiNET;
 using System;
 using System.IO;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -180,10 +181,7 @@ namespace FlightReLive.UI.Workspace
 
             // Positionner le curseur tout en bas
             Vector2 screenSize = ImGui.GetIO().DisplaySize;
-            Vector2 footerPos = new Vector2(
-                window.LocalPosition.x,
-                screenSize.y - footerHeight
-            );
+            Vector2 footerPos = new Vector2(window.LocalPosition.x, screenSize.y - footerHeight);
 
             ImGui.SetCursorScreenPos(footerPos);
 
@@ -204,14 +202,14 @@ namespace FlightReLive.UI.Workspace
                 layout.Spacing();
                 layout.SameLine();
 
-                // Zoom slider thumbnails
+                //Zoom slider thumbnails
                 float spacing = Fugui.Themes.CurrentTheme.ItemSpacing.x * scale;
                 float sliderWidth = 140f * scale;
                 float offsetX = 2f;
                 float sliderTotalWidth = spacing + sliderWidth + offsetX + 5f;
                 float sliderX = size.x - sliderTotalWidth;
 
-                // Workspace info
+                //Workspace info
                 string workspacePath = SettingsManager.CurrentSettings.WorkspacePath ?? "No workspace selected";
                 int flights = WorkspaceManager.Instance.LoadedFlights.Count;
                 string flightsCount = flights == 1 ? "1 flight" : $"{flights} flights";
@@ -233,7 +231,7 @@ namespace FlightReLive.UI.Workspace
 
                 if (size.x > fullWidthNeeded)
                 {
-                    // Text + slider
+                    //Text + slider
                     layout.SetNextElementToolTip("Current workspace path");
                     Fugui.PushFont(14, FontType.Regular);
                     layout.Text(workspaceText, FuTextStyle.Default);
@@ -253,7 +251,7 @@ namespace FlightReLive.UI.Workspace
                 }
                 else if (size.x > sliderOnlyWidth)
                 {
-                    // Slider
+                    //Slider
                     ImGui.SetCursorPos(new Vector2(sliderX, baseY));
                     layout.SetNextElementToolTip("Adjust thumbnail scale");
                     Fugui.PushFont(14, FontType.Regular);
@@ -276,47 +274,23 @@ namespace FlightReLive.UI.Workspace
         /// <param name="window"> the window that is drawing this UI</param>
         public override void OnUI(FuWindow window, FuLayout windowLayout)
         {
+            float scale = Fugui.CurrentContext.Scale;
+            float thumbnailScale = Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(_thumbnailScale));
+
             using (FuPanel panel = new FuPanel("workspacePanel", flags: FuPanelFlags.Default))
             {
-                float scale = Fugui.CurrentContext.Scale;
-                float thumbnailScale = Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(_thumbnailScale));
-
                 if (_workspaceIsLoading)
                 {
-                    using (FuLayout layout = new FuLayout())
-                    {
-                        Vector2 contentPos = ImGui.GetCursorScreenPos();
-
-                        float availWidth = layout.GetAvailableWidth();
-                        float availHeight = layout.GetAvailableHeight();
-
-                        float barWidth = 100f * scale;
-                        float barHeight = 16f * scale;
-                        FuElementSize barSize = new FuElementSize(barWidth, barHeight);
-
-                        Vector2 barPos = new Vector2(
-                            contentPos.x + (availWidth - barWidth) * 0.5f,
-                            contentPos.y + (availHeight - barHeight) * 0.5f
-                        );
-
-                        ImGui.SetCursorScreenPos(barPos);
-                        layout.ProgressBar("Loading Workspace", _loadingProgress, barSize, ProgressBarTextPosition.Inside);
-
-                        string message = "Workspace is loading. Please wait...";
-                        Fugui.PushFont(14, FontType.Regular);
-                        Vector2 textSize = ImGui.CalcTextSize(message);
-                        Fugui.PopFont();
-
-                        Vector2 textPos = new Vector2(
-                            contentPos.x + (availWidth - textSize.x) * 0.5f,
-                            barPos.y + barHeight + 12f * scale
-                        );
-
-                        ImGui.SetCursorScreenPos(textPos);
-                        Fugui.PushFont(14, FontType.Regular);
-                        layout.Text(message, FuTextStyle.Default);
-                        Fugui.PopFont();
-                    }
+                    string message1 = "Workspace is loading.";
+                    string message2 = "Workspace is loading. Please wait...";
+                    Vector2 size = Fugui.CalcTextSize(message1, FuTextWrapping.None);
+                    size.y *= 1.25f;
+                    FuElementSize barSize = new FuElementSize(size);
+                    windowLayout.CenterNextItemHV(barSize.ScaledSize.x, barSize.ScaledSize.y);
+                    windowLayout.ProgressBar("Loading Workspace", _loadingProgress, barSize, ProgressBarTextPosition.Inside);
+                    windowLayout.CenterNextItemH(message2);
+                    windowLayout.Text(message2, FuTextStyle.Default);
+                    Fugui.PopFont();
 
                     return;
                 }
@@ -330,7 +304,7 @@ namespace FlightReLive.UI.Workspace
                 float paddingY = 16f * scale * thumbnailScale;
 
                 ImGui.Dummy(new Vector2(1, 10f));
-                Vector2 contentRegion = new Vector2(windowLayout.GetAvailableWidth(), windowLayout.GetAvailableHeight() - BOTTOM_BAR_HEIGHT);
+                Vector2 contentRegion = new Vector2(windowLayout.GetAvailableWidth(), windowLayout.GetAvailableHeight() - (BOTTOM_BAR_HEIGHT * scale * 2));
                 Vector2 cursorPos = ImGui.GetCursorScreenPos();
 
                 float x = cursorPos.x;

@@ -34,6 +34,14 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region PROPERTIES
+        internal static float[] AvailableUIScale
+        {
+            get
+            {
+                return _availableUIScale;
+            }
+        }
+
         public static Settings CurrentSettings { get; private set; } = new Settings();
 
         #endregion
@@ -75,6 +83,9 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region METHODS
+        internal static void LoadDisplayWizard() =>
+            CurrentSettings.DisplayWizard = PlayerPrefs.GetInt(nameof(Settings.DisplayWizard), 1) == 1;
+
         internal static void LoadMainCameraUpscalerName() =>
             CurrentSettings.UpscalerName = (UpscalerName)PlayerPrefs.GetInt(nameof(Settings.UpscalerName), (int)UpscalerName.None);
 
@@ -234,6 +245,14 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadSaturationIntensity() =>
             CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 5f);
+
+
+        internal static void SaveDisplayWizard(bool value)
+        {
+            CurrentSettings.DisplayWizard = value;
+            PlayerPrefs.SetInt(nameof(Settings.DisplayWizard), value ? 1 : 0);
+            PlayerPrefs.Save();
+        }
 
         internal static void SaveApplicationTargetFPS(int value)
         {
@@ -515,6 +534,7 @@ namespace FlightReLive.Core.Settings
                 LoadDefaultSettings();
             }
 
+            LoadDisplayWizard();
             LoadMainCameraUpscalerName();
             LoadMainCameraUpscaleQuality();
             LoadMainCameraUpscalerSharpeningEnabled();
@@ -553,6 +573,7 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadDefaultSettings()
         {
+            SaveDisplayWizard(true);
             SaveUpscalerName(UpscalerName.None);
             SaveUpscalerQuality(UpscalerQuality.NativeAA);
             SaveUpscalerSharpeningEnabled(false);
@@ -619,7 +640,7 @@ namespace FlightReLive.Core.Settings
             return TimeZoneInfo.Utc;
         }
 
-        private static string FormatUtcOffset(TimeSpan offset)
+        internal static string FormatUtcOffset(TimeSpan offset)
         {
             string sign = offset.TotalMinutes >= 0 ? "+" : "-";
             int hours = Math.Abs(offset.Hours);
@@ -627,7 +648,7 @@ namespace FlightReLive.Core.Settings
             return $"{sign}{hours:D2}:{minutes:D2}";
         }
 
-        private static string GetDateFormatLabel(DateFormatStyle style)
+        internal static string GetDateFormatLabel(DateFormatStyle style)
         {
             switch (style)
             {
@@ -641,7 +662,7 @@ namespace FlightReLive.Core.Settings
             }
         }
 
-        private static string GetTimeFormatLabel(TimeFormatStyle style)
+        internal static string GetTimeFormatLabel(TimeFormatStyle style)
         {
             switch (style)
             {
@@ -1044,7 +1065,7 @@ namespace FlightReLive.Core.Settings
                             SaveMapTilerApiKey(mapTilerAPIKey);
                         }
                         apiGrid.NextColumn();
-                        apiGrid.TextURL("Follow this link to create a MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
+                        apiGrid.TextURL("Follow this link to create a free MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
 
                         int tilePadding = CurrentSettings.TilePadding;
                         apiGrid.SetNextElementToolTipWithLabel("Defines the number of additional tile rows around the flight area. Increases the realism of the scene but affects performance and the amount of resources downloaded.");

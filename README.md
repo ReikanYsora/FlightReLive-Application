@@ -42,6 +42,7 @@ Your input is invaluable to help the project grow and evolve!
 | DJI Mini 3          | 🟡 NOT TESTED |
 | DJI Mini 3 Pro      | 🟡 NOT TESTED |
 | DJI Mini 4 Pro      | 🟢 OK         |
+| DJI Mini 5 Pro      | 🟢 OK         |
 | DJI Air 3           | 🟡 NOT TESTED |
 | DJI Air 3S          | 🟡 NOT TESTED |
 | DJI Mavic 3 Classic | 🟡 NOT TESTED |

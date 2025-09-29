@@ -99,8 +99,11 @@ namespace FlightReLive.Core
                 DisplayWelcomePanel();
             }
 
-            //Check latest version
-            CheckLastVersion();
+            if (!Application.isEditor)
+            {
+                //Check latest version
+                CheckLastVersion();
+            }
         }
 
         private void Update()

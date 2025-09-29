@@ -27,9 +27,9 @@ namespace FlightReLive.Core.Settings
         public float WorkspaceZoom;
         public string MapTilerAPIKey;
         public float GlobalScale;
-        public float PathWidth;
-        public Color PathRemainingColor1;
-        public Color PathRemainingColor2;
+        public float Path3DThickness;
+        public Color Path3DRemainingColor1;
+        public Color Path3DRemainingColor2;
         public bool BuildingVisibility;
         public Color BuildingColor;
         public float BuildingAO;
@@ -38,10 +38,12 @@ namespace FlightReLive.Core.Settings
         public float ContactShadowsMaxDistance;
         public float ContactShadowsOpacity;
         public float VignettingIntensity;
-        public float PostExposureIntensity;
-        public float ContrastIntensity;
-        public float SaturationIntensity;
+        public float ContrastOffset;
+        public float ExposureOffset;
+        public float SaturationOffset;
+        public float IndirectLightningOffset;
         public string CurrentVersion;
+        public CloudStyle CloudStyle;
         #endregion
     }
 }

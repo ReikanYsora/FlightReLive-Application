@@ -15,6 +15,25 @@ namespace FlightReLive.Core.Settings
 {
     public static class SettingsManager
     {
+        #region CONSTANTS
+        internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.2f;
+        internal static Color PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE = Color.white;
+        internal static Color PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE = Color.black;
+        internal static bool BUILDING_DISPLAY_STATE_DEFAULT_VALUE = true;
+        internal static Color BUILDING_COLOR_DEFAULT_VALUE = Color.antiqueWhite;
+        internal static float BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE = 0.3f;
+        internal static float VIGNETTING_DEFAULT_VALUE = 0.3f;
+        internal static float EXPOSURE_OFFSET_DEFAULT_VALUE = 0f;
+        internal static float CONTRAST_OFFSET_DEFAULT_VALUE = 0f;
+        internal static float SATURATION_OFFSET_DEFAULT_VALUE = 0f;
+        internal static float INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE = 0f;
+        internal static bool CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE = true;
+        internal static float CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE = 0f;
+        internal static float CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE = 200f;
+        internal static float CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE = 0.7f;
+        internal static CloudStyle CLOUD_STYLE_DEFAULT_VALUE = CloudStyle.Cloudy;
+        #endregion
+
         #region ATTRIBUTES
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
@@ -66,9 +85,9 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnWorkspaceZoomChanged;
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<float> OnGlobalScaleChanged;
-        public static event Action<float> OnPathWidthChanged;
-        public static event Action<Color> OnPathRemainingColor1Changed;
-        public static event Action<Color> OnPathRemainingColor2Changed;
+        public static event Action<float> OnPath3DWidthChanged;
+        public static event Action<Color> OnPath3DRemainingColor1Changed;
+        public static event Action<Color> OnPath3DRemainingColor2Changed;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<Color> OnBuildingColorChanged;
         public static event Action<float> OnBuildingAOChanged;
@@ -77,9 +96,11 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnContactShadowsMaxDistanceChanged;
         public static event Action<float> OnContactShadowsOpacityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
-        public static event Action<float> OnPostExposureIntensityChanged;
-        public static event Action<float> OnContrastIntensityChanged;
-        public static event Action<float> OnSaturationIntensityChanged;
+        public static event Action<float> OnExposureOffsetChanged;
+        public static event Action<float> OnContrastOffsetChanged;
+        public static event Action<float> OnSaturationOffsetChanged;
+        public static event Action<float> OnIndirectLightningOffsetChanged;
+        public static event Action<CloudStyle> OnCloudStyleChanged;
         #endregion
 
         #region METHODS
@@ -154,13 +175,15 @@ namespace FlightReLive.Core.Settings
         internal static void LoadGlobalScale() =>
             CurrentSettings.GlobalScale = PlayerPrefs.GetFloat(nameof(Settings.GlobalScale), 1f);
 
-        internal static void LoadPathWidth() =>
-            CurrentSettings.PathWidth = PlayerPrefs.GetFloat(nameof(Settings.PathWidth), 0.15f);
+        internal static void LoadPath3DThickness() =>
+            CurrentSettings.Path3DThickness = PlayerPrefs.GetFloat(nameof(Settings.Path3DThickness), PATH_3D_THICKNESS_DEFAULT_VALUE);
 
-        internal static void LoadPathRemainingColor1()
+        internal static void LoadPath3DRemainingColor1()
         {
-            string colorString = PlayerPrefs.GetString(nameof(Settings.PathRemainingColor1), "0.007,0.007,0.007,1");
-            string[] rgba = colorString.Split(',');
+            Color color = PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE;
+            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
+            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor1), colorString);
+            string[] rgba = savedColorString.Split(',');
 
             if (rgba.Length == 4 &&
                 float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
@@ -168,17 +191,20 @@ namespace FlightReLive.Core.Settings
                 float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
                 float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
             {
-                CurrentSettings.PathRemainingColor1 = new Color(r, g, b, a);
+                CurrentSettings.Path3DRemainingColor1 = new Color(r, g, b, a);
             }
             else
             {
-                CurrentSettings.PathRemainingColor1 = new Color(0.007f, 0.007f, 0.007f, 1f);
+                CurrentSettings.Path3DRemainingColor1 = color;
             }
         }
-        internal static void LoadPathRemainingColor2()
+
+        internal static void LoadPath3DRemainingColor2()
         {
-            string colorString = PlayerPrefs.GetString(nameof(Settings.PathRemainingColor2), "0.141,0.141,0.141,1");
-            string[] rgba = colorString.Split(',');
+            Color color = PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE;
+            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
+            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor2), colorString);
+            string[] rgba = savedColorString.Split(',');
 
             if (rgba.Length == 4 &&
                 float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
@@ -186,21 +212,26 @@ namespace FlightReLive.Core.Settings
                 float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
                 float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
             {
-                CurrentSettings.PathRemainingColor2 = new Color(r, g, b, a);
+                CurrentSettings.Path3DRemainingColor2 = new Color(r, g, b, a);
             }
             else
             {
-                CurrentSettings.PathRemainingColor2 = new Color(0.141f, 0.141f, 0.141f, 1f);
+                CurrentSettings.Path3DRemainingColor2 = color;
             }
         }
 
-        internal static void LoadBuildingVisibility() =>
-            CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), 1) == 1;
+        internal static void LoadBuildingVisibility()
+        {
+            int intBool = BUILDING_DISPLAY_STATE_DEFAULT_VALUE ? 1 : 0;
+            CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), intBool) == 1;
+        }
 
         internal static void LoadBuildingColor()
         {
-            string colorString = PlayerPrefs.GetString(nameof(Settings.BuildingColor), "0.65,0.65,0.65,1");
-            string[] rgba = colorString.Split(',');
+            Color color = BUILDING_COLOR_DEFAULT_VALUE;
+            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
+            string savedColorString = PlayerPrefs.GetString(nameof(Settings.BuildingColor), colorString);
+            string[] rgba = savedColorString.Split(',');
 
             if (rgba.Length == 4 &&
                 float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
@@ -212,40 +243,48 @@ namespace FlightReLive.Core.Settings
             }
             else
             {
-                CurrentSettings.BuildingColor = new Color(0.65f, 0.65f, 0.65f, 1f);
+                CurrentSettings.BuildingColor = color;
             }
         }
 
         internal static void LoadBuildingAO() =>
-            CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), 0.3f);
+            CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
 
-        internal static void LoadContactShadowsEnabled() =>
-            CurrentSettings.ContactShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.ContactShadowsEnabled), 1) == 1;
+        internal static void LoadContactShadowsEnabled()
+        {
+            int intBool = CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE ? 1 : 0;
+            CurrentSettings.ContactShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.ContactShadowsEnabled), intBool) == 1;
+        }
 
         internal static void LoadContactShadowsMinDistance() =>
-            CurrentSettings.ContactShadowsMinDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMinDistance), 0f);
+            CurrentSettings.ContactShadowsMinDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMinDistance), CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
 
         internal static void LoadContactShadowsMaxDistance() =>
-            CurrentSettings.ContactShadowsMaxDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMaxDistance), 200f);
+            CurrentSettings.ContactShadowsMaxDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMaxDistance), CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
 
         internal static void LoadContactShadowsOpacity() =>
-            CurrentSettings.ContactShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsOpacity), 0.7f);
+            CurrentSettings.ContactShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsOpacity), CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
 
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
 
         internal static void LoadVignettingIntensity() =>
-            CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), 0.3f);
+            CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), VIGNETTING_DEFAULT_VALUE);
 
-        internal static void LoadPostExposureIntensity() =>
-            CurrentSettings.PostExposureIntensity = PlayerPrefs.GetFloat(nameof(Settings.PostExposureIntensity), 0);
+        internal static void LoadExposureOffset() =>
+            CurrentSettings.ExposureOffset = PlayerPrefs.GetFloat(nameof(Settings.ExposureOffset), EXPOSURE_OFFSET_DEFAULT_VALUE);
 
-        internal static void LoadContrastIntensity() =>
-            CurrentSettings.ContrastIntensity = PlayerPrefs.GetFloat(nameof(Settings.ContrastIntensity), 40);
+        internal static void LoadContrastOffset() =>
+            CurrentSettings.ContrastOffset = PlayerPrefs.GetFloat(nameof(Settings.ContrastOffset), CONTRAST_OFFSET_DEFAULT_VALUE);
 
-        internal static void LoadSaturationIntensity() =>
-            CurrentSettings.SaturationIntensity = PlayerPrefs.GetFloat(nameof(Settings.SaturationIntensity), 5f);
+        internal static void LoadSaturationOffset() =>
+            CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.SaturationOffset), SATURATION_OFFSET_DEFAULT_VALUE);
 
+        internal static void LoadIndirectLightningOffset() =>
+            CurrentSettings.IndirectLightningOffset = PlayerPrefs.GetFloat(nameof(Settings.IndirectLightningOffset), INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
+
+        internal static void LoadCloudStyle() =>
+            CurrentSettings.CloudStyle = (CloudStyle)PlayerPrefs.GetInt(nameof(Settings.CloudStyle), (int)CLOUD_STYLE_DEFAULT_VALUE);
 
         internal static void SaveDisplayWizard(bool value)
         {
@@ -413,30 +452,30 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
         }
 
-        internal static void SavePathWidth(float value)
+        internal static void SavePath3DThickness(float value)
         {
-            CurrentSettings.PathWidth = value;
-            PlayerPrefs.SetFloat(nameof(Settings.PathWidth), value);
+            CurrentSettings.Path3DThickness = value;
+            PlayerPrefs.SetFloat(nameof(Settings.Path3DThickness), value);
             PlayerPrefs.Save();
-            OnPathWidthChanged?.Invoke(value);
+            OnPath3DWidthChanged?.Invoke(value);
         }
 
-        internal static void SavePathRemainingColor1(Color color)
+        internal static void SavePath3DRemainingColor1(Color color)
         {
-            CurrentSettings.PathRemainingColor1 = color;
+            CurrentSettings.Path3DRemainingColor1 = color;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.PathRemainingColor1), colorString);
+            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor1), colorString);
             PlayerPrefs.Save();
-            OnPathRemainingColor1Changed?.Invoke(color);
+            OnPath3DRemainingColor1Changed?.Invoke(color);
         }
 
-        internal static void SavePathRemainingColor2(Color color)
+        internal static void SavePath3DRemainingColor2(Color color)
         {
-            CurrentSettings.PathRemainingColor2 = color;
+            CurrentSettings.Path3DRemainingColor2 = color;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.PathRemainingColor2), colorString);
+            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor2), colorString);
             PlayerPrefs.Save();
-            OnPathRemainingColor2Changed?.Invoke(color);
+            OnPath3DRemainingColor2Changed?.Invoke(color);
         }
 
         internal static void SaveBuildingVisibility(bool value)
@@ -463,6 +502,7 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnBuildingAOChanged?.Invoke(value);
         }
+
         internal static void SaveContactShadowsEnabled(bool value)
         {
             CurrentSettings.ContactShadowsEnabled = value;
@@ -503,28 +543,44 @@ namespace FlightReLive.Core.Settings
             OnVignettingIntensityChanged?.Invoke(value);
         }
 
-        internal static void SavePostExposureIntensity(float value)
+        internal static void SaveExposureOffset(float value)
         {
-            CurrentSettings.PostExposureIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.PostExposureIntensity), value);
+            CurrentSettings.ExposureOffset = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ExposureOffset), value);
             PlayerPrefs.Save();
-            OnPostExposureIntensityChanged?.Invoke(value);
+            OnExposureOffsetChanged?.Invoke(value);
         }
 
-        internal static void SaveContrastIntensity(float value)
+        internal static void SaveContrastOffset(float value)
         {
-            CurrentSettings.ContrastIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.ContrastIntensity), value);
+            CurrentSettings.ContrastOffset = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ContrastOffset), value);
             PlayerPrefs.Save();
-            OnContrastIntensityChanged?.Invoke(value);
+            OnContrastOffsetChanged?.Invoke(value);
         }
 
-        internal static void SaveSaturationIntensity(float value)
+        internal static void SaveSaturationOffset(float value)
         {
-            CurrentSettings.SaturationIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.SaturationIntensity), value);
+            CurrentSettings.SaturationOffset = value;
+            PlayerPrefs.SetFloat(nameof(Settings.SaturationOffset), value);
             PlayerPrefs.Save();
-            OnSaturationIntensityChanged?.Invoke(value);
+            OnSaturationOffsetChanged?.Invoke(value);
+        }
+
+        internal static void SaveIndirectLightningOffset(float value)
+        {
+            CurrentSettings.IndirectLightningOffset = value;
+            PlayerPrefs.SetFloat(nameof(Settings.IndirectLightningOffset), value);
+            PlayerPrefs.Save();
+            OnIndirectLightningOffsetChanged?.Invoke(value);
+        }
+
+        internal static void SaveCloudStyle(CloudStyle value)
+        {
+            CurrentSettings.CloudStyle = value;
+            PlayerPrefs.SetInt(nameof(Settings.CloudStyle), (int)value);
+            PlayerPrefs.Save();
+            OnCloudStyleChanged?.Invoke(value);
         }
 
         internal static void LoadAll()
@@ -555,9 +611,9 @@ namespace FlightReLive.Core.Settings
             LoadWorkspacePath();
             LoadWorkspaceZoom();
             LoadMapTilerApiKey();
-            LoadPathWidth();
-            LoadPathRemainingColor1();
-            LoadPathRemainingColor2();
+            LoadPath3DThickness();
+            LoadPath3DRemainingColor1();
+            LoadPath3DRemainingColor2();
             LoadBuildingVisibility();
             LoadBuildingColor();
             LoadBuildingAO();
@@ -566,9 +622,11 @@ namespace FlightReLive.Core.Settings
             LoadContactShadowsMaxDistance();
             LoadContactShadowsOpacity();
             LoadVignettingIntensity();
-            LoadPostExposureIntensity();
-            LoadContrastIntensity();
-            LoadSaturationIntensity();
+            LoadExposureOffset();
+            LoadContrastOffset();
+            LoadSaturationOffset();
+            LoadIndirectLightningOffset();
+            LoadCloudStyle();
         }
 
         internal static void LoadDefaultSettings()
@@ -597,20 +655,22 @@ namespace FlightReLive.Core.Settings
             SaveWorkspacePath(Application.persistentDataPath);
             SaveWorkspaceZoom(1f);
             SaveMapTilerApiKey("");
-            SavePathWidth(0.15f);
-            SavePathRemainingColor1(new Color(0.007f, 0.007f, 0.007f, 1f));
-            SavePathRemainingColor2(new Color(0.141f, 0.141f, 0.141f, 1f));
-            SaveBuildingVisibility(true);
-            SaveBuildingColor(new Color(0.65f, 0.65f, 0.65f, 1f));
-            SaveBuildingAO(0.3f);
-            SaveContactShadowsEnabled(true);
-            SaveContactShadowsMinDistance(0f);
-            SaveContactShadowsMaxDistance(200f);
-            SaveContrastIntensity(0.7f);
-            SaveVignettingIntensity(0.3f);
-            SavePostExposureIntensity(0f);
-            SaveContrastIntensity(40f);
-            SaveSaturationIntensity(5f);
+            SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
+            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
+            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
+            SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
+            SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
+            SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
+            SaveContactShadowsEnabled(CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE);
+            SaveContactShadowsMinDistance(CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
+            SaveContactShadowsMaxDistance(CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
+            SaveContactShadowsOpacity(CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
+            SaveVignettingIntensity(VIGNETTING_DEFAULT_VALUE);
+            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
+            SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
+            SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
+            SaveIndirectLightningOffset(INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
+            SaveCloudStyle(CLOUD_STYLE_DEFAULT_VALUE);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -731,6 +791,15 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        internal static string GetEnumLabel<TEnum>(TEnum value) where TEnum : struct, Enum
+        {
+            string raw = value.ToString();
+            string spaced = System.Text.RegularExpressions.Regex.Replace(raw, "_", " ");
+            string titleCase = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(spaced.ToLower());
+
+            return titleCase;
+        }
+
         internal static string FormatAltitude(double meters)
         {
             switch (CurrentSettings.UnitSystemType)
@@ -792,6 +861,179 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region UI
+        internal static void DisplaySettingsColorPickerWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, Color value, Color defaultValue, Action<Color> onChange, Action onReset)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            Vector4 tempValue = value;
+
+            if (grid.ColorPicker(text, ref tempValue))
+            {
+                onChange?.Invoke((Color) tempValue);
+            }
+
+            if (value == defaultValue)
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
+        internal static void DisplaySettingsToggleWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, bool value, bool defaultValue, Action<bool> onChange, Action onReset)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            bool tempValue = value;
+
+            if (grid.Toggle(text, ref tempValue))
+            {
+                onChange?.Invoke(tempValue);
+            }
+
+            if (value == defaultValue)
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
+        internal static void DisplaySettingsSliderWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float value, float minValue, float maxValue, float step, float defaultValue, string format, Action<float> onChange, Action onReset)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            float tempValue = value;
+            if (grid.Slider(text, ref tempValue, minValue, maxValue, step, format: format))
+            {
+                onChange?.Invoke(tempValue);
+            }
+
+            if (AreApproximatelyEqual(value, defaultValue))
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
+        internal static void DisplaySettingsRangeWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float value1, float value2, float minValue, float maxValue, float step, float defaultValue1, float defaultValue2, Action<float, float> onChange, Action onReset)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            float tempValue1 = value1;
+            float tempValue2 = value2;
+            if (grid.Range(text, ref tempValue1, ref tempValue2, minValue, maxValue, step))
+            {
+                onChange?.Invoke(tempValue1, tempValue2);
+            }
+
+            if (AreApproximatelyEqual(value1, defaultValue1) && AreApproximatelyEqual(value2, defaultValue2))
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
+        internal static void DisplaySettingsComboboxWithReset<TEnum>(FuGrid grid,string text, string tooltipText, string tooltipReset, TEnum value, TEnum defaultValue, Func<TEnum, string> getLabel, IEnumerable<TEnum> allowedValues, Action<TEnum> onChange, Action onReset) where TEnum : struct, Enum
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            string currentLabel = getLabel(value);
+
+            grid.Combobox($"{text}##Combobox", currentLabel, () =>
+            {
+                foreach (TEnum option in allowedValues)
+                {
+                    bool isSelected = EqualityComparer<TEnum>.Default.Equals(option, value);
+                    string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {getLabel(option)}";
+
+                    if (ImGui.Selectable(label))
+                    {
+                        onChange?.Invoke(option);
+                    }
+                }
+            });
+
+            if (EqualityComparer<TEnum>.Default.Equals(value, defaultValue))
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
+        private static bool AreApproximatelyEqual(float a, float b, float epsilon = 0.0001f)
+        {
+            return Mathf.Abs(a - b) < epsilon;
+        }
+
         internal static void ShowPreferencesModal()
         {
             if (_settingsOpened)
@@ -1164,7 +1406,6 @@ namespace FlightReLive.Core.Settings
             }
         }
 
-
         private static string GetUpscalerQualityLabel(UpscalerQuality quality)
         {
             switch (quality)
@@ -1188,6 +1429,101 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        internal static void ResetPath3DThickness()
+        {
+            SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
+            LoadPath3DThickness();
+        }
+
+        internal static void ResetPath3DRemainingColor1()
+        {
+            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
+            LoadPath3DRemainingColor1();
+        }
+
+        internal static void ResetPath3DRemainingColor2()
+        {
+            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
+            LoadPath3DRemainingColor2();
+        }
+
+        internal static void ResetBuildingVisibility()
+        {
+            SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
+            LoadBuildingVisibility();
+        }
+
+        internal static void ResetBuildingColor()
+        {
+            SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
+            LoadBuildingColor();
+        }
+
+        internal static void ResetBuildingAO()
+        {
+            SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
+            LoadBuildingAO();
+        }
+
+        internal static void ResetContactShadowsEnabled()
+        {
+            SaveContactShadowsEnabled(CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE);
+            LoadContactShadowsEnabled();
+        }
+
+        internal static void ResetContactShadowsMinDistance()
+        {
+            SaveContactShadowsMinDistance(CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
+            LoadContactShadowsMinDistance();
+        }
+
+        internal static void ResetContactShadowsMaxDistance()
+        {
+            SaveContactShadowsMaxDistance(CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
+            LoadContactShadowsMaxDistance();
+        }
+
+        internal static void ResetContactShadowsOpacity()
+        {
+            SaveContactShadowsOpacity(CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
+            LoadContactShadowsOpacity();
+        }
+
+        internal static void ResetExposureOffset()
+        {
+            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
+            LoadExposureOffset();
+        }
+
+        internal static void ResetContrastOffset()
+        {
+            SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
+            LoadContrastOffset();
+        }
+
+        internal static void ResetSaturationOffset()
+        {
+            SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
+            LoadSaturationOffset();
+        }
+
+        internal static void ResetIndirectLightningOffset()
+        {
+            SaveIndirectLightningOffset(INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
+            LoadIndirectLightningOffset();
+        }
+
+        internal static void ResetVignettingIntensity()
+        {
+            SaveVignettingIntensity(VIGNETTING_DEFAULT_VALUE);
+            LoadVignettingIntensity();
+        }
+
+        internal static void ResetCloudStyle()
+        {
+            SaveCloudStyle(CLOUD_STYLE_DEFAULT_VALUE);
+            LoadCloudStyle();
+        }
         #endregion
     }
 }

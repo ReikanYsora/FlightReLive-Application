@@ -789,6 +789,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Cameras.POVCameraManipulator
   _targetCamera: {fileID: 137108794}
   _followPosition: {fileID: 283911657}
+  _minFOV: 30
+  _maxFOV: 90
 --- !u!1 &311396843
 GameObject:
   m_ObjectHideFlags: 0
@@ -1374,7 +1376,7 @@ MonoBehaviour:
   m_InnerSpotPercent: 0
   m_SpotIESCutoffPercent: 100
   m_LightDimmer: 1
-  m_VolumetricDimmer: 1
+  m_VolumetricDimmer: 0.5
   m_FadeDistance: 10000
   m_VolumetricFadeDistance: 10000
   m_AffectDiffuse: 1
@@ -1409,10 +1411,10 @@ MonoBehaviour:
   moonPhase: 0.2
   moonPhaseRotation: 0
   earthshine: 1
-  flareSize: 2
+  flareSize: 1.5
   flareTint: {r: 1, g: 1, b: 1, a: 1}
   flareFalloff: 4
-  flareMultiplier: 1
+  flareMultiplier: 0.8
   surfaceTexture: {fileID: 0}
   surfaceTint: {r: 1, g: 1, b: 1, a: 1}
   m_Distance: 1.5e+11

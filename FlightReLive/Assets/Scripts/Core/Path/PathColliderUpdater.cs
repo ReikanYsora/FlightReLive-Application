@@ -11,7 +11,7 @@ namespace FlightReLive.Core.Paths
         /// </summary>
         public void UpdateColliderMesh()
         {
-            float baseThickness = SettingsManager.CurrentSettings.PathWidth;
+            float baseThickness = SettingsManager.CurrentSettings.Path3DThickness;
 
             MeshFilter mf = GetComponent<MeshFilter>();
             Mesh original = mf != null ? mf.sharedMesh : null;

@@ -507,33 +507,50 @@ namespace FlightReLive.Core.Building
         #endregion
 
         #region UI
-        internal void DisplayBuildingsSettings(FuGrid grid)
+        internal void DisplayBuildingsSettings()
         {
-            bool buildingEnabled = SettingsManager.CurrentSettings.BuildingVisibility;
-            grid.EnableNextElements();
-
-            if (grid.Toggle("Display buildings", ref buildingEnabled))
+            using (FuGrid grid = new FuGrid("gridBuildingsSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                SettingsManager.SaveBuildingVisibility(buildingEnabled);
-            }
+                bool buildingEnabled = SettingsManager.CurrentSettings.BuildingVisibility;
 
-            if (!buildingEnabled)
-            {
-                grid.DisableNextElements();
-            }
+                //Display buildings settings
+                SettingsManager.DisplaySettingsToggleWithReset(grid,
+                    "Display buildings",
+                    "Display or hide buildings.",
+                    $"Reset building display state to default value.",
+                    buildingEnabled,
+                    SettingsManager.BUILDING_DISPLAY_STATE_DEFAULT_VALUE,
+                     (x) => SettingsManager.SaveBuildingVisibility(x),
+                     () => SettingsManager.ResetBuildingVisibility());
 
-            Vector4 buildingColor = SettingsManager.CurrentSettings.BuildingColor;
+                if (!buildingEnabled)
+                {
+                    grid.DisableNextElements();
+                }
 
-            if (grid.ColorPicker("Color", ref buildingColor))
-            {
-                SettingsManager.SaveBuildingColor(buildingColor);
-            }
+                //Buildings color
+                SettingsManager.DisplaySettingsColorPickerWithReset(grid,
+                    "Buildings color",
+                    "Change buildings color.",
+                    "Reset buildings color to default value.",
+                    SettingsManager.CurrentSettings.BuildingColor,
+                    SettingsManager.BUILDING_COLOR_DEFAULT_VALUE,
+                    (x) => SettingsManager.SaveBuildingColor(x),
+                    () => SettingsManager.ResetBuildingColor());
 
-            float ambientOcclusion = SettingsManager.CurrentSettings.BuildingAO;
-
-            if (grid.Slider("Ambient occlusion", ref ambientOcclusion, 0f, 1f, 0.1f, format: "%.1f"))
-            {
-                SettingsManager.SaveBuildingAO(ambientOcclusion);
+                //Building ambient occlusion settings
+                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                    "Ambient occlusion",
+                    "Define buildings ambient occlusion value.",
+                    $"Reset buildings ambient occlusion to default value ({SettingsManager.BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE}).",
+                    SettingsManager.CurrentSettings.BuildingAO,
+                    0.0f,
+                    1.0f,
+                    0.1f,
+                    SettingsManager.BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE,
+                    "%.1f",
+                     (x) => SettingsManager.SaveBuildingAO(x),
+                     () => SettingsManager.ResetBuildingAO());
             }
         }
         #endregion

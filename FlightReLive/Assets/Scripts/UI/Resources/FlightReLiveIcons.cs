@@ -109,5 +109,11 @@ namespace FlightReLive.UI
 
         protected static string _POV = "\uE087";
         public static string POV { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _POV; }
+
+        protected static string _Undo = "\uE088";
+        public static string Undo { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Undo; }
+
+        protected static string _Compass = "\uE089";
+        public static string Compass { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Compass; }
     }
 }

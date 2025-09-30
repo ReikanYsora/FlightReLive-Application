@@ -1,6 +1,6 @@
-using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.Paths;
+using FlightReLive.UI.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -126,6 +126,11 @@ namespace FlightReLive.UI.ReLiveView
         protected virtual void InitializeCameraView()
         {
 
+        }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            TimeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
         }
         #endregion
 

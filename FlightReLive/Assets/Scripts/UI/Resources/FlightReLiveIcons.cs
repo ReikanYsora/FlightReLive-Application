@@ -115,5 +115,27 @@ namespace FlightReLive.UI
 
         protected static string _Compass = "\uE089";
         public static string Compass { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Compass; }
+
+        protected static string _Play = "\uE08A";
+        public static string Play { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Play; }
+
+        protected static string _Pause = "\uE08B";
+        public static string Pause { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Pause; }
+
+        protected static string _Stop = "\uE08C";
+        public static string Stop { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Stop; }
+
+        protected static string _Backward = "\uE08D";
+        public static string Backward { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Backward; }
+
+        protected static string _Forward = "\uE08E";
+        public static string Forward { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Forward; }
+
+        protected static string _BackwardStep = "\uE08F";
+        public static string BackwardStep { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _BackwardStep; }
+
+        protected static string _ForwardStep = "\uE090";
+        public static string ForwardStep { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _ForwardStep; }
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
@@ -85,7 +86,7 @@ namespace FlightReLive.Core.Paths
         }
         private void Start()
         {
-            VideoPlayerManager.Instance.OnProgressChanged += OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
             SettingsManager.OnPath3DWidthChanged += OnPathWidthChanged;
             SettingsManager.OnPath3DRemainingColor1Changed += OnPathRemainingColor1Changed;
             SettingsManager.OnPath3DRemainingColor2Changed += OnPathRemainingColor2Changed;
@@ -110,9 +111,9 @@ namespace FlightReLive.Core.Paths
 
                 if (Camera.Mouse.IsPressed(FuMouseButton.Left))
                 {
-                    long totalFrames = VideoPlayerManager.Instance.TotalFrameCount;
+                    long totalFrames = TimeBarManager.Instance.TotalFrameCount;
                     long targetFrame = Mathf.FloorToInt(hoverProgress * totalFrames);
-                    VideoPlayerManager.Instance.SetFrame(targetFrame, false);
+                    TimeBarManager.Instance.SetFrame(targetFrame, false);
                     _glowTimer = _glowDuration;
                 }
             }
@@ -122,7 +123,7 @@ namespace FlightReLive.Core.Paths
             }
 
             //Interpolate UV
-            float targetProgress = GetProgressAtTime(_interpolatedToFlightPoint[0].Time + TimeSpan.FromSeconds(VideoPlayerManager.Instance.Time));
+            float targetProgress = GetProgressAtTime(_interpolatedToFlightPoint[0].Time + TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
             _currentProgress = Mathf.Lerp(_currentProgress, targetProgress, Time.deltaTime * 5f);
             _progressionPathMaterialInstance.SetFloat("_Progress", _currentProgress);
 
@@ -170,7 +171,7 @@ namespace FlightReLive.Core.Paths
 
         private void OnDisable()
         {
-            VideoPlayerManager.Instance.OnProgressChanged -= OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged -= OnProgressChanged;
             SettingsManager.OnPath3DWidthChanged -= OnPathWidthChanged;
             SettingsManager.OnPath3DRemainingColor1Changed -= OnPathRemainingColor1Changed;
             SettingsManager.OnPath3DRemainingColor2Changed -= OnPathRemainingColor2Changed;

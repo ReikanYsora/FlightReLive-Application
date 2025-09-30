@@ -19,33 +19,42 @@ namespace FlightReLive.Core.FFmpeg
         public string VideoPath { get; set; }
 
         [Key(3)]
-        public DateTime CreationDate { get; set; }
+        public int Width { get; set; }
 
         [Key(4)]
-        public FlightGPSData EstimateTakeOffPosition { get; set; }
+        public int Height { get; set; }
 
         [Key(5)]
-        public List<FlightDataPoint> DataPoints { get; set; }
+        public double Frequency { get; set; }
 
         [Key(6)]
-        public SerializableVector2 FlightGPSCoordinates { get; set; }
+        public DateTime CreationDate { get; set; }
 
         [Key(7)]
-        public byte[] Thumbnail { get; set; }
+        public FlightGPSData EstimateTakeOffPosition { get; set; }
 
         [Key(8)]
-        public TimeSpan Duration { get; set; }
+        public List<FlightDataPoint> DataPoints { get; set; }
 
         [Key(9)]
-        public bool HasExtractionError { get; set; }
+        public SerializableVector2 FlightGPSCoordinates { get; set; }
 
         [Key(10)]
-        public bool IsValid { get; set; }
+        public byte[] Thumbnail { get; set; }
 
         [Key(11)]
-        public List<string> ErrorMessages { get; set; } = new List<string>();
+        public TimeSpan Duration { get; set; }
 
         [Key(12)]
+        public bool HasExtractionError { get; set; }
+
+        [Key(13)]
+        public bool IsValid { get; set; }
+
+        [Key(14)]
+        public List<string> ErrorMessages { get; set; } = new List<string>();
+
+        [Key(15)]
         public bool TakeOffPositionAvailable { get; set; }
 
         #region CONSTRUCTOR

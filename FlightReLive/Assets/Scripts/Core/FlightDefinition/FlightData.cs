@@ -25,10 +25,21 @@ namespace FlightReLive.Core.FlightDefinition
 
         #region PROPERTIES
         internal string Name { set; get; }
+
         internal string VideoPath { set; get; }
+
         internal DateTime Date { set; get; }
+
+        internal int Width { set; get; }
+
+        internal int Height { set; get; }
+
+        internal double Frequency { set; get; }
+
         internal List<FlightDataPoint> Points { set; get; }
+
         internal MapTilesDefinition MapDefinition { set; get; }
+
         internal Texture2D Thumbnail { set; get; }
 
         /// <summary>
@@ -38,11 +49,17 @@ namespace FlightReLive.Core.FlightDefinition
         internal Vector2 SceneCenterGPS { get; private set; }
 
         internal bool HasTakeOffPosition { get; set; }
+
         internal bool HasExtractionError { get; set; }
+
         internal bool IsValid { get; set; }
+
         internal FlightGPSData EstimateTakeOffPosition { set; get; }
+
         internal float TakeOffAltitude { get; set; }
+
         internal FlightGPSData GPSOrigin { get; set; }
+
         internal TimeSpan Length { get; set; }
 
         internal float GlobalScale => GLOBAL_SCALE;

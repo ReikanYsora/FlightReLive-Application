@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -39,6 +40,71 @@ namespace FlightReLive.Core.FFmpeg
             return string.Enpty;
 #endif
         }
+
+        /// <summary>
+        /// Extracts video metadata (resolution, fps) from FFmpeg stderr.
+        /// </summary>
+        public static void ExtractVideoMetadata(string videoPath, FlightDataContainer container)
+        {
+            string ffmpegPath = GetFFmpegPath();
+            if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
+            {
+                UnityEngine.Debug.LogError("FFmpeg path invalid.");
+                return;
+            }
+
+            if (!File.Exists(videoPath))
+            {
+                UnityEngine.Debug.LogError("Video not found.");
+                return;
+            }
+
+            string arguments = $"-i \"{videoPath}\"";
+
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = arguments,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = false
+            };
+
+            try
+            {
+                using (Process process = Process.Start(psi))
+                {
+                    string errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    Match match = Regex.Match(errorOutput, @"Video:.*?(\d{2,5})x(\d{2,5}).*?([\d\.]+)\s*fps", RegexOptions.IgnoreCase);
+
+                    if (match.Success)
+                    {
+                        if (int.TryParse(match.Groups[1].Value, out int width))
+                        {
+                            container.Width = width;
+                        }
+
+                        if (int.TryParse(match.Groups[2].Value, out int height))
+                        {
+                            container.Height = height;
+                        }
+
+                        if (double.TryParse(match.Groups[3].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double fps))
+                        {
+                            container.Frequency = fps;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"FFmpeg metadata extraction failed: {ex.Message}");
+            }
+        }
+
 
         /// <summary>
         /// Extract flight data from SRT encrypted in video file

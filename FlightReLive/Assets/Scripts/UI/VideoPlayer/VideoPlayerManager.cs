@@ -3,6 +3,7 @@ using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.FlightCharts;
 using Fu;
 using Fu.Framework;
@@ -11,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -25,109 +25,11 @@ namespace FlightReLive.UI.VideoPlayer
 
         #region ATTRIBUTES
         private FuVideoPlayer _videoPlayer;
-        private int _lastPointIndex = -1;
+        private FlightDataPoint _currentDataPoint;
         #endregion
 
         #region PROPERTIES
         internal static VideoPlayerManager Instance { get; private set; }
-
-        internal float Progress
-        {
-            get
-            {
-                if (_videoPlayer == null || _videoPlayer.Player == null || !_videoPlayer.Player.isPrepared || _videoPlayer.Player.length == 0)
-                {
-                    return 0f;
-                }
-
-                return (float)(_videoPlayer.Player.time / _videoPlayer.Player.length);
-            }
-        }
-
-        internal long TotalFrameCount
-        {
-            get
-            {
-                if (_videoPlayer == null || _videoPlayer.Player == null)
-                {
-                    return 0;
-                }
-
-                return (long)_videoPlayer.FrameCount;
-            }
-        }
-
-        internal long CurrentFrame
-        {
-            get
-            {
-                if (_videoPlayer == null || _videoPlayer.Player == null)
-                {
-                    return 0;
-                }
-
-                return _videoPlayer.CurrentFrame;
-            }
-        }
-
-        internal double Time
-        {
-            get
-            {
-                if (_videoPlayer == null || _videoPlayer.Player == null || !_videoPlayer.Player.isPrepared || _videoPlayer.Player.length == 0)
-                {
-                    return 0f;
-                }
-
-                return _videoPlayer.Player.time;
-            }
-        }
-
-        internal double Length
-        {
-            get
-            {
-                if (_videoPlayer == null || _videoPlayer.Player == null || !_videoPlayer.Player.isPrepared || _videoPlayer.Player.length == 0)
-                {
-                    return 0f;
-                }
-
-                return _videoPlayer.Player.length;
-            }
-        }
-
-        internal Texture Texture
-        {
-            get
-            {
-                if (_videoPlayer == null)
-                {
-                    return null;
-                }
-
-                return _videoPlayer.Texture;
-            }
-        }
-
-        internal UnityEngine.Video.VideoPlayer Player
-        {
-            get
-            {
-                if (_videoPlayer == null)
-                {
-                    return null;
-                }
-
-                return _videoPlayer.Player;
-            }
-        }
-
-        #endregion
-
-        #region EVENTS
-        internal event Action<float, int, FlightDataPoint> OnProgressChanged;
-        internal event Action<FlightData> OnVideoLoaded;
-        internal event Action OnVideoUnloaded;
         #endregion
 
         #region UNITY METHODS
@@ -148,39 +50,8 @@ namespace FlightReLive.UI.VideoPlayer
             _videoPlayer = layout.GetVideoPlayer("VideoPlayer");
             _videoPlayer.SetAutoPlay(true);
             layout.Dispose();
-        }
 
-        private void Update()
-        {
-            FlightData currentFlightData = LoadingManager.Instance.CurrentFlightData;
-
-            if (currentFlightData == null || _videoPlayer?.Player == null || currentFlightData.Points == null || currentFlightData.Points.Count == 0)
-            {
-                return;
-            }
-
-            double currentTime = _videoPlayer.Player.time;
-            double duration = _videoPlayer.Player.length;
-
-            if (duration <= 0)
-            {
-                return;
-            }
-
-            float progress = (float)(currentTime / duration);
-            TimeSpan currentSpan = TimeSpan.FromSeconds(currentTime);
-            TimeSpan first = currentFlightData.Points.First().TimeSpan;
-            TimeSpan last = currentFlightData.Points.Last().TimeSpan;
-            currentSpan = TimeSpan.FromTicks(Math.Clamp(currentSpan.Ticks, first.Ticks, last.Ticks));
-
-            int index = FindClosestPointIndex(currentFlightData.Points, currentSpan);
-
-            if (index != _lastPointIndex)
-            {
-                _lastPointIndex = index;
-                FlightDataPoint point = currentFlightData.Points[index];
-                OnProgressChanged?.Invoke(progress, index, point);
-            }
+            TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
         }
         #endregion
 
@@ -195,7 +66,6 @@ namespace FlightReLive.UI.VideoPlayer
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 _videoPlayer.SetFile(flightData.VideoPath);
-                OnVideoLoaded?.Invoke(flightData);
             });
         }
 
@@ -209,73 +79,25 @@ namespace FlightReLive.UI.VideoPlayer
                 }
 
                 _videoPlayer.Stop();
-                OnVideoUnloaded?.Invoke();
+                _currentDataPoint = null;
             });
-        }
-
-        private FlightDataPoint GetSafePoint(int index)
-        {
-            FlightData currentFlightData = LoadingManager.Instance.CurrentFlightData;
-
-            if (currentFlightData?.Points == null || index < 0 || index >= currentFlightData.Points.Count)
-            {
-                return null;
-            }
-
-            return currentFlightData.Points[index];
-        }
-
-        private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)
-        {
-            int low = 0;
-            int high = points.Count - 1;
-
-            while (low <= high)
-            {
-                int mid = (low + high) / 2;
-                TimeSpan midSpan = points[mid].TimeSpan;
-
-                if (midSpan < currentSpan)
-                {
-                    low = mid + 1;
-                }
-                else if (midSpan > currentSpan)
-                {
-                    high = mid - 1;
-                }
-                else
-                {
-                    return mid;
-                }
-            }
-
-            int before = Mathf.Clamp(low - 1, 0, points.Count - 1);
-            int after = Mathf.Clamp(low, 0, points.Count - 1);
-
-            TimeSpan diffBefore = (points[before].TimeSpan - currentSpan).Duration();
-            TimeSpan diffAfter = (points[after].TimeSpan - currentSpan).Duration();
-
-            return diffBefore <= diffAfter ? before : after;
-        }
-
-
-        internal void SetFrame(long frame, bool pause)
-        {
-            if (_videoPlayer == null)
-            {
-                return;
-            }
-
-            _videoPlayer.SetFrame(frame);
-
-            if (pause)
-            {
-                _videoPlayer.Pause();
-            }
         }
         #endregion
 
         #region CALLBACK
+        private void OnProgressChanged(float progress, int index, FlightDataPoint flightDataPoint)
+        {
+            _currentDataPoint = flightDataPoint;
+
+            if (_videoPlayer?.Player == null || !_videoPlayer.Player.isPrepared || _videoPlayer.Player.length <= 0)
+            {
+                return;
+            }
+
+            long targetFrame = (long)(progress * _videoPlayer.Player.frameCount);
+            _videoPlayer.Player.frame = targetFrame;
+        }
+
         /// <summary>
         /// Whenever the window is created, set the camera to the MouseOrbitImproved component
         /// </summary>
@@ -342,9 +164,7 @@ namespace FlightReLive.UI.VideoPlayer
             {
                 if (ImGui.GetCursorScreenPos().y <= Fugui.MainContainer.Size.y)
                 {
-                    FlightDataPoint point = GetSafePoint(_lastPointIndex);
-
-                    if (point == null)
+                    if (_currentDataPoint == null)
                     {
                         return;
                     }
@@ -430,18 +250,18 @@ namespace FlightReLive.UI.VideoPlayer
                         using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                         {
                             //GPS Position
-                            string formattedPosition = $"{point.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {point.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
+                            string formattedPosition = $"{_currentDataPoint.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
                             Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.GoogleMaps, () =>
                             {
-                                OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)point.Latitude, (float)point.Longitude));
+                                OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)_currentDataPoint.Latitude, (float)_currentDataPoint.Longitude));
                             }, "Display on Google Map");
 
                             //Altitudes
-                            string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + point.RelativeAltitude);
-                            string formattedRelativeAltitude = SettingsManager.FormatAltitude(point.RelativeAltitude);
+                            string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + _currentDataPoint.RelativeAltitude);
+                            string formattedRelativeAltitude = SettingsManager.FormatAltitude(_currentDataPoint.RelativeAltitude);
 
                             //Speed
-                            double speed = CalculateSpeed((float)point.HorizontalSpeed, (float)point.VerticalSpeed);
+                            double speed = CalculateSpeed((float)_currentDataPoint.HorizontalSpeed, (float)_currentDataPoint.VerticalSpeed);
                             string formattedSpeed = SettingsManager.FormatSpeed(speed);
 
                             Draw(window, "2", grid, layout, FlightReLiveIcons.Speed, formattedSpeed, "Current speed", FlightReLiveIcons.Charts, () =>
@@ -469,32 +289,32 @@ namespace FlightReLive.UI.VideoPlayer
 
                         using (FuGrid grid = new FuGrid("cameraDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                         {
-                            Draw(window, "5", grid, layout, FlightReLiveIcons.Aperture, point.CameraSettings.Aperture.ToString(), "Aperture", FlightReLiveIcons.Charts, () =>
+                            Draw(window, "5", grid, layout, FlightReLiveIcons.Aperture, _currentDataPoint.CameraSettings.Aperture.ToString(), "Aperture", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.Aperture;
                             }, "Display Aperture chart");
 
-                            Draw(window, "6", grid, layout, FlightReLiveIcons.ShutterSpeed, point.CameraSettings.ShutterSpeed.ToString(), "Shutter Speed", FlightReLiveIcons.Charts, () =>
+                            Draw(window, "6", grid, layout, FlightReLiveIcons.ShutterSpeed, _currentDataPoint.CameraSettings.ShutterSpeed.ToString(), "Shutter Speed", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.ShutterSpeed;
                             }, "Display Shutter speed chart");
 
-                            Draw(window, "7", grid, layout, FlightReLiveIcons.PostProcess, point.CameraSettings.FocalLength.ToString(), "Focal Length", FlightReLiveIcons.Charts, () =>
+                            Draw(window, "7", grid, layout, FlightReLiveIcons.PostProcess, _currentDataPoint.CameraSettings.FocalLength.ToString(), "Focal Length", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.Focal;
                             }, "Display Focal length chart");
 
-                            Draw(window, "8", grid, layout, FlightReLiveIcons.ISO, point.CameraSettings.ISO.ToString(), "ISO", FlightReLiveIcons.Charts, () =>
+                            Draw(window, "8", grid, layout, FlightReLiveIcons.ISO, _currentDataPoint.CameraSettings.ISO.ToString(), "ISO", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.ISO;
                             }, "Display ISO chart");
 
-                            Draw(window, "9", grid, layout, FlightReLiveIcons.Exposure, point.CameraSettings.Exposure.ToString(), "Exposure", FlightReLiveIcons.Charts, () =>
+                            Draw(window, "9", grid, layout, FlightReLiveIcons.Exposure, _currentDataPoint.CameraSettings.Exposure.ToString(), "Exposure", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.Exposure;
                             }, "Display exposure chart");
 
-                            string formattedZoom = $"X{point.CameraSettings.DigitalZoom:F1}";
+                            string formattedZoom = $"X{_currentDataPoint.CameraSettings.DigitalZoom:F1}";
                             Draw(window, "10", grid, layout, FlightReLiveIcons.DigitalZoom, formattedZoom, "Digital Zoom", FlightReLiveIcons.Charts, () =>
                             {
                                 FlightChartsManager.Instance.DisplayedChart = FlightChartType.DigitalZoom;

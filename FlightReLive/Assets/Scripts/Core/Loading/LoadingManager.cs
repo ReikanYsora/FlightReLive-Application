@@ -6,6 +6,7 @@ using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.FlightCharts;
 using FlightReLive.UI.VideoPlayer;
@@ -185,6 +186,7 @@ namespace FlightReLive.Core.Loading
                     }
                 }
                 
+                TimeBarManager.Instance.Load(flightData);
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);
                 VideoPlayerManager.Instance.Load(flightData);
@@ -213,6 +215,9 @@ namespace FlightReLive.Core.Loading
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
+                Width = file.Width,
+                Height = file.Height,
+                Frequency = file.Frequency,
                 Date = file.CreationDate,
                 Length = file.Duration,
                 Points = file.DataPoints,
@@ -326,6 +331,7 @@ namespace FlightReLive.Core.Loading
         {
             List<Task> unloadTasks = new List<Task>
             {
+                TimeBarManager.Instance.Unload(),
                 FlightChartsManager.Instance.Unload(),
                 VideoPlayerManager.Instance.Unload(),
                 ProceduralTerrainManager.Instance.Unload(),

@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
@@ -114,7 +115,7 @@ namespace FlightReLive.UI.FlightCharts
             _isChartSet = false;
             _isMouseClicked = false;
 
-            VideoPlayerManager.Instance.OnProgressChanged += OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
         }
 
         private void OnProgressChanged(float ratio, int index, FlightDataPoint point)
@@ -155,7 +156,7 @@ namespace FlightReLive.UI.FlightCharts
 
         public void Dispose()
         {
-            VideoPlayerManager.Instance.OnProgressChanged -= OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged -= OnProgressChanged;
             Steps = null;
         }
 
@@ -168,7 +169,7 @@ namespace FlightReLive.UI.FlightCharts
 
         private float GetRatioFromDataPoint(FlightDataPoint point)
         {
-            double videoDuration = VideoPlayerManager.Instance.Length;
+            double videoDuration = TimeBarManager.Instance.Length;
             double timeSeconds = point.TimeSpan.TotalSeconds;
             float ratio = (float)(timeSeconds / videoDuration);
 
@@ -178,7 +179,7 @@ namespace FlightReLive.UI.FlightCharts
         private long GetFrameFromDataPoint(FlightDataPoint point)
         {
             float ratio = GetRatioFromDataPoint(point);
-            long totalFrames = VideoPlayerManager.Instance.TotalFrameCount;
+            long totalFrames = TimeBarManager.Instance.TotalFrameCount;
 
             return Math.Clamp(Mathf.RoundToInt(ratio * (totalFrames - 1)), 0, totalFrames - 1);
         }
@@ -338,7 +339,7 @@ namespace FlightReLive.UI.FlightCharts
                 OnDateChanged?.Invoke(point.Time, _currentRatio);
 
                 long targetFrame = GetFrameFromDataPoint(point);
-                VideoPlayerManager.Instance.SetFrame(targetFrame, false);
+                TimeBarManager.Instance.SetFrame(targetFrame, false);
             }
         }
 

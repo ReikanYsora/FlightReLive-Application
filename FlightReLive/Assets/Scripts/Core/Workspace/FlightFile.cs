@@ -17,6 +17,8 @@ namespace FlightReLive.Core.Workspace
 
         public DateTime CreationDate { get; set; }
 
+        public Texture2D Map { get; set; }
+
         public Texture2D Thumbnail { get; set; }
 
         public FlightGPSData EstimateTakeOffPosition { get; set; }

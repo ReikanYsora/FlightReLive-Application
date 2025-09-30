@@ -2,6 +2,7 @@
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
+using NUnit.Compatibility;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,6 +39,7 @@ namespace FlightReLive.Core.Environment
         private Vignette _vignette;
         private Bloom _bloom;
         private IndirectLightingController _indirectLighting;
+        private DepthOfField _dof;
 
         //Baseline values
         private float _baseExposureComp;
@@ -216,6 +218,7 @@ namespace FlightReLive.Core.Environment
                 _vignette = _globalVolumeProfile.Add<Vignette>(true);
                 _bloom = _globalVolumeProfile.Add<Bloom>(true);
                 _indirectLighting = _globalVolumeProfile.Add<IndirectLightingController>(true);
+                _dof = _globalVolumeProfile.Add<DepthOfField>(true);
 
                 // Cameras render sky (not solid color) in ReLive/POV
                 if (_reliveCamera != null)
@@ -238,14 +241,31 @@ namespace FlightReLive.Core.Environment
                 }
             }
 
-            //Exposure (automatic) + dynamic limits:
-            //At low sun: allow darker min (avoid haze wash), cap highlights slightly
-            //At high sun: raise max so whites can breathe, min less negative
+            //Exposure (automatic)
             if (_exposure != null)
             {
                 _exposure.mode.Override(ExposureMode.Fixed);
                 _exposure.fixedExposure.overrideState = false;
-                _baseExposureComp = Mathf.Lerp(5f, -0.5f, elevationFactor);
+
+                _baseExposureComp = Mathf.Lerp(4f, 0f, Mathf.Pow(elevationFactor, 1.1f));
+
+                float middayDip = Mathf.Exp(-Mathf.Pow((elevationFactor - 0.8f) * 4f, 2f));
+                _baseExposureComp -= 0.15f * middayDip;
+
+                //Sunset boost (+1 when elevation < 20°)
+                float sunsetBoost = Mathf.SmoothStep(1f, 0f, elevationFactor / 0.2f);
+                _baseExposureComp += 1.0f * sunsetBoost;
+
+                //Smooth mMidday clamp
+                if (hour >= 12.5f && hour <= 15.5f)
+                {
+                    float middayFactor = 1f - Mathf.Clamp01(Mathf.Abs(hour - 14f) / 1.5f);
+                    _baseExposureComp -= 0.4f * middayFactor;
+                }
+
+                //Base boost (more "HDR" type rendering)
+                _baseExposureComp += 0.5f;
+
                 _exposure.compensation.Override(_baseExposureComp);
             }
 
@@ -280,6 +300,9 @@ namespace FlightReLive.Core.Environment
                 _sky.horizonZenithShift.Override(0f);
                 _sky.updateMode.Override(EnvironmentUpdateMode.Realtime);
                 _sky.updatePeriod.Override(0f);
+                _sky.skyIntensityMode.Override(SkyIntensityMode.Exposure);
+                _sky.exposure.Override(0.5f);
+                _sky.includeSunInBaking.overrideState = false;
             }
 
             //Fog
@@ -365,7 +388,8 @@ namespace FlightReLive.Core.Environment
             if (_colorAdjustments != null)
             { 
                 _baseContrast = 50f;
-                _baseSaturation = 20f;
+                float middayFade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.7f, 0.9f, elevationFactor));
+                _baseSaturation = Mathf.Lerp(20f, 15f, middayFade);
                 _colorAdjustments.contrast.Override(_baseContrast);
                 _colorAdjustments.saturation.Override(_baseSaturation);
 
@@ -390,19 +414,47 @@ namespace FlightReLive.Core.Environment
             //Bloom for highlights
             if (_bloom != null)
             {
-                _bloom.threshold.Override(0.25f);
-                _bloom.intensity.Override(0.12f);
+                _bloom.threshold.Override(0.15f);
+                _bloom.intensity.Override(0.1f);
                 _bloom.tint.overrideState = false;
                 _bloom.scatter.overrideState = false;
                 _bloom.dirtIntensity.overrideState = false;
                 _bloom.dirtTexture.overrideState = false;
             }
 
-            //Indirect/Ambient baseline boost
+            //Indirect lightning
             if (_indirectLighting != null)
             {
-                _baseIndirect = Mathf.Lerp(5.5f, 1f, elevationFactor);
+                _baseIndirect = Mathf.Lerp(4.5f, 1.2f, elevationFactor);
+
+                if (elevationFactor > 0.7f)
+                {
+                    float middayFade = Mathf.InverseLerp(0.7f, 1f, elevationFactor);
+                    _baseIndirect *= Mathf.Lerp(1f, 0.8f, middayFade);
+                }
+
+                //Sunset boost (+0.5 when elevation < 20°)
+                float sunsetBoostIndirect = Mathf.SmoothStep(0.5f, 0f, elevationFactor / 0.2f);
+                _baseIndirect += sunsetBoostIndirect;
+
+                //Smooth midday clamp
+                if (hour >= 12.5f && hour <= 15.5f)
+                {
+                    float middayFactor = 1f - Mathf.Clamp01(Mathf.Abs(hour - 14f) / 1.5f);
+                    _baseIndirect -= 0.3f * middayFactor;
+                }
+
                 _indirectLighting.indirectDiffuseLightingMultiplier.Override(_baseIndirect);
+            }
+
+            //Deaph of field
+            if (_dof != null)
+            {
+                _dof.focusMode.Override(DepthOfFieldMode.Manual);
+                _dof.nearFocusStart.overrideState = false;
+                _dof.nearFocusEnd.overrideState = false;
+                _dof.farFocusStart.Override(500f);
+                _dof.farFocusEnd.Override(5000f);
             }
 
             _globalVolume.enabled = true;
@@ -433,21 +485,20 @@ namespace FlightReLive.Core.Environment
                 return;
             }
 
-            float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
-            float elevationRad = Mathf.Deg2Rad * sun.Elevation;
-            float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
+            if (_mainLight != null)
+            {
+                float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
+                float elevationRad = Mathf.Deg2Rad * sun.Elevation;
+                float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
 
-            Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
-
-            _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
-
-            //Keep a physically plausible baseline, avoid cranking light; ambient will do the lifting
-            _baseMainLightIntensity = Mathf.Lerp(0.2f, 4f, Mathf.Pow(elevationFactor, 1.4f));
-            _mainLight.intensity = _baseMainLightIntensity;
-
-            RenderSettings.sun = _mainLight;
+                Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
+                _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
+                float cappedFactor = Mathf.Pow(elevationFactor, 1.2f);
+                _baseMainLightIntensity = Mathf.Lerp(0.2f, 3.5f, cappedFactor);
+                _mainLight.intensity = _baseMainLightIntensity;
+                RenderSettings.sun = _mainLight;
+            }
         }
-
 
         /// <summary>
         /// Apply vignetting intensity from user settings
@@ -657,6 +708,7 @@ namespace FlightReLive.Core.Environment
             _vignette = null;
             _bloom = null;
             _indirectLighting = null;
+            _dof = null;
             _baseExposureComp = 0f;
             _baseContrast = 0f;
             _baseSaturation = 0f;

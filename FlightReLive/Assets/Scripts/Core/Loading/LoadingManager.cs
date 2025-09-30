@@ -192,7 +192,7 @@ namespace FlightReLive.Core.Loading
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loade.", StateType.Info);
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
                 OnFlightEndLoading?.Invoke();
             }
             catch (OperationCanceledException)

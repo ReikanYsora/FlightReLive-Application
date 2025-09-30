@@ -469,7 +469,7 @@ namespace FlightReLive.UI.Workspace
                         {
                             if (layout.ClickableText(FlightReLiveIcons.GoogleMaps, FuTextStyle.Default))
                             {
-                                GoogleAPIHelper.OpenGoogleMapsBrowser(file.DataPoints.Select(p => new Vector2((float)p.Latitude, (float)p.Longitude)).ToList());
+                                OpenStreetMapHelper.OpenOpenStreetMapBrowser(file.DataPoints.Select(p => new Vector2((float)p.Latitude, (float)p.Longitude)).ToList());
                             }
                         }
                         else

@@ -433,7 +433,7 @@ namespace FlightReLive.UI.VideoPlayer
                             string formattedPosition = $"{point.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {point.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
                             Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.GoogleMaps, () =>
                             {
-                                GoogleAPIHelper.OpenGoogleMapsBrowser(new Vector2((float)point.Latitude, (float)point.Longitude));
+                                OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)point.Latitude, (float)point.Longitude));
                             }, "Display on Google Map");
 
                             //Altitudes

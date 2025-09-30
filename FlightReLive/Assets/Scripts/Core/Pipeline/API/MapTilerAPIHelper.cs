@@ -198,6 +198,118 @@ namespace FlightReLive.Core.Pipeline.API
         }
         #endregion
 
+        #region STATIC MAP IMAGE
+        /// <summary>
+        /// Download a static map image from MapTiler with markers at the given GPS points.
+        /// Each Vector2 = (X = Latitude, Y = Longitude).
+        /// </summary>
+        internal static async Task<Texture2D> DownloadStaticMapImageAsync(List<Vector2> gpsPoints, int width, int height, string style = "streets-v2", CancellationToken token = default)
+        {
+            if (gpsPoints == null || gpsPoints.Count == 0)
+            {
+                Debug.LogWarning("DownloadStaticMapImageAsync called with empty gpsPoints list.");
+                return null;
+            }
+
+            string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                Debug.LogError("MapTiler API key is missing.");
+                return null;
+            }
+
+            // Compute bounding box center
+            float minLat = float.MaxValue, maxLat = float.MinValue;
+            float minLon = float.MaxValue, maxLon = float.MinValue;
+
+            foreach (var pt in gpsPoints)
+            {
+                if (pt.x < minLat)
+                {
+                    minLat = pt.x;
+                }
+
+                if (pt.x > maxLat)
+                {
+                    maxLat = pt.x;
+                }
+
+                if (pt.y < minLon)
+                {
+                    minLon = pt.y;
+                }
+
+                if (pt.y > maxLon)
+                {
+                    maxLon = pt.y;
+                }
+            }
+
+            float centerLat = (minLat + maxLat) / 2f;
+            float centerLon = (minLon + maxLon) / 2f;
+
+            int zoom = GetZoomForBounds(minLat, maxLat, minLon, maxLon, width, height);
+
+            //Build markers param
+            List<string> markerList = new List<string>();
+            foreach (var pt in gpsPoints)
+            {
+                //MapTiler format: lon,lat,color
+                markerList.Add($"{pt.y.ToString(System.Globalization.CultureInfo.InvariantCulture)},{pt.x.ToString(System.Globalization.CultureInfo.InvariantCulture)},red");
+            }
+            string markersParam = string.Join("|", markerList);
+
+            //Construct URL
+            string url =
+                $"https://api.maptiler.com/maps/{style}/static/{centerLon.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
+                $"{centerLat.ToString(System.Globalization.CultureInfo.InvariantCulture)},{zoom}/{width}x{height}.png" +
+                $"?key={apiKey}&markers={markersParam}";
+
+            TaskCompletionSource<Texture2D> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            Debug.Log(url);
+
+            DownloadManager.EnqueueDownload(
+                url,
+                async data =>
+                {
+                    if (token.IsCancellationRequested)
+                    { 
+                        tcs.TrySetCanceled(token);
+                        return;
+                    }
+
+                    try
+                    {
+                        //Create Texture2D on main thread
+                        Texture2D tex = await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
+                        {
+                            var t = new Texture2D(2, 2, TextureFormat.RGB24, false);
+                            t.LoadImage(data);
+                            t.name = "MapTiler_StaticMap";
+                            t.filterMode = FilterMode.Bilinear;
+                            return t;
+                        });
+
+                        tcs.TrySetResult(tex);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"Failed to parse MapTiler static map image: {ex.Message}");
+                        tcs.TrySetResult(null);
+                    }
+                },
+                error => tcs.TrySetResult(null),
+                (received, total) => { }
+            );
+
+            using (token.Register(() => tcs.TrySetCanceled(token)))
+            {
+                return await tcs.Task;
+            }
+        }
+        #endregion
+
         #region HEIGHTMAP
         private static async Task<ResourceResult<float[,]>> DownloadHeightmapAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
@@ -488,6 +600,40 @@ namespace FlightReLive.Core.Pipeline.API
             }
 
             return atlas;
+        }
+
+        private static int GetZoomForBounds(float minLat, float maxLat, float minLon, float maxLon, int width, int height)
+        {
+            const int TILE_SIZE = 256;
+            const int MAX_ZOOM = 20;
+            const int MIN_ZOOM = 1;
+
+            //Convert degrees to radians
+            double latRadMin = minLat * Mathf.Deg2Rad;
+            double latRadMax = maxLat * Mathf.Deg2Rad;
+
+            for (int z = MAX_ZOOM; z >= MIN_ZOOM; z--)
+            {
+                double mapSize = TILE_SIZE * Math.Pow(2, z);
+
+                //Lon → pixels
+                double xMin = (minLon + 180.0) / 360.0 * mapSize;
+                double xMax = (maxLon + 180.0) / 360.0 * mapSize;
+
+                //Lat → pixels (Mercator projection)
+                double yMin = (1 - Math.Log(Math.Tan(latRadMin) + 1 / Math.Cos(latRadMin)) / Math.PI) / 2 * mapSize;
+                double yMax = (1 - Math.Log(Math.Tan(latRadMax) + 1 / Math.Cos(latRadMax)) / Math.PI) / 2 * mapSize;
+
+                double pixelWidth = Math.Abs(xMax - xMin);
+                double pixelHeight = Math.Abs(yMax - yMin);
+
+                if (pixelWidth <= width && pixelHeight <= height)
+                {
+                    return z;
+                }
+            }
+
+            return MIN_ZOOM;
         }
         #endregion
     }

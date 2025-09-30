@@ -17,65 +17,69 @@ namespace FlightReLive.Core.TimeBar
         private long _totalFrameCount;
         private int _lastPointIndex = -1;
         private FlightData _currentFlightData;
-
-        // Bornes absolues des points (timeline réelle du vol)
-        private TimeSpan _firstTS;
-        private TimeSpan _lastTS;
+        private TimeSpan _firstTimeSpan;
+        private TimeSpan _lastTimeSpan;
+        private PlaybackSpeed _playbackSpeed = PlaybackSpeed.Normal;
         #endregion
 
         #region PROPERTIES
         internal static TimeBarManager Instance { get; private set; }
 
-        /// <summary>
-        /// True if playback is active.
-        /// </summary>
         internal bool IsPlaying { get; private set; }
 
-        /// <summary>
-        /// Current playback time in seconds (relative to the first point).
-        /// </summary>
         internal double CurrentTime { get; private set; }
 
-        /// <summary>
-        /// Total flight duration in seconds (last point - first point).
-        /// </summary>
         internal double Duration { get; private set; }
 
-        /// <summary>
-        /// Native frame frequency (fps), taken from FlightData.
-        /// </summary>
         internal double Frequency { get; private set; }
 
-        /// <summary>
-        /// Total number of frames in the flight (Duration * Frequency).
-        /// </summary>
         internal long TotalFrameCount { get; private set; }
 
-        /// <summary>
-        /// Current frame index derived from CurrentTime and Frequency.
-        /// </summary>
-        internal long CurrentFrame =>
-            (long)Math.Clamp(Math.Round(CurrentTime * Frequency), 0, TotalFrameCount > 0 ? TotalFrameCount - 1 : 0);
+        internal long CurrentFrame => (long)Math.Clamp(Math.Round(CurrentTime * Frequency), 0, TotalFrameCount > 0 ? TotalFrameCount - 1 : 0);
 
-        /// <summary>
-        /// Alias of CurrentTime.
-        /// </summary>
         internal double Time => (_currentFlightData == null || Duration <= 0) ? 0f : CurrentTime;
 
-        /// <summary>
-        /// Alias of Duration.
-        /// </summary>
         internal double Length => (_currentFlightData == null || Duration <= 0) ? 0f : Duration;
+
+        internal PlaybackSpeed Speed
+        {
+            get
+            {
+                return _playbackSpeed;
+            }
+            set
+            {
+                _playbackSpeed = value;
+            }
+        }
+        internal double SpeedFactor
+        {
+            get
+            {
+                switch (_playbackSpeed)
+                {
+                    case PlaybackSpeed.UltraSlow:
+                        return 0.25;
+                    case PlaybackSpeed.Slow:
+                        return 0.5;
+                    default:
+                    case PlaybackSpeed.Normal:
+                        return 1.0;
+                    case PlaybackSpeed.Fast:
+                        return 2.0;
+                    case PlaybackSpeed.UltraFast:
+                        return 4.0;
+                }
+            }
+        }
         #endregion
 
-        #region EVENTS
+            #region EVENTS
         internal event Action<float, int, FlightDataPoint> OnProgressChanged;
         internal event Action<FlightData> OnFlightDataLoaded;
         internal event Action OnFlightDataUnloaded;
         internal event Action OnPlay;
         internal event Action OnPause;
-        internal event Action OnResume;
-        internal event Action OnStop;
         #endregion
 
         #region UNITY METHODS
@@ -92,17 +96,19 @@ namespace FlightReLive.Core.TimeBar
         private void Update()
         {
             if (_currentFlightData == null || _currentFlightData.Points == null || _currentFlightData.Points.Count == 0)
+            {
                 return;
+            }
 
             if (IsPlaying)
             {
-                CurrentTime += UnityEngine.Time.deltaTime;
+                CurrentTime += UnityEngine.Time.deltaTime * SpeedFactor;
                 CurrentTime = Math.Min(CurrentTime, Duration);
             }
 
-            // CurrentTime (relatif) -> absolu = first + CurrentTime
-            TimeSpan target = _firstTS + TimeSpan.FromSeconds(CurrentTime);
-            target = TimeSpan.FromTicks(Math.Clamp(target.Ticks, _firstTS.Ticks, _lastTS.Ticks));
+            // synchro avec les points
+            TimeSpan target = _firstTimeSpan + TimeSpan.FromSeconds(CurrentTime);
+            target = TimeSpan.FromTicks(Math.Clamp(target.Ticks, _firstTimeSpan.Ticks, _lastTimeSpan.Ticks));
 
             int index = FindClosestPointIndex(_currentFlightData.Points, target);
 
@@ -120,19 +126,18 @@ namespace FlightReLive.Core.TimeBar
         internal void Load(FlightData flightData)
         {
             if (flightData == null || flightData.Points == null || flightData.Points.Count == 0)
+            {
                 return;
+            }
 
             _currentFlightData = flightData;
             _lastPointIndex = -1;
-
-            _firstTS = flightData.Points.First().TimeSpan;
-            _lastTS = flightData.Points.Last().TimeSpan;
-            Duration = Math.Max(0, (_lastTS - _firstTS).TotalSeconds);
-
+            _firstTimeSpan = flightData.Points.First().TimeSpan;
+            _lastTimeSpan = flightData.Points.Last().TimeSpan;
+            Duration = Math.Max(0, (_lastTimeSpan - _firstTimeSpan).TotalSeconds);
             Frequency = flightData.Frequency;
             _totalFrameCount = (Duration > 0 && Frequency > 0) ? (long)Math.Round(Duration * Frequency) : 0;
             TotalFrameCount = _totalFrameCount;
-
             CurrentTime = 0;
             OnFlightDataLoaded?.Invoke(flightData);
             Play();
@@ -155,7 +160,24 @@ namespace FlightReLive.Core.TimeBar
         }
         #endregion
 
-        #region METHODS : Playback
+        #region METHODS
+        internal void BackwardStep()
+        {
+            Seek(0);
+        }
+
+        internal void BackwardPoint()
+        {
+            if (_currentFlightData == null || _lastPointIndex <= 0)
+            {
+                return;
+            }
+
+            int targetIndex = Mathf.Max(0, _lastPointIndex - 1);
+            FlightDataPoint targetPoint = _currentFlightData.Points[targetIndex];
+            Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
+        }
+
         internal void Play()
         {
             IsPlaying = true;
@@ -168,24 +190,33 @@ namespace FlightReLive.Core.TimeBar
             OnPause?.Invoke();
         }
 
-        internal void Stop()
+        internal void ForwardPoint()
         {
-            IsPlaying = false;
-            Seek(0);
-            OnStop?.Invoke();
-        }
-        #endregion
+            if (_currentFlightData == null || _lastPointIndex < 0)
+            {
+                return;
+            }
 
-        #region METHODS : Seeking
+            int targetIndex = Mathf.Min(_currentFlightData.Points.Count - 1, _lastPointIndex + 1);
+            FlightDataPoint targetPoint = _currentFlightData.Points[targetIndex];
+            Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
+        }
+
+        internal void ForwardStep()
+        {
+            Seek(Duration);
+        }
+
         internal void Seek(double timeInSeconds)
         {
-            if (_currentFlightData == null) return;
+            if (_currentFlightData == null)
+            {
+                return;
+            }
+
             CurrentTime = Math.Clamp(timeInSeconds, 0, Duration);
         }
 
-        /// <summary>
-        /// Seek by ratio [0..1] across the flight duration.
-        /// </summary>
         internal void SeekRatio(float ratio01)
         {
             ratio01 = Mathf.Clamp01(ratio01);
@@ -194,7 +225,10 @@ namespace FlightReLive.Core.TimeBar
 
         internal void SetFrame(long frame, bool pause)
         {
-            if (_currentFlightData == null || Frequency <= 0) return;
+            if (_currentFlightData == null || Frequency <= 0)
+            {
+                return;
+            }
 
             frame = Math.Clamp(frame, 0, TotalFrameCount > 0 ? TotalFrameCount - 1 : 0);
             double targetTime = frame / Frequency;
@@ -209,13 +243,21 @@ namespace FlightReLive.Core.TimeBar
 
         internal void SeekFrame(long frame)
         {
-            if (Frequency <= 0 || Duration <= 0) return;
+            if (Frequency <= 0 || Duration <= 0)
+            {
+                return;
+            }
+
             double targetTime = frame / Frequency;
             Seek(targetTime);
         }
-        #endregion
 
-        #region METHODS : Tools
+        internal void ChangeSpeed()
+        {
+            int next = ((int)_playbackSpeed + 1) % Enum.GetValues(typeof(PlaybackSpeed)).Length;
+            _playbackSpeed = (PlaybackSpeed)next;
+        }
+
         private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)
         {
             int low = 0;
@@ -226,9 +268,18 @@ namespace FlightReLive.Core.TimeBar
                 int mid = (low + high) / 2;
                 TimeSpan midSpan = points[mid].TimeSpan;
 
-                if (midSpan < currentSpan) low = mid + 1;
-                else if (midSpan > currentSpan) high = mid - 1;
-                else return mid;
+                if (midSpan < currentSpan)
+                {
+                    low = mid + 1;
+                }
+                else if (midSpan > currentSpan)
+                {
+                    high = mid - 1;
+                }
+                else
+                {
+                    return mid;
+                }
             }
 
             int before = Mathf.Clamp(low - 1, 0, points.Count - 1);
@@ -240,5 +291,14 @@ namespace FlightReLive.Core.TimeBar
             return diffBefore <= diffAfter ? before : after;
         }
         #endregion
+    }
+
+    public enum PlaybackSpeed
+    {
+        UltraSlow = 0,
+        Slow = 1,
+        Normal = 2,
+        Fast = 3,
+        UltraFast = 4
     }
 }

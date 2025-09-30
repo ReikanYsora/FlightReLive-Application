@@ -4,6 +4,7 @@ using Fu.Framework;
 using ImGuiNET;
 using UnityEngine;
 using System;
+using FlightReLive.Core.Loading;
 
 namespace FlightReLive.UI.TimeBar
 {
@@ -35,6 +36,7 @@ namespace FlightReLive.UI.TimeBar
         internal static void DisplayTimeBar(FuCameraWindow cameraWindow)
         {
             TimeBarManager timeBar = TimeBarManager.Instance;
+
             if (timeBar == null)
             {
                 return;
@@ -44,138 +46,261 @@ namespace FlightReLive.UI.TimeBar
 
             float scale = Fugui.CurrentContext.Scale;
             Vector2 cursorPos = ImGui.GetCursorScreenPos();
-            Vector2 availableSize = ImGui.GetContentRegionAvail();
+            Vector2 availBefore = ImGui.GetContentRegionAvail();
 
-            // === Seek bar ===
+            //Seek bar
             float barHeight = SEAK_BAR_HEIGHT * scale;
-            float barWidth = availableSize.x - SEAK_BAR_HORIZONTAL_PADDING * scale;
-            Vector2 barPos = new Vector2(cursorPos.x + (SEAK_BAR_HORIZONTAL_PADDING / 2f) * scale, cursorPos.y + 10f * scale);
+            float barWidth = availBefore.x - SEAK_BAR_HORIZONTAL_PADDING * scale;
+            Vector2 barPos = new Vector2(cursorPos.x + (SEAK_BAR_HORIZONTAL_PADDING * 0.5f) * scale, cursorPos.y + 10f * scale);
             Vector2 barSize = new Vector2(barWidth, barHeight);
             Vector2 barEnd = barPos + barSize;
 
-            uint backgroundColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
+            //Theme colors
+            uint bgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
             uint progressColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Highlight));
+            uint hoverColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
             uint cursorColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
-            uint darkBgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBgHovered)); // gris sombre du thème
+            uint textZoneBg = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBgHovered));
+            uint offsetTextCol = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
 
-            // Background
-            drawList.AddRectFilled(barPos, barEnd, backgroundColor, 4f);
+            //Background
+            drawList.AddRectFilled(barPos, barEnd, bgColor, 4f);
 
-            // Progress
-            float ratio = (timeBar.Duration > 0) ? (float)(timeBar.CurrentTime / timeBar.Duration) : 0f;
+            //Progress bar
+            float ratio = (timeBar.Duration > 0.0) ? (float)(timeBar.CurrentTime / timeBar.Duration) : 0f;
             ratio = Mathf.Clamp01(ratio);
+            float progressX = barPos.x + barSize.x * ratio;
+            drawList.AddRectFilled(barPos, new Vector2(progressX, barEnd.y), progressColor, 4f);
 
-            float filledWidth = barSize.x * ratio;
-            Vector2 filledEnd = new Vector2(barPos.x + filledWidth, barEnd.y);
-            drawList.AddRectFilled(barPos, filledEnd, progressColor, 4f);
-
-            // Cursor (symétrique et centré verticalement)
-            float cursorX = barPos.x + filledWidth;
-            float midY = (barPos.y + barEnd.y) * 0.5f;
-            float cursorExtend = barHeight * 0.5f + 4f * scale;
-            drawList.AddLine(
-                new Vector2(cursorX, midY - cursorExtend),
-                new Vector2(cursorX, midY + cursorExtend),
-                cursorColor,
-                2f * scale
-            );
-
-            // Interaction
+            //Hover feedback
             Vector2 mousePos = ImGui.GetMousePos();
             bool isHovering = ImGui.IsMouseHoveringRect(barPos, barEnd);
+            float hoverX = -1f;
+            float hoverRatio = 0f;
+
             if (isHovering)
             {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
+                hoverRatio = Mathf.Clamp01((mousePos.x - barPos.x) / barSize.x);
+                hoverX = barPos.x + barSize.x * hoverRatio;
+
+                float startX = Mathf.Min(progressX, hoverX);
+                float endX = Mathf.Max(progressX, hoverX);
+
+                //Orange rectangle
+                drawList.AddRectFilled(new Vector2(startX, barPos.y), new Vector2(endX, barEnd.y), hoverColor, 0f);
+
+                //Offset text (drawn in drawList, does not affect layout)
+                double offsetSeconds = (hoverRatio - ratio) * timeBar.Duration;
+                TimeSpan offsetSpan = TimeSpan.FromSeconds(Math.Abs(offsetSeconds));
+                string offsetText = (offsetSeconds >= 0 ? "+" : "-") + offsetSpan.ToString(@"mm\:ss\.fff");
+
+                Fugui.PushFont(12, FontType.Regular);
+                Vector2 textSize = ImGui.CalcTextSize(offsetText);
+                Fugui.PopFont();
+
+                float orangeWidth = endX - startX;
+                if (orangeWidth > textSize.x + 6f * scale)
                 {
-                    float clickRatio = (mousePos.x - barPos.x) / barSize.x;
-                    clickRatio = Mathf.Clamp01(clickRatio);
-                    timeBar.SeekRatio(clickRatio);
+                    float textX = startX + (orangeWidth - textSize.x) * 0.5f;
+                    float textY = barPos.y + (barHeight - textSize.y) * 0.5f;
+
+                    Fugui.PushFont(12, FontType.Regular);
+                    drawList.AddText(new Vector2(textX, textY), offsetTextCol, offsetText);
+                    Fugui.PopFont();
+                }
+
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    timeBar.Seek(timeBar.Duration * hoverRatio);
                 }
             }
 
+            //Reserve vertical space under the bar
             float totalBarHeight = barSize.y + 20f * scale;
-            ImGui.Dummy(new Vector2(availableSize.x, totalBarHeight));
+            ImGui.Dummy(new Vector2(availBefore.x, totalBarHeight));
 
-            // === Ligne boutons + textes ===
+            //Buttons and text line
             FuElementSize buttonSize = new FuElementSize(MEDIA_BUTTON_WIDTH, MEDIA_BUTTON_HEIGHT);
-            float buttonsWidth = (MEDIA_BUTTON_WIDTH * 6 + MEDIA_BUTTON_SPACING * 5) * scale;
+            Vector2 btnSizePx = buttonSize.GetSize();
+            float btnW = btnSizePx.x;
 
-            string currentTimeStr = TimeSpan.FromSeconds(timeBar.CurrentTime).ToString(@"mm\:ss\.fff");
-            string pointLabel = $"Point {timeBar.CurrentFrame} / {timeBar.TotalFrameCount}";
+            float buttonsWidth = (MEDIA_BUTTON_WIDTH * 5 + MEDIA_BUTTON_SPACING * 4) * scale;
 
+            string currentTimeStr = TimeSpan.FromSeconds(timeBar.CurrentTime).ToString(@"hh\:mm\:ss");
+            string totalTimeStr = TimeSpan.FromSeconds(timeBar.Length).ToString(@"hh\:mm\:ss");
+
+            Fugui.PushFont(12, FontType.Regular);
             Vector2 timeTextSize = ImGui.CalcTextSize(currentTimeStr);
-            Vector2 pointTextSize = ImGui.CalcTextSize(pointLabel);
+            Vector2 totalTextSize = ImGui.CalcTextSize(totalTimeStr);
+            Fugui.PopFont();
 
             float availWidth = ImGui.GetContentRegionAvail().x;
+            float rowY = ImGui.GetCursorScreenPos().y;
+            float padding = MEDIA_BUTTON_SPACING * 2f * scale;
+            float radius = MEDIA_BUTTON_RADIUS * scale;
 
             float buttonsStartX = cursorPos.x + (availWidth - buttonsWidth) * 0.5f;
             float buttonsEndX = buttonsStartX + buttonsWidth;
 
-            float y = ImGui.GetCursorScreenPos().y;
-            float padding = MEDIA_BUTTON_SPACING * 2f * scale; // padding doublé
+            //Left zone (Speed + CurrentTime)
+            Vector2 leftRectMin = new Vector2(cursorPos.x + padding + btnW + padding, rowY);
+            Vector2 leftRectMax = new Vector2(buttonsStartX - padding, rowY + MEDIA_BUTTON_HEIGHT * scale);
+            if (leftRectMax.x > leftRectMin.x)
+            {
+                drawList.AddRectFilled(leftRectMin, leftRectMax, textZoneBg, radius);
+            }
 
-            // Zone gauche (fond sombre étendu)
-            Vector2 leftRectMin = new Vector2(cursorPos.x + padding, y);
-            Vector2 leftRectMax = new Vector2(buttonsStartX - padding, y + MEDIA_BUTTON_HEIGHT * scale);
-            drawList.AddRectFilled(leftRectMin, leftRectMax, darkBgColor, MEDIA_BUTTON_RADIUS * scale);
+            //Right zone (TotalTime + Unload)
+            Vector2 rightRectMin = new Vector2(buttonsEndX + padding, rowY);
+            Vector2 rightRectMax = new Vector2(cursorPos.x + availWidth - padding - btnW - padding, rowY + MEDIA_BUTTON_HEIGHT * scale);
 
-            Fugui.PushFont(14, FontType.Regular);
-            float leftTextX = leftRectMin.x + (leftRectMax.x - leftRectMin.x - timeTextSize.x) * 0.5f;
-            float leftTextY = y + (MEDIA_BUTTON_HEIGHT * scale - timeTextSize.y) * 0.5f;
-            ImGui.SetCursorScreenPos(new Vector2(leftTextX, leftTextY));
-            ImGui.Text(currentTimeStr);
-            Fugui.PopFont();
+            if (rightRectMax.x > rightRectMin.x)
+            {
+                drawList.AddRectFilled(rightRectMin, rightRectMax, textZoneBg, radius);
+            }
 
-            // Boutons (centrés)
-            Fugui.Push(ImGuiStyleVar.FrameRounding, MEDIA_BUTTON_RADIUS * scale);
-            Fugui.PushFont(20, FontType.Regular);
-
-            // Style boutons personnalisé (hover = couleur progression)
+            //Custom button style (hover = progress color)
             FuButtonStyle customButton = new FuButtonStyle(
                 Fugui.Themes.GetColor(FuColors.Button),
-                Fugui.Themes.GetColor(FuColors.Highlight), // hover = bleu progress
+                Fugui.Themes.GetColor(FuColors.ButtonHovered),
                 Fugui.Themes.GetColor(FuColors.ButtonActive),
                 Fugui.Themes.GetColor(FuColors.Button) * 0.5f,
                 FuTextStyle.Default,
                 new Vector2(8f, 4f)
             );
 
-            ImGui.SetCursorScreenPos(new Vector2(buttonsStartX, y));
+            //Speed button
+            ImGui.SetCursorScreenPos(new Vector2(cursorPos.x + padding, rowY));
+            Fugui.PushFont(20, FontType.Regular);
+            using (FuLayout layoutSpeed = new FuLayout())
+            {
+                string speedIcon;
+                switch (TimeBarManager.Instance.Speed)
+                {
+                    case PlaybackSpeed.UltraSlow:
+                        speedIcon = FlightReLiveIcons.SpeedUltraSlow;
+                        break;
+                    case PlaybackSpeed.Slow:
+                        speedIcon = FlightReLiveIcons.SpeedSlow;
+                        break;
+                    default:
+                    case PlaybackSpeed.Normal:
+                        speedIcon = FlightReLiveIcons.SpeedNormal;
+                        break;
+                    case PlaybackSpeed.Fast:
+                        speedIcon = FlightReLiveIcons.SpeedFast;
+                        break;
+                    case PlaybackSpeed.UltraFast:
+                        speedIcon = FlightReLiveIcons.SpeedUltraFast;
+                        break;
+                }
+
+                if (layoutSpeed.Button(speedIcon, buttonSize, customButton))
+                {
+                    TimeBarManager.Instance.ChangeSpeed();
+                }
+            }
+            Fugui.PopFont();
+
+            //Left text (CurrentTime)
+            Fugui.PushFont(12, FontType.Regular);
+            if (leftRectMax.x > leftRectMin.x)
+            {
+                float leftTextX = leftRectMin.x + (leftRectMax.x - leftRectMin.x - timeTextSize.x) * 0.5f;
+                float leftTextY = rowY + (MEDIA_BUTTON_HEIGHT * scale - timeTextSize.y) * 0.5f;
+                ImGui.SetCursorScreenPos(new Vector2(leftTextX, leftTextY));
+                ImGui.Text(currentTimeStr);
+            }
+            Fugui.PopFont();
+
+            //Media buttons
+            Fugui.Push(ImGuiStyleVar.FrameRounding, radius * 0.5f);
+            Fugui.PushFont(20, FontType.Regular);
+            ImGui.SetCursorScreenPos(new Vector2(buttonsStartX, rowY));
+
             using (FuLayout layout = new FuLayout())
             {
-                if (layout.Button(FlightReLiveIcons.BackwardStep, buttonSize, customButton)) { }
-                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
-                if (layout.Button(FlightReLiveIcons.Backward, buttonSize, customButton)) { }
-                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
-                if (layout.Button(FlightReLiveIcons.Play, buttonSize, customButton)) { }
-                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
-                if (layout.Button(FlightReLiveIcons.Stop, buttonSize, customButton)) { }
-                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
-                if (layout.Button(FlightReLiveIcons.Forward, buttonSize, customButton)) { }
-                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
-                if (layout.Button(FlightReLiveIcons.ForwardStep, buttonSize, customButton)) { }
-            }
+                if (layout.Button(FlightReLiveIcons.BackwardStep, buttonSize, customButton))
+                {
+                    timeBar.BackwardStep();
+                }
 
+                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
+
+                if (layout.Button(FlightReLiveIcons.Backward, buttonSize, customButton))
+                {
+                    timeBar.BackwardPoint();
+                }
+
+                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
+                string iconPlayOrPause = timeBar.IsPlaying ? FlightReLiveIcons.Pause : FlightReLiveIcons.Play;
+
+                if (layout.Button(iconPlayOrPause, buttonSize, customButton))
+                {
+                    if (timeBar.IsPlaying)
+                    {
+                        timeBar.Pause();
+                    }
+                    else
+                    {
+                        timeBar.Play();
+                    }
+                }
+
+                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
+
+                if (layout.Button(FlightReLiveIcons.Forward, buttonSize, customButton))
+                {
+                    timeBar.ForwardPoint();
+                }
+
+                ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
+
+                if (layout.Button(FlightReLiveIcons.ForwardStep, buttonSize, customButton))
+                {
+                    timeBar.ForwardStep();
+                }
+            }
             Fugui.PopFont();
             Fugui.PopStyle();
 
-            // Zone droite (fond sombre étendu)
-            Vector2 rightRectMin = new Vector2(buttonsEndX + padding, y);
-            Vector2 rightRectMax = new Vector2(cursorPos.x + availWidth - padding, y + MEDIA_BUTTON_HEIGHT * scale);
-            drawList.AddRectFilled(rightRectMin, rightRectMax, darkBgColor, MEDIA_BUTTON_RADIUS * scale);
-
-            Fugui.PushFont(14, FontType.Regular);
-            float rightTextX = rightRectMin.x + (rightRectMax.x - rightRectMin.x - pointTextSize.x) * 0.5f;
-            float rightTextY = y + (MEDIA_BUTTON_HEIGHT * scale - pointTextSize.y) * 0.5f;
-            ImGui.SetCursorScreenPos(new Vector2(rightTextX, rightTextY));
-            ImGui.Text(pointLabel);
+            //Right text
+            Fugui.PushFont(12, FontType.Regular);
+            if (rightRectMax.x > rightRectMin.x)
+            {
+                float rightTextX = rightRectMin.x + (rightRectMax.x - rightRectMin.x - totalTextSize.x) * 0.5f;
+                float rightTextY = rowY + (MEDIA_BUTTON_HEIGHT * scale - totalTextSize.y) * 0.5f;
+                ImGui.SetCursorScreenPos(new Vector2(rightTextX, rightTextY));
+                ImGui.Text(totalTimeStr);
+            }
             Fugui.PopFont();
+
+            //Unload button
+            ImGui.SetCursorScreenPos(new Vector2(cursorPos.x + availWidth - padding - btnW, rowY));
+            Fugui.PushFont(20, FontType.Regular);
+            using (FuLayout layoutUnload = new FuLayout())
+            {
+                if (layoutUnload.Button(FlightReLiveIcons.Unload, buttonSize, customButton))
+                {
+                    LoadingManager.Instance.UnloadFlightData();
+                }
+            }
+            Fugui.PopFont();
+
+            //Draw cursor
+            float midY = (barPos.y + barEnd.y) * 0.5f;
+            float cursorExtend = barHeight * 0.5f + 4f * scale;
+
+            //Progress cursor
+            drawList.AddLine(new Vector2(progressX, midY - cursorExtend), new Vector2(progressX, midY + cursorExtend), cursorColor, 2f * scale);
+
+            //Hover cursor
+            if (isHovering && hoverX >= 0f)
+            {
+                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend), ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
+            }
         }
-
-
-
-
         #endregion
     }
 }

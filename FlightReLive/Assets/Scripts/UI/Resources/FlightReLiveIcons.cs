@@ -122,20 +122,36 @@ namespace FlightReLive.UI
         protected static string _Pause = "\uE08B";
         public static string Pause { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Pause; }
 
-        protected static string _Stop = "\uE08C";
-        public static string Stop { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Stop; }
-
-        protected static string _Backward = "\uE08D";
+        protected static string _Backward = "\uE08C";
         public static string Backward { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Backward; }
 
-        protected static string _Forward = "\uE08E";
+        protected static string _Forward = "\uE08D";
         public static string Forward { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Forward; }
 
-        protected static string _BackwardStep = "\uE08F";
+        protected static string _BackwardStep = "\uE08E";
         public static string BackwardStep { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _BackwardStep; }
 
-        protected static string _ForwardStep = "\uE090";
+        protected static string _ForwardStep = "\uE08F";
         public static string ForwardStep { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _ForwardStep; }
+
+        protected static string _Unload = "\uE090";
+        public static string Unload { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Unload; }
+
+        protected static string _SpeedUltraSlow = "\uE091";
+        public static string SpeedUltraSlow { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedUltraSlow; }
+
+        protected static string _SpeedSlow = "\uE092";
+        public static string SpeedSlow { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedSlow; }
+
+        protected static string _SpeedNormal = "\uE093";
+        public static string SpeedNormal { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedNormal; }
+
+        protected static string _SpeedFast = "\uE094";
+        public static string SpeedFast { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedFast; }
+
+        protected static string _SpeedUltraFast = "\uE095";
+        public static string SpeedUltraFast { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedUltraFast; }
+
 
     }
 }

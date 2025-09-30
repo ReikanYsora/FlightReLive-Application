@@ -208,6 +208,11 @@ namespace FlightReLive.Core.Loading
             }
         }
 
+        internal async void UnloadFlightData()
+        {
+            await UnloadFlightDataInModules();
+        }
+
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {
             int tilePadding = SettingsManager.CurrentSettings.TilePadding;

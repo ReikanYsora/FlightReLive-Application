@@ -9,7 +9,7 @@ using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.FlightCharts;
-using FlightReLive.UI.VideoPlayer;
+using FlightReLive.UI.Video;
 using Fu;
 using Fu.Framework;
 using System;
@@ -144,7 +144,7 @@ namespace FlightReLive.Core.Loading
                         token.ThrowIfCancellationRequested();
 
                         _tileProgress = 0f;
-                        _currentTile = $"{tile.X},{tile.Y}";
+                        _currentTile = $"{tile.X}, {tile.Y}";
                         _currentTilePriority = tile.Priority;
 
                         TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(
@@ -186,13 +186,13 @@ namespace FlightReLive.Core.Loading
                     }
                 }
                 
-                TimeBarManager.Instance.Load(flightData);
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);
                 VideoPlayerManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
+                TimeBarManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
                 OnFlightEndLoading?.Invoke();

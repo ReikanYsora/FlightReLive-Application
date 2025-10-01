@@ -17,6 +17,10 @@ namespace FlightReLive.UI.ReLiveView
         private const float SETTINGS_POPUP_WIDTH = 300f;
         #endregion
 
+        #region ATTRIBUTES
+        private TimeBarViewManager _timeBarViewManager;
+        #endregion
+
         #region UI
         private void DrawCameraWindowSettingBar(FuWindow window, Vector2 size)
         {
@@ -130,7 +134,8 @@ namespace FlightReLive.UI.ReLiveView
 
         public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
         {
-            TimeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+            _timeBarViewManager = new TimeBarViewManager();
+            _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
         }
         #endregion
 

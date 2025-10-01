@@ -369,7 +369,7 @@ namespace FlightReLive.UI.Workspace
                             }
                             else
                             {
-                                tooltipText += $"Double click to load this video file.\nThis file contains {file.DataPoints.Count} recorded flight points.\n\nClick on {FlightReLiveIcons.GoogleMaps} to display waypoints on Google Maps.";
+                                tooltipText += $"Double click to load this video file.\nThis file contains {file.DataPoints.Count} recorded flight points.\n\nClick on {FlightReLiveIcons.GoogleMaps} to display waypoints on OpenStreetMap.";
                             }
 
                             Vector2 tooltipPadding = new Vector2(12f, 8f) * scale * thumbnailScale;

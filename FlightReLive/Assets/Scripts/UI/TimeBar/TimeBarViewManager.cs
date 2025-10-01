@@ -8,7 +8,7 @@ using FlightReLive.Core.Loading;
 
 namespace FlightReLive.UI.TimeBar
 {
-    public static class TimeBarViewManager
+    public class TimeBarViewManager
     {
         #region CONSTANTS
         private const int TIME_BAR_OVERLAY_WIDTH = 450;
@@ -22,26 +22,28 @@ namespace FlightReLive.UI.TimeBar
         #endregion
 
         #region ATTRIBUTES
-        private static FuOverlay _timeBarOverlay;
+        private FuOverlay _timeBarOverlay;
+        private FuWindowDefinition _windowDefinition;
         #endregion
 
         #region UI
-        internal static void DisplayTimeBarOverlay(FuWindowDefinition windowsDefinition, FuCameraWindow cameraWindow)
+        internal void DisplayTimeBarOverlay(FuWindowDefinition windowsDefinition, FuCameraWindow cameraWindow)
         {
+            _windowDefinition = windowsDefinition;
             _timeBarOverlay = new FuOverlay("timeBarOverlay",
                 new Vector2Int(TIME_BAR_OVERLAY_WIDTH, TIME_BAR_OVERLAY_HEIGHT),
                 (overlay, layout) =>
                 {
                     DisplayTimeBar(cameraWindow);
                 },
-               FuOverlayFlags.NoClose,
+                FuOverlayFlags.NoClose | FuOverlayFlags.NoEditAnchor | FuOverlayFlags.NoBackground | FuOverlayFlags.NoMove,
                 FuOverlayDragPosition.Bottom);
 
             _timeBarOverlay.AnchorWindowDefinition(windowsDefinition, FuOverlayAnchorLocation.BottomCenter);
             _timeBarOverlay.SetMinimumWindowSize(new Vector2Int(TIME_BAR_OVERLAY_WIDTH, TIME_BAR_OVERLAY_HEIGHT));
         }
 
-        internal static void DisplayTimeBar(FuCameraWindow cameraWindow)
+        internal void DisplayTimeBar(FuCameraWindow cameraWindow)
         {
             TimeBarManager timeBar = TimeBarManager.Instance;
 
@@ -64,15 +66,23 @@ namespace FlightReLive.UI.TimeBar
             Vector2 barEnd = barPos + barSize;
 
             //Theme colors
-            uint bgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
+            uint bgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBgHovered));
+            uint seakBgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
             uint progressColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Highlight));
             uint hoverColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
             uint cursorColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
-            uint textZoneBg = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBgHovered));
+            uint textZoneBg = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
+            uint textZoneBorder = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Border));
             uint offsetTextCol = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
 
-            //Background
-            drawList.AddRectFilled(barPos, barEnd, bgColor, 4f);
+            //Global background
+            float totalBarHeight = SEAK_BAR_HEIGHT * scale + 20f * scale + MEDIA_BUTTON_HEIGHT * scale + 15f * scale;
+            Vector2 globalMin = cursorPos;
+            Vector2 globalMax = new Vector2(cursorPos.x + availBefore.x, cursorPos.y + totalBarHeight);
+            drawList.AddRectFilled(globalMin, globalMax, bgColor, MEDIA_BUTTON_RADIUS * scale);
+
+            //Seak bar background
+            drawList.AddRectFilled(barPos, barEnd, seakBgColor, 4f);
 
             //Progress bar
             float ratio = (timeBar.Duration > 0.0) ? (float)(timeBar.CurrentTime / timeBar.Duration) : 0f;
@@ -89,7 +99,7 @@ namespace FlightReLive.UI.TimeBar
                 float hoverRatio = Mathf.Clamp01((mousePos.x - barPos.x) / barSize.x);
                 float hoverX = barPos.x + barSize.x * hoverRatio;
 
-                timeBar.SetHoverFromSeekBar(hoverRatio);
+                timeBar.SetHover(_windowDefinition.WindowName.Name, hoverRatio);
 
                 float startX = Mathf.Min(progressX, hoverX);
                 float endX = Mathf.Max(progressX, hoverX);
@@ -126,7 +136,7 @@ namespace FlightReLive.UI.TimeBar
             else
             {
                 //Sync hover over Path3D module and only if Path3D is the owner, not the TimeBarViewer
-                if (timeBar.IsHovering && timeBar.HoverOwner != HoverOwner.SeekBar)
+                if (timeBar.IsHovering && timeBar.HoverSourceID != _windowDefinition.WindowName.Name)
                 {
                     float hoverX = barPos.x + barSize.x * timeBar.HoverRatio;
                     float startX = Mathf.Min(progressX, hoverX);
@@ -155,16 +165,16 @@ namespace FlightReLive.UI.TimeBar
                         Fugui.PopFont();
                     }
                 }
-                else if (timeBar.HoverOwner == HoverOwner.SeekBar)
+                else if (timeBar.HoverSourceID == _windowDefinition.WindowName.Name)
                 {
                     //Release hover
-                    timeBar.ClearHover();
+                    timeBar.ClearHover(_windowDefinition.WindowName.Name);
                 }
             }
 
             //Reserve vertical space under the bar
-            float totalBarHeight = barSize.y + 20f * scale;
-            ImGui.Dummy(new Vector2(availBefore.x, totalBarHeight));
+            float seakBarHeight = barSize.y + 20f * scale;
+            ImGui.Dummy(new Vector2(availBefore.x, seakBarHeight));
 
             //Buttons and text line
             FuElementSize buttonSize = new FuElementSize(MEDIA_BUTTON_WIDTH, MEDIA_BUTTON_HEIGHT);
@@ -192,6 +202,7 @@ namespace FlightReLive.UI.TimeBar
             if (leftRectMax.x > leftRectMin.x)
             {
                 drawList.AddRectFilled(leftRectMin, leftRectMax, textZoneBg, radius);
+                drawList.AddRect(leftRectMin, leftRectMax, textZoneBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
             }
 
             //Right zone (TotalTime + Unload)
@@ -201,6 +212,7 @@ namespace FlightReLive.UI.TimeBar
             if (rightRectMax.x > rightRectMin.x)
             {
                 drawList.AddRectFilled(rightRectMin, rightRectMax, textZoneBg, radius);
+                drawList.AddRect(rightRectMin, rightRectMax, textZoneBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
             }
 
             //Custom button style (hover = progress color)
@@ -239,6 +251,29 @@ namespace FlightReLive.UI.TimeBar
                         break;
                 }
 
+                string currentSpeed;
+
+                switch (TimeBarManager.Instance.Speed)
+                {
+                    case PlaybackSpeed.UltraSlow:
+                        currentSpeed = "(x0.25 to x0.5)";
+                        break;
+                    case PlaybackSpeed.Slow:
+                        currentSpeed = "(x0.5 to x1)";
+                        break;
+                    default:
+                    case PlaybackSpeed.Normal:
+                        currentSpeed = "(x1 to x2)";
+                        break;
+                    case PlaybackSpeed.Fast:
+                        currentSpeed = "(x2 to x4)";
+                        break;
+                    case PlaybackSpeed.UltraFast:
+                        currentSpeed = "(x2 to x0.25)";
+                        break;
+                }
+
+                layoutSpeed.SetNextElementToolTip("Change current playback speed " + currentSpeed);
                 if (layoutSpeed.Button(speedIcon, buttonSize, customButton))
                 {
                     TimeBarManager.Instance.ChangeSpeed();
@@ -264,6 +299,7 @@ namespace FlightReLive.UI.TimeBar
 
             using (FuLayout layout = new FuLayout())
             {
+                layout.SetNextElementToolTip("Go to flight start");
                 if (layout.Button(FlightReLiveIcons.BackwardStep, buttonSize, customButton))
                 {
                     timeBar.BackwardStep();
@@ -271,6 +307,7 @@ namespace FlightReLive.UI.TimeBar
 
                 ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
 
+                layout.SetNextElementToolTip("Previous recorded GPS point");
                 if (layout.Button(FlightReLiveIcons.Backward, buttonSize, customButton))
                 {
                     timeBar.BackwardPoint();
@@ -279,14 +316,30 @@ namespace FlightReLive.UI.TimeBar
                 ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
                 string iconPlayOrPause = timeBar.IsPlaying ? FlightReLiveIcons.Pause : FlightReLiveIcons.Play;
 
+                if (timeBar.IsPlaying)
+                {
+                    layout.SetNextElementToolTip("Pause flight");
+                }
+                else
+                {
+                    layout.SetNextElementToolTip("Play flight");
+                }
+
                 if (layout.Button(iconPlayOrPause, buttonSize, customButton))
                 {
-                    if (timeBar.IsPlaying) { timeBar.Pause(); }
-                    else { timeBar.Play(); }
+                    if (timeBar.IsPlaying)
+                    {
+                        timeBar.Pause();
+                    }
+                    else 
+                    { 
+                        timeBar.Play();
+                    }
                 }
 
                 ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
 
+                layout.SetNextElementToolTip("Next recorded GPS point");
                 if (layout.Button(FlightReLiveIcons.Forward, buttonSize, customButton))
                 {
                     timeBar.ForwardPoint();
@@ -294,6 +347,7 @@ namespace FlightReLive.UI.TimeBar
 
                 ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
 
+                layout.SetNextElementToolTip("Go to end of flight");
                 if (layout.Button(FlightReLiveIcons.ForwardStep, buttonSize, customButton))
                 {
                     timeBar.ForwardStep();
@@ -318,9 +372,20 @@ namespace FlightReLive.UI.TimeBar
             Fugui.PushFont(20, FontType.Regular);
             using (FuLayout layoutUnload = new FuLayout())
             {
+                layoutUnload.SetNextElementToolTip("Unload current flight");
                 if (layoutUnload.Button(FlightReLiveIcons.Unload, buttonSize, customButton))
                 {
-                    LoadingManager.Instance.UnloadFlightData();
+                    Fugui.ShowModal("  ", (layout) =>
+                    {
+                        Fugui.PushFont(14, FontType.Regular);
+                        string displayText = "The current flight will be completely unloaded. Do you want to continue?";
+                        layout.CenterNextItemHV(displayText);
+                        layout.Text(displayText, FuTextWrapping.Wrap);
+                        Fugui.PopFont();
+                    },
+                    FuModalSize.Medium,
+                    new FuModalButton("Cancel", null, FuButtonStyle.Default, FuKeysCode.Escape),
+                    new FuModalButton("Unload flight", () => LoadingManager.Instance.UnloadFlightData(), FuButtonStyle.Danger, FuKeysCode.Enter));
                 }
             }
             Fugui.PopFont();
@@ -336,11 +401,9 @@ namespace FlightReLive.UI.TimeBar
             if (timeBar.IsHovering && timeBar.HoverRatio >= 0f)
             {
                 float hoverX = barPos.x + barSize.x * timeBar.HoverRatio;
-                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend),
-                                 ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
+                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend), ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
             }
         }
-
         #endregion
     }
 }

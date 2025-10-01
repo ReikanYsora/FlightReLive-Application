@@ -1,5 +1,4 @@
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.UI.TimeBar;
 using Fu;
 using System;
 using System.Collections.Generic;
@@ -18,14 +17,6 @@ namespace FlightReLive.Core.TimeBar
         UltraFast = 4
     }
 
-    internal enum HoverOwner
-    {
-        None = 0,
-        SeekBar = 1,
-        Path3D = 2,
-        FlightChart = 3
-    }
-
     /// <summary>
     /// Central manager that controls the playback timeline of a flight.
     /// Decoupled from video, modules can subscribe to events here instead of the VideoPlayer.
@@ -42,6 +33,7 @@ namespace FlightReLive.Core.TimeBar
         private PlaybackSpeed _playbackSpeed = PlaybackSpeed.Normal;
         private List<FuWindowName> _registeredWindows;
         private float _hoverRatio;
+        private string _hoverSourceID;
         #endregion
 
         #region PROPERTIES
@@ -72,7 +64,6 @@ namespace FlightReLive.Core.TimeBar
             private set
             {
                 _hoverRatio = value;
-                RefreshRegiteredWindows();
             }
         }
 
@@ -86,7 +77,17 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
-        internal HoverOwner HoverOwner { get; private set; } = HoverOwner.None;
+        internal string HoverSourceID
+        {
+            get
+            {
+                return _hoverSourceID;
+            }
+            set
+            {
+                _hoverSourceID = value;
+            }
+        }
 
         internal PlaybackSpeed Speed
         {
@@ -119,10 +120,7 @@ namespace FlightReLive.Core.TimeBar
 
         #region EVENTS
         internal event Action<float, int, FlightDataPoint> OnProgressChanged;
-        internal event Action<FlightData> OnFlightDataLoaded;
-        internal event Action OnFlightDataUnloaded;
-        internal event Action OnPlay;
-        internal event Action OnPause;
+        internal event Action<float> OnPlaybackSpeedChanged;
         internal event Action<float> OnHoverChanged;
         internal event Action OnHoverCleared;
         #endregion
@@ -141,6 +139,7 @@ namespace FlightReLive.Core.TimeBar
             _registeredWindows = new List<FuWindowName>();
 
             HoverRatio = -1f;
+            HoverSourceID = null;
         }
 
         private void Update()
@@ -169,6 +168,8 @@ namespace FlightReLive.Core.TimeBar
                 FlightDataPoint point = _currentFlightData.Points[index];
                 OnProgressChanged?.Invoke(progress, index, point);
             }
+
+            RefreshRegiteredWindows();
         }
         #endregion
 
@@ -189,7 +190,6 @@ namespace FlightReLive.Core.TimeBar
             _totalFrameCount = (Duration > 0 && Frequency > 0) ? (long)Math.Round(Duration * Frequency) : 0;
             TotalFrameCount = _totalFrameCount;
             CurrentTime = 0;
-            OnFlightDataLoaded?.Invoke(flightData);
 
             Play();
         }
@@ -207,9 +207,8 @@ namespace FlightReLive.Core.TimeBar
                 TotalFrameCount = 0;
                 IsPlaying = false;
                 HoverRatio = -1f;
+                HoverSourceID = null;
                 IsHovering = false;
-                HoverOwner = HoverOwner.None;
-                OnFlightDataUnloaded?.Invoke();
                 OnHoverCleared?.Invoke();
             });
         }
@@ -232,40 +231,30 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
-        internal void SetHoverFromSeekBar(float ratio)
+        internal void SetHover(string sourceID, float ratio)
         {
-            HoverRatio = Mathf.Clamp01(ratio);
+            if (_hoverSourceID == sourceID && Mathf.Approximately(_hoverRatio, ratio))
+            {
+                return;
+            }
+
+            _hoverSourceID = sourceID;
+            _hoverRatio = Mathf.Clamp01(ratio);
             IsHovering = true;
-            HoverOwner = HoverOwner.SeekBar;
-            OnHoverChanged?.Invoke(HoverRatio);
-            RefreshRegiteredWindows();
+            OnHoverChanged?.Invoke(_hoverRatio);
         }
 
-        internal void SetHoverFromPath(float ratio)
+        internal void ClearHover(string sourceID)
         {
-            HoverRatio = Mathf.Clamp01(ratio);
-            IsHovering = true;
-            HoverOwner = HoverOwner.Path3D;
-            OnHoverChanged?.Invoke(HoverRatio);
-            RefreshRegiteredWindows();
-        }
+            if (_hoverSourceID != sourceID)
+            {
+                return;
+            }
 
-        internal void SetHoverFromChart(float ratio)
-        {
-            HoverRatio = Mathf.Clamp01(ratio);
-            IsHovering = true;
-            HoverOwner = HoverOwner.FlightChart;
-            OnHoverChanged?.Invoke(HoverRatio);
-            RefreshRegiteredWindows();
-        }
-
-        internal void ClearHover()
-        {
-            HoverRatio = -1f;
+            _hoverSourceID = null;
+            _hoverRatio = -1f;
             IsHovering = false;
-            HoverOwner = HoverOwner.None;
             OnHoverCleared?.Invoke();
-            RefreshRegiteredWindows();
         }
 
         private void RefreshRegiteredWindows()
@@ -296,15 +285,11 @@ namespace FlightReLive.Core.TimeBar
         internal void Play()
         {
             IsPlaying = true;
-            OnPlay?.Invoke();
-            RefreshRegiteredWindows();
         }
 
         internal void Pause()
         {
             IsPlaying = false;
-            OnPause?.Invoke();
-            RefreshRegiteredWindows();
         }
 
         internal void ForwardPoint()
@@ -332,13 +317,7 @@ namespace FlightReLive.Core.TimeBar
             }
 
             CurrentTime = Math.Clamp(timeInSeconds, 0, Duration);
-            RefreshRegiteredWindows();
-        }
-
-        internal void SeekRatio(float ratio01)
-        {
-            ratio01 = Mathf.Clamp01(ratio01);
-            Seek(Duration * ratio01);
+            float ratio01 = (Duration > 0) ? (float)(CurrentTime / Duration) : 0f;
         }
 
         internal void SetFrame(long frame, bool pause)
@@ -355,7 +334,6 @@ namespace FlightReLive.Core.TimeBar
             if (pause)
             {
                 IsPlaying = false;
-                OnPause?.Invoke();
             }
         }
 
@@ -363,7 +341,26 @@ namespace FlightReLive.Core.TimeBar
         {
             int next = ((int)_playbackSpeed + 1) % Enum.GetValues(typeof(PlaybackSpeed)).Length;
             _playbackSpeed = (PlaybackSpeed)next;
-            RefreshRegiteredWindows();
+
+            switch (_playbackSpeed)
+            {
+                case PlaybackSpeed.UltraSlow:
+                    OnPlaybackSpeedChanged?.Invoke(0.25f);
+                    break;
+                case PlaybackSpeed.Slow:
+                    OnPlaybackSpeedChanged?.Invoke(0.5f);
+                    break;
+                default:
+                case PlaybackSpeed.Normal:
+                    OnPlaybackSpeedChanged?.Invoke(1f);
+                    break;
+                case PlaybackSpeed.Fast:
+                    OnPlaybackSpeedChanged?.Invoke(2f);
+                    break;
+                case PlaybackSpeed.UltraFast:
+                    OnPlaybackSpeedChanged?.Invoke(4f);
+                    break;
+            }
         }
 
         private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)

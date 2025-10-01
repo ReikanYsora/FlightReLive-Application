@@ -1,7 +1,5 @@
-﻿using FlightReLive.Core;
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -42,6 +40,7 @@ namespace FlightReLive.UI.FlightCharts
         private Color _blueBackgroundColor;
         private uint _darkBackgroundColorU32;
         private uint _blueBackgroundColorU32;
+        private FuWindowDefinition _windowDefinition;
         #endregion
 
         #region EVENTS
@@ -218,8 +217,9 @@ namespace FlightReLive.UI.FlightCharts
         #endregion
 
         #region UI
-        internal void Draw(FuWindow window, FuLayout layout, float lineWidth)
+        internal void Draw(FuWindowDefinition windowDefinition, FuWindow window, FuLayout layout, float lineWidth)
         {
+            _windowDefinition = windowDefinition;
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
             float availableWidth = layout.GetAvailableWidth();
             float scale = Fugui.CurrentContext.Scale;
@@ -450,7 +450,7 @@ namespace FlightReLive.UI.FlightCharts
                 if (step != null && step.FlightDataPoint != null)
                 {
                     float ratio = GetRatioFromDataPoint(step.FlightDataPoint);
-                    TimeBarManager.Instance.SetHoverFromChart(ratio);
+                    TimeBarManager.Instance.SetHover(_windowDefinition.WindowName.Name, ratio);
                 }
 
                 float pulse = Mathf.Sin(Time.time * 6f) * 0.3f + 1f;
@@ -492,9 +492,9 @@ namespace FlightReLive.UI.FlightCharts
             else
             {
                 //Release hover
-                if (!isHovering && TimeBarManager.Instance.HoverOwner == HoverOwner.FlightChart)
+                if (!isHovering && TimeBarManager.Instance.HoverSourceID == _windowDefinition.WindowName.Name)
                 {
-                    TimeBarManager.Instance.ClearHover();
+                    TimeBarManager.Instance.ClearHover(_windowDefinition.WindowName.Name);
                 }
             }
         }

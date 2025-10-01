@@ -1,9 +1,9 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
-using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
+using FlightReLive.UI.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Video;
 
 namespace FlightReLive.UI.FlightCharts
 {
@@ -31,6 +30,7 @@ namespace FlightReLive.UI.FlightCharts
         private FlightChart _isoChart;
         private FlightChart _exposureChart;
         private FlightChart _digitalZoomChart;
+        private static FuWindowDefinition _windowDefinition;
         #endregion
 
         #region PROPERTIES
@@ -458,6 +458,11 @@ namespace FlightReLive.UI.FlightCharts
             _relativeAltitudeChart.AddStep(relativeAltitudeChart);
             _absoluteAltitudeChart.AddStep(absoluteAltitudeChart);
         }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            _windowDefinition = windowDefinition;
+        }
         #endregion
 
         #region UI
@@ -481,7 +486,7 @@ namespace FlightReLive.UI.FlightCharts
 
                         if (toDisplay != null)
                         {
-                            toDisplay.Draw(window, layout, _chartLineWidth);
+                            toDisplay.Draw(_windowDefinition, window, layout, _chartLineWidth);
                         }
                         ImGui.Dummy(Vector2.zero);
                     }

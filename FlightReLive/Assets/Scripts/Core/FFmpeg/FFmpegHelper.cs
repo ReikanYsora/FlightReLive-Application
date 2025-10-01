@@ -23,7 +23,7 @@ namespace FlightReLive.Core.FFmpeg
         /// Get the path to the FFmpeg executable based on the platform.
         /// </summary>
         /// <returns></returns>
-        private static string GetFFmpegPath()
+        internal static string GetFFmpegPath()
         {
 #if UNITY_EDITOR_OSX
             // macOs editor : use StreamingAssets/ffmpeg

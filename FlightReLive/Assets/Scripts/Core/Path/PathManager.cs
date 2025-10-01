@@ -2,7 +2,6 @@
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.VideoPlayer;
 using Fu;
 using Fu.Framework;
 using System;
@@ -115,7 +114,7 @@ namespace FlightReLive.Core.Paths
                 _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
 
                 //Propagate hover to TimeBar as Path3D owner
-                TimeBarManager.Instance.SetHoverFromPath(hoverProgress);
+                TimeBarManager.Instance.SetHover("PathManager", hoverProgress);
 
                 //Click on path
                 if (Camera.Mouse.IsPressed(FuMouseButton.Left))
@@ -129,13 +128,13 @@ namespace FlightReLive.Core.Paths
             else
             {
                 //No ray hit
-                if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverOwner == HoverOwner.Path3D)
+                if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID == "PathManager")
                 {
                     //If the hover is still marked as Path3D but no ray hit, clear hover
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
-                    TimeBarManager.Instance.ClearHover();
+                    TimeBarManager.Instance.ClearHover("PathManager");
                 }
-                else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverOwner != HoverOwner.Path3D)
+                else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID != "PathManager")
                 {
                     //Just mirror the SeekBar hover
                     float hoverProgress = TimeBarManager.Instance.HoverRatio;

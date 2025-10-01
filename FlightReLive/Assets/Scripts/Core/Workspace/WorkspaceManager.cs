@@ -185,6 +185,7 @@ namespace FlightReLive.Core.Workspace
             }
 
             FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
+            FFmpegHelper.ExtractVideoMetadata(fullVideoPath, container);
 
             if (container == null || string.IsNullOrEmpty(container.VideoPath))
             {
@@ -200,6 +201,9 @@ namespace FlightReLive.Core.Workspace
             {
                 VideoPath = container.VideoPath,
                 Name = container.Name,
+                Width = container.Width,
+                Height = container.Height,
+                Frequency = container.Frequency,
                 DataPoints = container.DataPoints,
                 CreationDate = container.CreationDate,
                 EstimateTakeOffPosition = container.EstimateTakeOffPosition,

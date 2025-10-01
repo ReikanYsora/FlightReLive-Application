@@ -1,6 +1,5 @@
-﻿using FlightReLive.Core;
-using FlightReLive.Core.FlightDefinition;
-using FlightReLive.UI.VideoPlayer;
+﻿using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -41,6 +40,7 @@ namespace FlightReLive.UI.FlightCharts
         private Color _blueBackgroundColor;
         private uint _darkBackgroundColorU32;
         private uint _blueBackgroundColorU32;
+        private FuWindowDefinition _windowDefinition;
         #endregion
 
         #region EVENTS
@@ -114,7 +114,7 @@ namespace FlightReLive.UI.FlightCharts
             _isChartSet = false;
             _isMouseClicked = false;
 
-            VideoPlayerManager.Instance.OnProgressChanged += OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
         }
 
         private void OnProgressChanged(float ratio, int index, FlightDataPoint point)
@@ -155,7 +155,7 @@ namespace FlightReLive.UI.FlightCharts
 
         public void Dispose()
         {
-            VideoPlayerManager.Instance.OnProgressChanged -= OnProgressChanged;
+            TimeBarManager.Instance.OnProgressChanged -= OnProgressChanged;
             Steps = null;
         }
 
@@ -168,7 +168,7 @@ namespace FlightReLive.UI.FlightCharts
 
         private float GetRatioFromDataPoint(FlightDataPoint point)
         {
-            double videoDuration = VideoPlayerManager.Instance.Length;
+            double videoDuration = TimeBarManager.Instance.Length;
             double timeSeconds = point.TimeSpan.TotalSeconds;
             float ratio = (float)(timeSeconds / videoDuration);
 
@@ -178,7 +178,7 @@ namespace FlightReLive.UI.FlightCharts
         private long GetFrameFromDataPoint(FlightDataPoint point)
         {
             float ratio = GetRatioFromDataPoint(point);
-            long totalFrames = VideoPlayerManager.Instance.TotalFrameCount;
+            long totalFrames = TimeBarManager.Instance.TotalFrameCount;
 
             return Math.Clamp(Mathf.RoundToInt(ratio * (totalFrames - 1)), 0, totalFrames - 1);
         }
@@ -217,8 +217,9 @@ namespace FlightReLive.UI.FlightCharts
         #endregion
 
         #region UI
-        internal void Draw(FuWindow window, FuLayout layout, float lineWidth)
+        internal void Draw(FuWindowDefinition windowDefinition, FuWindow window, FuLayout layout, float lineWidth)
         {
+            _windowDefinition = windowDefinition;
             ImDrawListPtr drawList = ImGui.GetWindowDrawList();
             float availableWidth = layout.GetAvailableWidth();
             float scale = Fugui.CurrentContext.Scale;
@@ -338,7 +339,7 @@ namespace FlightReLive.UI.FlightCharts
                 OnDateChanged?.Invoke(point.Time, _currentRatio);
 
                 long targetFrame = GetFrameFromDataPoint(point);
-                VideoPlayerManager.Instance.SetFrame(targetFrame, false);
+                TimeBarManager.Instance.SetFrame(targetFrame, false);
             }
         }
 
@@ -418,11 +419,11 @@ namespace FlightReLive.UI.FlightCharts
 
                     drawList.AddLine(minStart, minEnd, step.ColorU32, lineWidth);
 
-                    DrawChartPoint(drawList, minEnd, step.TooltipSize, step.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY);
+                    DrawChartPoint(drawList, minEnd, step.TooltipSize, step.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY, prevStep);
 
                     if (firstDrawingStep)
                     {
-                        DrawChartPoint(drawList, minStart, prevStep.TooltipSize, prevStep.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY);
+                        DrawChartPoint(drawList, minStart, prevStep.TooltipSize, prevStep.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY, prevStep);
                         firstDrawingStep = false;
                     }
 
@@ -434,8 +435,8 @@ namespace FlightReLive.UI.FlightCharts
 
 
         private void DrawChartPoint(ImDrawListPtr drawList, Vector2 position, Vector2 tooltipSize, double value, ref bool isHovering,
-            float radius, float innerRadius, float outerRadius, uint pointColorU32,
-            float chartTopY, float chartBottomY)
+                    float radius, float innerRadius, float outerRadius, uint pointColorU32,
+                    float chartTopY, float chartBottomY, FlightChartStep step)
         {
             Vector2 outerRadiusVec = new Vector2(outerRadius, outerRadius);
             Vector2 hoverMin = position - outerRadiusVec;
@@ -444,6 +445,13 @@ namespace FlightReLive.UI.FlightCharts
             if (ImGui.IsMouseHoveringRect(hoverMin, hoverMax) && !isHovering)
             {
                 isHovering = true;
+
+                //Sync hover with TimeBarManager
+                if (step != null && step.FlightDataPoint != null)
+                {
+                    float ratio = GetRatioFromDataPoint(step.FlightDataPoint);
+                    TimeBarManager.Instance.SetHover(_windowDefinition.WindowName.Name, ratio);
+                }
 
                 float pulse = Mathf.Sin(Time.time * 6f) * 0.3f + 1f;
                 float animatedRadius = outerRadius * pulse;
@@ -481,7 +489,16 @@ namespace FlightReLive.UI.FlightCharts
                 drawList.AddText(tooltipPosition - textSize / 2f, chartCircleOuterColor, text);
                 Fugui.PopFont();
             }
+            else
+            {
+                //Release hover
+                if (!isHovering && TimeBarManager.Instance.HoverSourceID == _windowDefinition.WindowName.Name)
+                {
+                    TimeBarManager.Instance.ClearHover(_windowDefinition.WindowName.Name);
+                }
+            }
         }
+
         #endregion
     }
 }

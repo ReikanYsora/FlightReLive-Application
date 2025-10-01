@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Paths;
+using FlightReLive.Core.TimeBar;
 
 namespace FlightReLive.UI.ReLiveView
 {
@@ -19,6 +20,16 @@ namespace FlightReLive.UI.ReLiveView
             }
 
             Instance = this;
+        }
+
+        private void Start()
+        {
+            TimeBarManager.Instance.RegisterWindowName(_windowName);
+        }
+
+        private void OnDestroy()
+        {
+            TimeBarManager.Instance.UnregisterWindowName(_windowName);
         }
         #endregion
 

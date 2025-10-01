@@ -6,9 +6,10 @@ using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.FlightCharts;
-using FlightReLive.UI.VideoPlayer;
+using FlightReLive.UI.Video;
 using Fu;
 using Fu.Framework;
 using System;
@@ -143,7 +144,7 @@ namespace FlightReLive.Core.Loading
                         token.ThrowIfCancellationRequested();
 
                         _tileProgress = 0f;
-                        _currentTile = $"{tile.X},{tile.Y}";
+                        _currentTile = $"{tile.X}, {tile.Y}";
                         _currentTilePriority = tile.Priority;
 
                         TileDefinition loaded = await MapTilerAPIHelper.DownloadTileAsync(
@@ -191,6 +192,7 @@ namespace FlightReLive.Core.Loading
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
+                TimeBarManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
                 OnFlightEndLoading?.Invoke();
@@ -206,6 +208,11 @@ namespace FlightReLive.Core.Loading
             }
         }
 
+        internal async void UnloadFlightData()
+        {
+            await UnloadFlightDataInModules();
+        }
+
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {
             int tilePadding = SettingsManager.CurrentSettings.TilePadding;
@@ -213,6 +220,9 @@ namespace FlightReLive.Core.Loading
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
+                Width = file.Width,
+                Height = file.Height,
+                Frequency = file.Frequency,
                 Date = file.CreationDate,
                 Length = file.Duration,
                 Points = file.DataPoints,
@@ -326,6 +336,7 @@ namespace FlightReLive.Core.Loading
         {
             List<Task> unloadTasks = new List<Task>
             {
+                TimeBarManager.Instance.Unload(),
                 FlightChartsManager.Instance.Unload(),
                 VideoPlayerManager.Instance.Unload(),
                 ProceduralTerrainManager.Instance.Unload(),

@@ -13,6 +13,12 @@ namespace FlightReLive.Core.Workspace
 
         public string VideoPath { get; set; }
 
+        public int Width { get; set; }
+
+        public int Height { get; set; }
+
+        public double Frequency { get; set; }
+
         public TimeSpan Duration { get; set; }
 
         public DateTime CreationDate { get; set; }

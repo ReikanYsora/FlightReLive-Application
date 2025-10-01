@@ -1,11 +1,17 @@
 using FlightReLive.Core.Cameras;
-using FlightReLive.Core.Paths;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.ReLiveView;
+using FlightReLive.UI.TimeBar;
+using Fu;
 
 namespace FlightReLive.UI.POVView
 {
     internal class POVViewManager : FlightReLiveCameraView
     {
+        #region ATTRIBUTES
+        private TimeBarViewManager _timeBarViewManager;
+        #endregion
+
         #region PROPERTIES
         public static POVViewManager Instance { get; private set; }
         #endregion
@@ -21,12 +27,28 @@ namespace FlightReLive.UI.POVView
 
             Instance = this;
         }
+
+        private void Start()
+        {
+            TimeBarManager.Instance.RegisterWindowName(_windowName);
+        }
+
+        private void OnDestroy()
+        {
+            TimeBarManager.Instance.UnregisterWindowName(_windowName);
+        }
         #endregion
 
         #region METHODS
         protected override void InitializeCameraView()
         {
             POVCameraManipulator.Instance.CameraWindow = CameraWindow;
+        }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            _timeBarViewManager = new TimeBarViewManager();
+            _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
         }
         #endregion
     }

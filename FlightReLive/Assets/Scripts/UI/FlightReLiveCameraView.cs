@@ -1,6 +1,6 @@
-using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.Paths;
+using FlightReLive.UI.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -15,6 +15,10 @@ namespace FlightReLive.UI.ReLiveView
         private const float TOP_BAR_HEIGHT = 26f;
         private const float SETTINGS_POPUP_BUTTON_WIDTH = 42f;
         private const float SETTINGS_POPUP_WIDTH = 300f;
+        #endregion
+
+        #region ATTRIBUTES
+        private TimeBarViewManager _timeBarViewManager;
         #endregion
 
         #region UI
@@ -126,6 +130,12 @@ namespace FlightReLive.UI.ReLiveView
         protected virtual void InitializeCameraView()
         {
 
+        }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            _timeBarViewManager = new TimeBarViewManager();
+            _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
         }
         #endregion
 

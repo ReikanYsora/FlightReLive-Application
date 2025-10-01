@@ -1,4 +1,6 @@
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.UI.TimeBar;
+using Fu;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,11 +9,29 @@ using UnityEngine;
 
 namespace FlightReLive.Core.TimeBar
 {
+    internal enum PlaybackSpeed
+    {
+        UltraSlow = 0,
+        Slow = 1,
+        Normal = 2,
+        Fast = 3,
+        UltraFast = 4
+    }
+
+    internal enum HoverOwner
+    {
+        None = 0,
+        SeekBar = 1,
+        Path3D = 2,
+        FlightChart = 3
+    }
+
     /// <summary>
     /// Central manager that controls the playback timeline of a flight.
     /// Decoupled from video, modules can subscribe to events here instead of the VideoPlayer.
+    /// Handles synchronization between TimeBar (SeekBar) and Path3D hover states.
     /// </summary>
-    public class TimeBarManager : MonoBehaviour
+    internal class TimeBarManager : MonoBehaviour
     {
         #region ATTRIBUTES
         private long _totalFrameCount;
@@ -20,6 +40,8 @@ namespace FlightReLive.Core.TimeBar
         private TimeSpan _firstTimeSpan;
         private TimeSpan _lastTimeSpan;
         private PlaybackSpeed _playbackSpeed = PlaybackSpeed.Normal;
+        private List<FuWindowName> _registeredWindows;
+        private float _hoverRatio;
         #endregion
 
         #region PROPERTIES
@@ -41,45 +63,68 @@ namespace FlightReLive.Core.TimeBar
 
         internal double Length => (_currentFlightData == null || Duration <= 0) ? 0f : Duration;
 
-        internal PlaybackSpeed Speed
+        internal float HoverRatio 
         {
             get
             {
+                return _hoverRatio;
+            }
+            private set
+            {
+                _hoverRatio = value;
+                RefreshRegiteredWindows();
+            }
+        }
+
+        internal bool IsHovering { get; private set; }
+
+        internal bool IsInitialized
+        {
+            get
+            {
+                return _currentFlightData != null;
+            }
+        }
+
+        internal HoverOwner HoverOwner { get; private set; } = HoverOwner.None;
+
+        internal PlaybackSpeed Speed
+        {
+            get
+            { 
                 return _playbackSpeed;
             }
             set
-            {
-                _playbackSpeed = value;
+            { 
+                _playbackSpeed = value; 
             }
         }
+
         internal double SpeedFactor
         {
             get
             {
                 switch (_playbackSpeed)
                 {
-                    case PlaybackSpeed.UltraSlow:
-                        return 0.25;
-                    case PlaybackSpeed.Slow:
-                        return 0.5;
+                    case PlaybackSpeed.UltraSlow: return 0.25;
+                    case PlaybackSpeed.Slow: return 0.5;
                     default:
-                    case PlaybackSpeed.Normal:
-                        return 1.0;
-                    case PlaybackSpeed.Fast:
-                        return 2.0;
-                    case PlaybackSpeed.UltraFast:
-                        return 4.0;
+                    case PlaybackSpeed.Normal: return 1.0;
+                    case PlaybackSpeed.Fast: return 2.0;
+                    case PlaybackSpeed.UltraFast: return 4.0;
                 }
             }
         }
         #endregion
 
-            #region EVENTS
+        #region EVENTS
         internal event Action<float, int, FlightDataPoint> OnProgressChanged;
         internal event Action<FlightData> OnFlightDataLoaded;
         internal event Action OnFlightDataUnloaded;
         internal event Action OnPlay;
         internal event Action OnPause;
+        internal event Action<float> OnHoverChanged;
+        internal event Action OnHoverCleared;
         #endregion
 
         #region UNITY METHODS
@@ -91,6 +136,11 @@ namespace FlightReLive.Core.TimeBar
                 return;
             }
             Instance = this;
+
+            //Create registered windows (for refreshing windows on seak)
+            _registeredWindows = new List<FuWindowName>();
+
+            HoverRatio = -1f;
         }
 
         private void Update()
@@ -106,7 +156,7 @@ namespace FlightReLive.Core.TimeBar
                 CurrentTime = Math.Min(CurrentTime, Duration);
             }
 
-            // synchro avec les points
+            // Synchronize with points
             TimeSpan target = _firstTimeSpan + TimeSpan.FromSeconds(CurrentTime);
             target = TimeSpan.FromTicks(Math.Clamp(target.Ticks, _firstTimeSpan.Ticks, _lastTimeSpan.Ticks));
 
@@ -122,7 +172,7 @@ namespace FlightReLive.Core.TimeBar
         }
         #endregion
 
-        #region METHODS : Loading
+        #region METHODS
         internal void Load(FlightData flightData)
         {
             if (flightData == null || flightData.Points == null || flightData.Points.Count == 0)
@@ -140,6 +190,7 @@ namespace FlightReLive.Core.TimeBar
             TotalFrameCount = _totalFrameCount;
             CurrentTime = 0;
             OnFlightDataLoaded?.Invoke(flightData);
+
             Play();
         }
 
@@ -155,12 +206,76 @@ namespace FlightReLive.Core.TimeBar
                 _totalFrameCount = 0;
                 TotalFrameCount = 0;
                 IsPlaying = false;
+                HoverRatio = -1f;
+                IsHovering = false;
+                HoverOwner = HoverOwner.None;
                 OnFlightDataUnloaded?.Invoke();
+                OnHoverCleared?.Invoke();
             });
         }
-        #endregion
 
-        #region METHODS
+        internal void RegisterWindowName(FuWindowName windowName)
+        {
+            if (_registeredWindows.Contains(windowName))
+            {
+                return;
+            }
+
+            _registeredWindows.Add(windowName);
+        }
+
+        internal void UnregisterWindowName(FuWindowName windowName)
+        {
+            if (!_registeredWindows.Contains(windowName))
+            {
+                _registeredWindows.Remove(windowName);
+            }
+        }
+
+        internal void SetHoverFromSeekBar(float ratio)
+        {
+            HoverRatio = Mathf.Clamp01(ratio);
+            IsHovering = true;
+            HoverOwner = HoverOwner.SeekBar;
+            OnHoverChanged?.Invoke(HoverRatio);
+            RefreshRegiteredWindows();
+        }
+
+        internal void SetHoverFromPath(float ratio)
+        {
+            HoverRatio = Mathf.Clamp01(ratio);
+            IsHovering = true;
+            HoverOwner = HoverOwner.Path3D;
+            OnHoverChanged?.Invoke(HoverRatio);
+            RefreshRegiteredWindows();
+        }
+
+        internal void SetHoverFromChart(float ratio)
+        {
+            HoverRatio = Mathf.Clamp01(ratio);
+            IsHovering = true;
+            HoverOwner = HoverOwner.FlightChart;
+            OnHoverChanged?.Invoke(HoverRatio);
+            RefreshRegiteredWindows();
+        }
+
+        internal void ClearHover()
+        {
+            HoverRatio = -1f;
+            IsHovering = false;
+            HoverOwner = HoverOwner.None;
+            OnHoverCleared?.Invoke();
+            RefreshRegiteredWindows();
+        }
+
+        private void RefreshRegiteredWindows()
+        {
+            foreach (FuWindowName window in _registeredWindows)
+            {
+                Fugui.RefreshWindowsInstances(window);
+            }
+        }
+
         internal void BackwardStep()
         {
             Seek(0);
@@ -182,12 +297,14 @@ namespace FlightReLive.Core.TimeBar
         {
             IsPlaying = true;
             OnPlay?.Invoke();
+            RefreshRegiteredWindows();
         }
 
         internal void Pause()
         {
             IsPlaying = false;
             OnPause?.Invoke();
+            RefreshRegiteredWindows();
         }
 
         internal void ForwardPoint()
@@ -215,6 +332,7 @@ namespace FlightReLive.Core.TimeBar
             }
 
             CurrentTime = Math.Clamp(timeInSeconds, 0, Duration);
+            RefreshRegiteredWindows();
         }
 
         internal void SeekRatio(float ratio01)
@@ -241,21 +359,11 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
-        internal void SeekFrame(long frame)
-        {
-            if (Frequency <= 0 || Duration <= 0)
-            {
-                return;
-            }
-
-            double targetTime = frame / Frequency;
-            Seek(targetTime);
-        }
-
         internal void ChangeSpeed()
         {
             int next = ((int)_playbackSpeed + 1) % Enum.GetValues(typeof(PlaybackSpeed)).Length;
             _playbackSpeed = (PlaybackSpeed)next;
+            RefreshRegiteredWindows();
         }
 
         private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)
@@ -291,14 +399,5 @@ namespace FlightReLive.Core.TimeBar
             return diffBefore <= diffAfter ? before : after;
         }
         #endregion
-    }
-
-    public enum PlaybackSpeed
-    {
-        UltraSlow = 0,
-        Slow = 1,
-        Normal = 2,
-        Fast = 3,
-        UltraFast = 4
     }
 }

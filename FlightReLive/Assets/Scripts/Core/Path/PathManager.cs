@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-
 namespace FlightReLive.Core.Paths
 {
     public class PathManager : MonoBehaviour
@@ -54,7 +53,9 @@ namespace FlightReLive.Core.Paths
         {
             get
             {
-                return _progressionPath != null && _progressionPath.GetComponent<MeshFilter>() != null && _progressionPath.GetComponent<MeshFilter>().sharedMesh != null;
+                return _progressionPath != null &&
+                       _progressionPath.GetComponent<MeshFilter>() != null &&
+                       _progressionPath.GetComponent<MeshFilter>().sharedMesh != null;
             }
         }
         #endregion
@@ -82,8 +83,8 @@ namespace FlightReLive.Core.Paths
             _progressionPathMaterialInstance = new Material(_progressionPathMaterial);
             _progressionPathColliderUpdater = _progressionPath.AddComponent<PathColliderUpdater>();
             _progressionPathRenderer.material = _progressionPathMaterialInstance;
-
         }
+
         private void Start()
         {
             TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
@@ -96,7 +97,10 @@ namespace FlightReLive.Core.Paths
 
         private void Update()
         {
-            if (LoadingManager.Instance.CurrentFlightData == null || _fullPath == null || _fullPath.Count < 2 || _interpolatedToFlightPoint.Count == 0)
+            if (LoadingManager.Instance.CurrentFlightData == null ||
+                _fullPath == null ||
+                _fullPath.Count < 2 ||
+                _interpolatedToFlightPoint.Count == 0)
             {
                 return;
             }
@@ -106,9 +110,14 @@ namespace FlightReLive.Core.Paths
 
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, _raycastMask))
             {
+                //Hover on 3D path
                 float hoverProgress = GetProgressFromHit(hit.point);
                 _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
 
+                //Propagate hover to TimeBar as Path3D owner
+                TimeBarManager.Instance.SetHoverFromPath(hoverProgress);
+
+                //Click on path
                 if (Camera.Mouse.IsPressed(FuMouseButton.Left))
                 {
                     long totalFrames = TimeBarManager.Instance.TotalFrameCount;
@@ -119,15 +128,35 @@ namespace FlightReLive.Core.Paths
             }
             else
             {
-                _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
+                //No ray hit
+                if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverOwner == HoverOwner.Path3D)
+                {
+                    //If the hover is still marked as Path3D but no ray hit, clear hover
+                    _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
+                    TimeBarManager.Instance.ClearHover();
+                }
+                else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverOwner != HoverOwner.Path3D)
+                {
+                    //Just mirror the SeekBar hover
+                    float hoverProgress = TimeBarManager.Instance.HoverRatio;
+                    _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
+                }
+                else
+                {
+                    //No hover at all
+                    _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
+                }
             }
 
-            //Interpolate UV
-            float targetProgress = GetProgressAtTime(_interpolatedToFlightPoint[0].Time + TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
+            //Interpolate UV for progression
+            float targetProgress = GetProgressAtTime(
+                _interpolatedToFlightPoint[0].Time +
+                TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
+
             _currentProgress = Mathf.Lerp(_currentProgress, targetProgress, Time.deltaTime * 5f);
             _progressionPathMaterialInstance.SetFloat("_Progress", _currentProgress);
 
-            //Refresh "drone" position
+            //Refresh drone position
             Vector3 position = GetWorldPositionAtUVProgress(_currentProgress);
             Vector3 nextPosition = GetWorldPositionAtUVProgress(_currentProgress + 0.001f);
             Vector3 direction = (nextPosition - position).normalized;
@@ -154,9 +183,12 @@ namespace FlightReLive.Core.Paths
             }
 
             _droneAnchorTransform.position = position;
-            _droneAnchorTransform.rotation = Quaternion.Slerp(_droneAnchorTransform.rotation, targetRotation, Time.deltaTime * 5f);
+            _droneAnchorTransform.rotation = Quaternion.Slerp(
+                _droneAnchorTransform.rotation,
+                targetRotation,
+                Time.deltaTime * 5f);
 
-            //Glow
+            //Glow effect
             if (_glowTimer > 0f)
             {
                 _glowTimer -= Time.deltaTime;
@@ -188,13 +220,25 @@ namespace FlightReLive.Core.Paths
             }
 
             //Estimate altitude at takeoff point
-            Vector3 positionGPS = new Vector3((float)flightData.EstimateTakeOffPosition.Latitude, flightData.TakeOffAltitude, (float)flightData.EstimateTakeOffPosition.Longitude);
+            Vector3 positionGPS = new Vector3(
+                (float)flightData.EstimateTakeOffPosition.Latitude,
+                flightData.TakeOffAltitude,
+                (float)flightData.EstimateTakeOffPosition.Longitude);
 
             //Create bezier path
-            List<Vector3> bezierPath = flightData.CreateBezierFlightPath(positionGPS.y, samplesPerSegment: 10, controlOffsetFactor: 0.5f);
+            List<Vector3> bezierPath = flightData.CreateBezierFlightPath(
+                positionGPS.y,
+                samplesPerSegment: 10,
+                controlOffsetFactor: 0.5f);
 
             //Apply path
-            SetFlightPaths(flightData, bezierPath, samplesPerSegment: 20, controlOffsetFactor: 0.3f, minUVStep: 0.0005f, smoothUVs: false);
+            SetFlightPaths(
+                flightData,
+                bezierPath,
+                samplesPerSegment: 20,
+                controlOffsetFactor: 0.3f,
+                minUVStep: 0.0005f,
+                smoothUVs: false);
 
             if (_progressionPathCollider != null)
             {
@@ -242,7 +286,13 @@ namespace FlightReLive.Core.Paths
         #endregion
 
         #region METHODS
-        private void SetFlightPaths(FlightData flightData, List<Vector3> worldPositions, int samplesPerSegment = 10, float controlOffsetFactor = 0.3f, float minUVStep = 0.0001f, bool smoothUVs = true)
+        private void SetFlightPaths(
+            FlightData flightData,
+            List<Vector3> worldPositions,
+            int samplesPerSegment = 10,
+            float controlOffsetFactor = 0.3f,
+            float minUVStep = 0.0001f,
+            bool smoothUVs = true)
         {
             List<Vector3> rawPath = new List<Vector3>();
             _interpolatedToFlightPoint = new List<FlightDataPoint>();
@@ -289,7 +339,10 @@ namespace FlightReLive.Core.Paths
             for (int i = 1; i < rawPath.Count; i++)
             {
                 float dist = Vector3.Distance(rawPath[i], cleanedPath.Last());
-                if (dist < adaptiveMinDistance) continue;
+                if (dist < adaptiveMinDistance)
+                {
+                    continue;
+                }
 
                 cleanedPath.Add(rawPath[i]);
 
@@ -310,10 +363,7 @@ namespace FlightReLive.Core.Paths
             //UV smoothing
             if (smoothUVs && uvProgress.Count > 2)
             {
-                List<float> smoothed = new List<float>
-                { 
-                    uvProgress[0]
-                };
+                List<float> smoothed = new List<float> { uvProgress[0] };
 
                 for (int i = 1; i < uvProgress.Count - 1; i++)
                 {
@@ -341,7 +391,10 @@ namespace FlightReLive.Core.Paths
 
         private Mesh GeneratePathMesh(List<Vector3> pathPoints, List<float> uvProgression, float radius = 2f, int radialSegments = 4)
         {
-            if (pathPoints == null || pathPoints.Count < 2 || uvProgression == null || uvProgression.Count != pathPoints.Count)
+            if (pathPoints == null ||
+                pathPoints.Count < 2 ||
+                uvProgression == null ||
+                uvProgression.Count != pathPoints.Count)
             {
                 return null;
             }
@@ -403,8 +456,14 @@ namespace FlightReLive.Core.Paths
                     float u = (float)j / (radialSegments - 1);
                     uvs.Add(new Vector2(u, v));
 
-                    if (i == 0) firstRingIndices.Add(vertices.Count - 1);
-                    if (i == ringCount - 1) lastRingIndices.Add(vertices.Count - 1);
+                    if (i == 0)
+                    {
+                        firstRingIndices.Add(vertices.Count - 1);
+                    }
+                    if (i == ringCount - 1)
+                    {
+                        lastRingIndices.Add(vertices.Count - 1);
+                    }
                 }
 
                 up = normal;
@@ -513,6 +572,7 @@ namespace FlightReLive.Core.Paths
 
             return 0f;
         }
+
         private float GetProgressFromHit(Vector3 hitPoint)
         {
             if (_fullPath == null || _fullPath.Count == 0)
@@ -585,7 +645,11 @@ namespace FlightReLive.Core.Paths
         #region UI
         internal void DrawPathSettings(FuLayout layout)
         {
-            using (FuGrid grid = new FuGrid("grdSceneSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
+            using (FuGrid grid = new FuGrid("grdSceneSettings",
+                       new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }),
+                       FuGridFlag.AutoToolTipsOnLabels,
+                       rowsPadding: 4f,
+                       outterPadding: 10))
             {
                 if (!IsPathVisible)
                 {
@@ -595,7 +659,8 @@ namespace FlightReLive.Core.Paths
                 float thickness = SettingsManager.CurrentSettings.Path3DThickness;
 
                 //Display path 3D thickness custom settings
-                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                SettingsManager.DisplaySettingsSliderWithReset(
+                    grid,
                     "3D path thickness",
                     "Define the thickness of the 3D path.",
                     $"Reset 3D path thickness to default value ({SettingsManager.PATH_3D_THICKNESS_DEFAULT_VALUE}).",
@@ -605,16 +670,17 @@ namespace FlightReLive.Core.Paths
                     0.1f,
                     SettingsManager.PATH_3D_THICKNESS_DEFAULT_VALUE,
                     "%.1f",
-                     (x) => SettingsManager.SavePath3DThickness(x),
-                     () => SettingsManager.ResetPath3DThickness());
-            
+                    (x) => SettingsManager.SavePath3DThickness(x),
+                    () => SettingsManager.ResetPath3DThickness());
+
                 if (!IsPathVisible)
                 {
                     grid.DisableNextElements();
                 }
 
                 //Path 3D remaining color 1
-                SettingsManager.DisplaySettingsColorPickerWithReset(grid,
+                SettingsManager.DisplaySettingsColorPickerWithReset(
+                    grid,
                     "Remaining color 1",
                     "Change remaining color step 1.",
                     "Reset remaining color step 1 to default value.",
@@ -624,7 +690,8 @@ namespace FlightReLive.Core.Paths
                     () => SettingsManager.ResetPath3DRemainingColor1());
 
                 //Path 3D remaining color 2
-                SettingsManager.DisplaySettingsColorPickerWithReset(grid,
+                SettingsManager.DisplaySettingsColorPickerWithReset(
+                    grid,
                     "Remaining color 2",
                     "Change remaining color step 2.",
                     "Reset remaining color step 2 to default value.",
@@ -652,5 +719,4 @@ namespace FlightReLive.Core.Paths
             #endregion
         }
     }
-
 }

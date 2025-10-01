@@ -419,11 +419,11 @@ namespace FlightReLive.UI.FlightCharts
 
                     drawList.AddLine(minStart, minEnd, step.ColorU32, lineWidth);
 
-                    DrawChartPoint(drawList, minEnd, step.TooltipSize, step.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY);
+                    DrawChartPoint(drawList, minEnd, step.TooltipSize, step.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY, prevStep);
 
                     if (firstDrawingStep)
                     {
-                        DrawChartPoint(drawList, minStart, prevStep.TooltipSize, prevStep.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY);
+                        DrawChartPoint(drawList, minStart, prevStep.TooltipSize, prevStep.Value, ref isHoveringPoint, circleRadius, innerCircleRadius, outerCircleRadius, step.ColorU32, chartTopY, chartBottomY, prevStep);
                         firstDrawingStep = false;
                     }
 
@@ -435,8 +435,8 @@ namespace FlightReLive.UI.FlightCharts
 
 
         private void DrawChartPoint(ImDrawListPtr drawList, Vector2 position, Vector2 tooltipSize, double value, ref bool isHovering,
-            float radius, float innerRadius, float outerRadius, uint pointColorU32,
-            float chartTopY, float chartBottomY)
+                    float radius, float innerRadius, float outerRadius, uint pointColorU32,
+                    float chartTopY, float chartBottomY, FlightChartStep step)
         {
             Vector2 outerRadiusVec = new Vector2(outerRadius, outerRadius);
             Vector2 hoverMin = position - outerRadiusVec;
@@ -445,6 +445,13 @@ namespace FlightReLive.UI.FlightCharts
             if (ImGui.IsMouseHoveringRect(hoverMin, hoverMax) && !isHovering)
             {
                 isHovering = true;
+
+                //Sync hover with TimeBarManager
+                if (step != null && step.FlightDataPoint != null)
+                {
+                    float ratio = GetRatioFromDataPoint(step.FlightDataPoint);
+                    TimeBarManager.Instance.SetHoverFromChart(ratio);
+                }
 
                 float pulse = Mathf.Sin(Time.time * 6f) * 0.3f + 1f;
                 float animatedRadius = outerRadius * pulse;
@@ -482,7 +489,16 @@ namespace FlightReLive.UI.FlightCharts
                 drawList.AddText(tooltipPosition - textSize / 2f, chartCircleOuterColor, text);
                 Fugui.PopFont();
             }
+            else
+            {
+                //Release hover
+                if (!isHovering && TimeBarManager.Instance.HoverOwner == HoverOwner.FlightChart)
+                {
+                    TimeBarManager.Instance.ClearHover();
+                }
+            }
         }
+
         #endregion
     }
 }

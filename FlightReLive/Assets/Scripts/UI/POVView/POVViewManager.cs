@@ -1,5 +1,5 @@
 using FlightReLive.Core.Cameras;
-using FlightReLive.Core.Paths;
+using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.ReLiveView;
 
 namespace FlightReLive.UI.POVView
@@ -20,6 +20,16 @@ namespace FlightReLive.UI.POVView
             }
 
             Instance = this;
+        }
+
+        private void Start()
+        {
+            TimeBarManager.Instance.RegisterWindowName(_windowName);
+        }
+
+        private void OnDestroy()
+        {
+            TimeBarManager.Instance.UnregisterWindowName(_windowName);
         }
         #endregion
 

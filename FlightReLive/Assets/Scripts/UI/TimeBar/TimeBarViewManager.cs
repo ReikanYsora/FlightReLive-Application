@@ -1,4 +1,4 @@
-using FlightReLive.Core.TimeBar;
+﻿using FlightReLive.Core.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -11,33 +11,41 @@ namespace FlightReLive.UI.TimeBar
     public static class TimeBarViewManager
     {
         #region CONSTANTS
-        private const int TIME_BAR_OVERLAY_WIDTH = 600;
-        private const int TIME_BAR_OVERLAY_HEIGHT = 105;
-        private const float SEAK_BAR_HORIZONTAL_PADDING = 20f;
-        private const float SEAK_BAR_HEIGHT = 20f;
-        private const float MEDIA_BUTTON_HEIGHT = 40f;
-        private const float MEDIA_BUTTON_WIDTH = 40f;
-        private const float MEDIA_BUTTON_SPACING = 5f;
+        private const int TIME_BAR_OVERLAY_WIDTH = 450;
+        private const int TIME_BAR_OVERLAY_HEIGHT = 90;
+        private const float SEAK_BAR_HORIZONTAL_PADDING = 12f;
+        private const float SEAK_BAR_HEIGHT = 16f;
+        private const float MEDIA_BUTTON_HEIGHT = 34f;
+        private const float MEDIA_BUTTON_WIDTH = 34f;
+        private const float MEDIA_BUTTON_SPACING = 3f;
         private const float MEDIA_BUTTON_RADIUS = 5f;
+        #endregion
+
+        #region ATTRIBUTES
+        private static FuOverlay _timeBarOverlay;
         #endregion
 
         #region UI
         internal static void DisplayTimeBarOverlay(FuWindowDefinition windowsDefinition, FuCameraWindow cameraWindow)
         {
-            FuOverlay fps1 = new FuOverlay("timeBarOverlay",
+            _timeBarOverlay = new FuOverlay("timeBarOverlay",
                 new Vector2Int(TIME_BAR_OVERLAY_WIDTH, TIME_BAR_OVERLAY_HEIGHT),
-                (overlay, layout) => { DisplayTimeBar(cameraWindow); },
-                FuOverlayFlags.Default,
+                (overlay, layout) =>
+                {
+                    DisplayTimeBar(cameraWindow);
+                },
+               FuOverlayFlags.NoClose,
                 FuOverlayDragPosition.Bottom);
 
-            fps1.AnchorWindowDefinition(windowsDefinition, FuOverlayAnchorLocation.BottomCenter);
+            _timeBarOverlay.AnchorWindowDefinition(windowsDefinition, FuOverlayAnchorLocation.BottomCenter);
+            _timeBarOverlay.SetMinimumWindowSize(new Vector2Int(TIME_BAR_OVERLAY_WIDTH, TIME_BAR_OVERLAY_HEIGHT));
         }
 
         internal static void DisplayTimeBar(FuCameraWindow cameraWindow)
         {
             TimeBarManager timeBar = TimeBarManager.Instance;
 
-            if (timeBar == null)
+            if (timeBar == null || !timeBar.IsInitialized)
             {
                 return;
             }
@@ -75,26 +83,26 @@ namespace FlightReLive.UI.TimeBar
             //Hover feedback
             Vector2 mousePos = ImGui.GetMousePos();
             bool isHovering = ImGui.IsMouseHoveringRect(barPos, barEnd);
-            float hoverX = -1f;
-            float hoverRatio = 0f;
 
             if (isHovering)
             {
-                hoverRatio = Mathf.Clamp01((mousePos.x - barPos.x) / barSize.x);
-                hoverX = barPos.x + barSize.x * hoverRatio;
+                float hoverRatio = Mathf.Clamp01((mousePos.x - barPos.x) / barSize.x);
+                float hoverX = barPos.x + barSize.x * hoverRatio;
+
+                timeBar.SetHoverFromSeekBar(hoverRatio);
 
                 float startX = Mathf.Min(progressX, hoverX);
                 float endX = Mathf.Max(progressX, hoverX);
 
-                //Orange rectangle
+                //Hover rectangle
                 drawList.AddRectFilled(new Vector2(startX, barPos.y), new Vector2(endX, barEnd.y), hoverColor, 0f);
 
-                //Offset text (drawn in drawList, does not affect layout)
+                //Offset text
                 double offsetSeconds = (hoverRatio - ratio) * timeBar.Duration;
                 TimeSpan offsetSpan = TimeSpan.FromSeconds(Math.Abs(offsetSeconds));
-                string offsetText = (offsetSeconds >= 0 ? "+" : "-") + offsetSpan.ToString(@"mm\:ss\.fff");
+                string offsetText = (offsetSeconds >= 0 ? "+" : "-") + offsetSpan.ToString(@"mm\:ss");
 
-                Fugui.PushFont(12, FontType.Regular);
+                Fugui.PushFont(12, FontType.Bold);
                 Vector2 textSize = ImGui.CalcTextSize(offsetText);
                 Fugui.PopFont();
 
@@ -104,7 +112,7 @@ namespace FlightReLive.UI.TimeBar
                     float textX = startX + (orangeWidth - textSize.x) * 0.5f;
                     float textY = barPos.y + (barHeight - textSize.y) * 0.5f;
 
-                    Fugui.PushFont(12, FontType.Regular);
+                    Fugui.PushFont(12, FontType.Bold);
                     drawList.AddText(new Vector2(textX, textY), offsetTextCol, offsetText);
                     Fugui.PopFont();
                 }
@@ -113,6 +121,44 @@ namespace FlightReLive.UI.TimeBar
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
                     timeBar.Seek(timeBar.Duration * hoverRatio);
+                }
+            }
+            else
+            {
+                //Sync hover over Path3D module and only if Path3D is the owner, not the TimeBarViewer
+                if (timeBar.IsHovering && timeBar.HoverOwner != HoverOwner.SeekBar)
+                {
+                    float hoverX = barPos.x + barSize.x * timeBar.HoverRatio;
+                    float startX = Mathf.Min(progressX, hoverX);
+                    float endX = Mathf.Max(progressX, hoverX);
+
+                    //Hover rectangle
+                    drawList.AddRectFilled(new Vector2(startX, barPos.y), new Vector2(endX, barEnd.y), hoverColor, 0f);
+
+                    // Offset text
+                    double offsetSeconds = (timeBar.HoverRatio - ratio) * timeBar.Duration;
+                    TimeSpan offsetSpan = TimeSpan.FromSeconds(Math.Abs(offsetSeconds));
+                    string offsetText = (offsetSeconds >= 0 ? "+" : "-") + offsetSpan.ToString(@"mm\:ss");
+
+                    Fugui.PushFont(12, FontType.Bold);
+                    Vector2 textSize = ImGui.CalcTextSize(offsetText);
+                    Fugui.PopFont();
+
+                    float orangeWidth = endX - startX;
+                    if (orangeWidth > textSize.x + 6f * scale)
+                    {
+                        float textX = startX + (orangeWidth - textSize.x) * 0.5f;
+                        float textY = barPos.y + (barHeight - textSize.y) * 0.5f;
+
+                        Fugui.PushFont(12, FontType.Bold);
+                        drawList.AddText(new Vector2(textX, textY), offsetTextCol, offsetText);
+                        Fugui.PopFont();
+                    }
+                }
+                else if (timeBar.HoverOwner == HoverOwner.SeekBar)
+                {
+                    //Release hover
+                    timeBar.ClearHover();
                 }
             }
 
@@ -124,9 +170,7 @@ namespace FlightReLive.UI.TimeBar
             FuElementSize buttonSize = new FuElementSize(MEDIA_BUTTON_WIDTH, MEDIA_BUTTON_HEIGHT);
             Vector2 btnSizePx = buttonSize.GetSize();
             float btnW = btnSizePx.x;
-
             float buttonsWidth = (MEDIA_BUTTON_WIDTH * 5 + MEDIA_BUTTON_SPACING * 4) * scale;
-
             string currentTimeStr = TimeSpan.FromSeconds(timeBar.CurrentTime).ToString(@"hh\:mm\:ss");
             string totalTimeStr = TimeSpan.FromSeconds(timeBar.Length).ToString(@"hh\:mm\:ss");
 
@@ -139,7 +183,6 @@ namespace FlightReLive.UI.TimeBar
             float rowY = ImGui.GetCursorScreenPos().y;
             float padding = MEDIA_BUTTON_SPACING * 2f * scale;
             float radius = MEDIA_BUTTON_RADIUS * scale;
-
             float buttonsStartX = cursorPos.x + (availWidth - buttonsWidth) * 0.5f;
             float buttonsEndX = buttonsStartX + buttonsWidth;
 
@@ -238,14 +281,8 @@ namespace FlightReLive.UI.TimeBar
 
                 if (layout.Button(iconPlayOrPause, buttonSize, customButton))
                 {
-                    if (timeBar.IsPlaying)
-                    {
-                        timeBar.Pause();
-                    }
-                    else
-                    {
-                        timeBar.Play();
-                    }
+                    if (timeBar.IsPlaying) { timeBar.Pause(); }
+                    else { timeBar.Play(); }
                 }
 
                 ImGui.SameLine(0, MEDIA_BUTTON_SPACING * scale);
@@ -295,12 +332,15 @@ namespace FlightReLive.UI.TimeBar
             //Progress cursor
             drawList.AddLine(new Vector2(progressX, midY - cursorExtend), new Vector2(progressX, midY + cursorExtend), cursorColor, 2f * scale);
 
-            //Hover cursor
-            if (isHovering && hoverX >= 0f)
+            //Hover cursor (SeekBar or Path3D)
+            if (timeBar.IsHovering && timeBar.HoverRatio >= 0f)
             {
-                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend), ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
+                float hoverX = barPos.x + barSize.x * timeBar.HoverRatio;
+                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend),
+                                 ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
             }
         }
+
         #endregion
     }
 }

@@ -3,6 +3,7 @@ using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -67,11 +68,13 @@ namespace FlightReLive.UI.FlightCharts
         private void Start()
         {
             SettingsManager.OnUnitSystemTypeChanged += OnUnitSystemTypeChanged;
+            TimeBarManager.Instance.RegisterWindowName(_windowName);
         }
 
         private void OnDestroy()
         {
             SettingsManager.OnUnitSystemTypeChanged -= OnUnitSystemTypeChanged;
+            TimeBarManager.Instance.UnregisterWindowName(_windowName);
         }
         #endregion
 

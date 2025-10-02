@@ -6,6 +6,7 @@ using FlightReLive.Core.Settings;
 using FlightReLive.Core.Share;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.Helpers;
+using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -496,22 +497,7 @@ namespace FlightReLive.UI.Workspace
                         {
                             if (layout.ClickableText(FlightReLiveIcons.Share, FuTextStyle.Default))
                             {
-                                string safePath = Path.Combine(Application.persistentDataPath);
-                                FileBrowser.SaveFilePanelAsync("Export a Flight Relive Shared file (.frs)", safePath, file.Name, "frs",
-                                async (x) =>
-                                {
-                                    if (!string.IsNullOrEmpty(x))
-                                    {
-                                        await CacheManager.ExportFlightFileAsync(file, x);
-                                    }
-                                });
-
-                                //UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
-                                //{
-                                //    string token = await  FlightShareService.ShareFlightFileAsync(file, 1);
-
-                                //    Debug.Log($"[WorkspaceViewManager] Exported Flight hash: {token}");
-                                //});
+                                ShareViewManager.DisplayShareModal(file);
                             }
                         }
                         else

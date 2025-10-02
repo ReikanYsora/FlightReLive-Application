@@ -1,0 +1,178 @@
+﻿using FlightReLive.Core.Cache;
+using FlightReLive.Core.Share;
+using FlightReLive.Core.Workspace;
+using Fu;
+using Fu.Framework;
+using System;
+using System.IO;
+using UnityEngine;
+
+namespace FlightReLive.UI.Share
+{
+    internal static class ShareViewManager
+    {
+        #region CONSTANTS
+        private const float PADDING = 10f;
+        private const float SHARED_HASH_WIDTH = 200f;
+        #endregion
+
+        #region ATTRIBUTES
+        private static string _shareHash = string.Empty;
+        private static bool _isSharing = false;
+        private static int _nbDaysValidity = 365;
+        #endregion
+
+        #region METHODS
+        internal static void DisplayShareModal(FlightFile fileToShare)
+        {
+            float uiScale = Fugui.DefaultContext.Scale;
+
+            Fugui.ShowModal("   ", (layout) =>
+            {
+                string title = "Select a method to share your flight";
+                Fugui.PushFont(16, FontType.Bold);
+                layout.CenterNextItemH(title);
+                layout.Text(title);
+                Fugui.PopFont();
+
+                layout.Spacing();
+                layout.Collapsable("Online mode", () =>
+                {
+                    Fugui.PushFont(14, FontType.Regular);
+                    layout.Text("Share your flight with a simple hashcode.", FuTextWrapping.Wrap);
+                    layout.Spacing();
+                    layout.Text("Send it to users, and anyone with this code will be able to view your flight (the video will not be included, only the flight data needed to reconstruct the scene in Flight ReLive).", FuTextWrapping.Wrap);
+                    layout.Text("You can choose a sharing period. This code will be accessible to everyone during this period and will be automatically deleted afterwards.", FuTextWrapping.Wrap);
+                    Fugui.PopFont();
+                    layout.Spacing();
+                    Fugui.PushFont(14, FontType.Bold);
+                    layout.Text("Anonymous submission, no data other than that necessary for viewing the scene is sent.", FuTextWrapping.Wrap);
+                    Fugui.PopFont();
+                    layout.Spacing();
+
+                    if (!_isSharing && string.IsNullOrEmpty(_shareHash))
+                    {
+                        using (FuGrid onlineGrid = new FuGrid("shareOnlineGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, 10))
+                        {
+                            if (_isSharing)
+                            {
+                                onlineGrid.DisableNextElements();
+                            }
+
+                            onlineGrid.Slider("Validity (days)", ref _nbDaysValidity, 1, 365);
+                            onlineGrid.NextColumn();
+
+                            float width = onlineGrid.GetAvailableWidth() - (PADDING / 2f);
+
+                            if (onlineGrid.Button("Get a sharing hashcode", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
+                            {
+                                StartShareAsync(fileToShare, _nbDaysValidity);
+                            }
+                        }
+                    }
+
+                    if (_isSharing && string.IsNullOrEmpty(_shareHash))
+                    {
+                        layout.CenterNextItemH(20f);
+                        layout.Loader_CircleSpinner(20f, 24);
+                    }
+
+                    if (!_isSharing && !string.IsNullOrEmpty(_shareHash))
+                    {
+                        layout.Separator();
+                        layout.Spacing();
+                        Fugui.PushFont(14, FontType.Bold);
+                        string helpSharedHashText1 = "This is your Flight ReLive SharedHash.";
+                        string helpSharedHashText2 = "It will no longer be visible after this operation. Use the button to copy it to your clipboard.";
+                        layout.CenterNextItemH(helpSharedHashText1);
+                        layout.Text(helpSharedHashText1);
+                        Fugui.PopFont();
+                        layout.Spacing();
+                        Fugui.PushFont(14, FontType.Regular);
+                        layout.CenterNextItemH(helpSharedHashText2);
+                        layout.Text(helpSharedHashText2);
+                        Fugui.PopFont();
+                        layout.Spacing();
+                        Fugui.MoveX((layout.GetAvailableWidth() - SHARED_HASH_WIDTH - PADDING - 24f) / 2f);
+                        layout.FramedText(_shareHash, new FuElementSize(SHARED_HASH_WIDTH, 24f));
+                        layout.SameLine();
+                        Fugui.PushFont(12, FontType.Regular);
+                        if (layout.Button(FlightReLiveIcons.Duplicate, new FuElementSize(new Vector2(24f, 24f)), FuButtonStyle.Default))
+                        {
+                            GUIUtility.systemCopyBuffer = _shareHash;
+                        }
+                        Fugui.PopFont();
+                    }
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                layout.Spacing();
+
+                layout.Collapsable("Offline mode", () =>
+                {
+                    Fugui.PushFont(14, FontType.Regular);
+                    layout.Text("Generates a file allowing other users to relive your flight from their Flight ReLive application.", FuTextWrapping.Wrap);
+                    layout.Spacing();
+                    layout.Text("The video will not be included, only the data needed to relive the flight. Anyone with this file will be able to view your flight, but no data will be sent to the Flight ReLive API.", FuTextWrapping.Wrap);
+                    Fugui.PopFont();
+                    layout.Spacing();
+
+                    using (FuGrid offlineGrid = new FuGrid("shareOfflineGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, 10))
+                    {
+                        offlineGrid.NextColumn();
+
+                        float width = offlineGrid.GetAvailableWidth() - (PADDING / 2f);
+
+                        if (offlineGrid.Button("Export flight to file", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
+                        {
+                            string safePath = Path.Combine(Application.persistentDataPath);
+                            FileBrowser.SaveFilePanelAsync("Export a Flight Relive Shared file (.frs)", safePath, fileToShare.Name, "frs",
+                            async (x) =>
+                            {
+                                if (!string.IsNullOrEmpty(x))
+                                {
+                                    await CacheManager.ExportFlightFileAsync(fileToShare, x);
+                                }
+                            });
+                        }
+                    }
+                }, FuButtonStyle.Collapsable, defaultOpen: true);               
+            }, new FuModalSize(new Vector2(600, 600)), new FuModalButton("Close", () => { Reset(); }, FuButtonStyle.Default));
+        }
+
+        private static void Reset()
+        {
+            _shareHash = string.Empty;
+            _isSharing = false;
+            _nbDaysValidity = 365;
+        }
+
+        private static async void StartShareAsync(FlightFile fileToShare, int daysValidity)
+        {
+            if (_isSharing || fileToShare == null)
+            {
+                return;
+            }
+
+            _isSharing = true;
+            _shareHash = string.Empty;
+
+            try
+            {
+                string token = await FlightShareService.ShareFlightFileAsync(fileToShare, daysValidity).ConfigureAwait(false);
+                OnShareHashReceived(token ?? string.Empty);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                OnShareHashReceived(string.Empty);
+            }
+        }
+
+        private static void OnShareHashReceived(string hash)
+        {
+            _shareHash = hash;
+            _isSharing = false;
+        }
+        #endregion
+    }
+}

@@ -7,7 +7,8 @@ namespace FlightReLive.Core.Share
     {
         public string ShareHash { get; set; }
 
-        public DateTime ExpirationDate { get; set; }
-    }
+        public string ShareHashDisplay { get; set; }
 
+        public DateTime ExpirationDateUtc { get; set; }
+    }
 }

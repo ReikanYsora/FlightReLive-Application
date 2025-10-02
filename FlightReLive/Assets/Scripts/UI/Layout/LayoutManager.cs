@@ -3,6 +3,7 @@ using FlightReLive.Core.Cache;
 using FlightReLive.Core.Platform;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Share;
+using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -44,6 +45,26 @@ namespace FlightReLive.UI.Layout
         private void RegisterMainMenuItemsMacOs()
         {
             Fugui.DisableMainMenu();
+
+            MacOsMainMenuManager.AddMenuEntry("Flight ReLive", "Import local file", () =>
+            {
+                string safePath = Path.Combine(Application.persistentDataPath);
+                FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
+                async (x) =>
+                {
+                    if (x.Length > 0)
+                    {
+                        await FlightShareManager.ImportAsync(x[0]);
+                    }
+                });
+            });
+
+            MacOsMainMenuManager.AddMenuEntry("Flight ReLive", "Import from SharedHash", () =>
+            {
+                ShareViewManager.DisplaySharedHashModel();
+            });
+
+            MacOsMainMenuManager.AddSeparator("Flight ReLive");
 
             MacOsMainMenuManager.AddQuitMenuEntry("Flight ReLive", () =>
             {
@@ -132,7 +153,7 @@ namespace FlightReLive.UI.Layout
             //"Flight ReLive" menu
             Fugui.RegisterMainMenuItem(flightReLiveTitle, null);
 
-            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import shared flight", () =>
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import local file", () =>
             {
                 string safePath = Path.Combine(Application.persistentDataPath);
                 FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
@@ -143,6 +164,11 @@ namespace FlightReLive.UI.Layout
                             await FlightShareManager.ImportAsync(x[0]);
                         }
                     });
+            }, flightReLiveTitle);
+
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.SharedImport + "  Import from SharedHash", () =>
+            {
+                ShareViewManager.DisplaySharedHashModel();
             }, flightReLiveTitle);
 
             Fugui.RegisterMainMenuSeparator(flightReLiveTitle);

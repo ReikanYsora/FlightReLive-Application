@@ -1,8 +1,11 @@
-﻿using FlightReLive.Core.Cache;
+﻿using FlightReLive.Core;
+using FlightReLive.Core.Cache;
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Share;
 using FlightReLive.Core.Workspace;
 using Fu;
 using Fu.Framework;
+using ImGuiNET;
 using System;
 using System.IO;
 using UnityEngine;
@@ -19,10 +22,81 @@ namespace FlightReLive.UI.Share
         #region ATTRIBUTES
         private static string _shareHash = string.Empty;
         private static bool _isSharing = false;
+        private static bool _isDownloading = false;
+        private static bool _dowloadSuccess = false;
+        private static string _downloadError = "";
+        private static string _sharedHash = "";
         private static int _nbDaysValidity = 365;
         #endregion
 
         #region METHODS
+        internal static void DisplaySharedHashModel()
+        {
+            float uiScale = Fugui.DefaultContext.Scale;
+
+            Fugui.ShowModal("   ", (layout) =>
+            {
+                if (_isDownloading && !_dowloadSuccess)
+                {
+                    string title = "Please wait...";
+                    Fugui.PushFont(14, FontType.Regular);
+                    layout.CenterNextItemH(title);
+                    layout.Text(title);
+                    Fugui.PopFont();
+                }
+                else
+                {
+                    string title = "Load a flight from a sharedhash";
+                    Fugui.PushFont(14, FontType.Regular);
+                    layout.CenterNextItemH(title);
+                    layout.Text(title);
+                    Fugui.PopFont();
+                    layout.Separator();
+                }
+
+                layout.Spacing();
+
+                if (!_isDownloading && !_dowloadSuccess)
+                {
+                    using (FuGrid sharedHashOpenGrid = new FuGrid("sharedHashOpenGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, 10))
+                    {
+                        float width = (sharedHashOpenGrid.GetAvailableWidth() / 2f) - (PADDING / 2f);
+                        sharedHashOpenGrid.TextInput("Paste the sharedhash you want to load", "", ref _sharedHash);
+                        sharedHashOpenGrid.NextColumn();
+
+                        if (string.IsNullOrEmpty(_sharedHash.Trim()))
+                        {
+                            sharedHashOpenGrid.DisableNextElement();
+                        }
+
+                        if (sharedHashOpenGrid.Button("Load flight from sharedhash", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
+                        {
+                            StartDownloadAsync(_sharedHash);
+                        }
+                    }
+                }
+
+                if (_isDownloading && !_dowloadSuccess)
+                {
+                    layout.CenterNextItemH(20f);
+                    layout.Loader_CircleSpinner(20f, 24);
+                }
+
+                if (!string.IsNullOrEmpty(_downloadError))
+                {
+                    layout.Spacing();
+                    Fugui.PushFont(14, FontType.Bold);
+                    layout.CenterNextItemH(_downloadError);
+                    ImGui.PushStyleColor(ImGuiCol.Text, Fugui.Themes.GetColor(FuColors.TextDanger)); 
+                    layout.Text(_downloadError);
+                    ImGui.PopStyleColor();
+
+                    Fugui.PopFont();
+                }
+
+            }, new FuModalSize(new Vector2(450, 450)), new FuModalButton("Close", () => { ResetDownload(); }, FuButtonStyle.Default));
+        }
+
         internal static void DisplayShareModal(FlightFile fileToShare)
         {
             float uiScale = Fugui.DefaultContext.Scale;
@@ -30,7 +104,7 @@ namespace FlightReLive.UI.Share
             Fugui.ShowModal("   ", (layout) =>
             {
                 string title = "Select a method to share your flight";
-                Fugui.PushFont(16, FontType.Bold);
+                Fugui.PushFont(14, FontType.Bold);
                 layout.CenterNextItemH(title);
                 layout.Text(title);
                 Fugui.PopFont();
@@ -94,7 +168,9 @@ namespace FlightReLive.UI.Share
                         Fugui.PopFont();
                         layout.Spacing();
                         Fugui.MoveX((layout.GetAvailableWidth() - SHARED_HASH_WIDTH - PADDING - 24f) / 2f);
+                        Fugui.PushFont(14, FontType.Italic);
                         layout.FramedText(_shareHash, new FuElementSize(SHARED_HASH_WIDTH, 24f));
+                        Fugui.PopFont();
                         layout.SameLine();
                         Fugui.PushFont(12, FontType.Regular);
                         if (layout.Button(FlightReLiveIcons.Duplicate, new FuElementSize(new Vector2(24f, 24f)), FuButtonStyle.Default))
@@ -136,14 +212,22 @@ namespace FlightReLive.UI.Share
                         }
                     }
                 }, FuButtonStyle.Collapsable, defaultOpen: true);               
-            }, new FuModalSize(new Vector2(600, 600)), new FuModalButton("Close", () => { Reset(); }, FuButtonStyle.Default));
+            }, new FuModalSize(new Vector2(600, 600)), new FuModalButton("Close", () => { ResetUpload(); }, FuButtonStyle.Default));
         }
 
-        private static void Reset()
+        private static void ResetUpload()
         {
             _shareHash = string.Empty;
             _isSharing = false;
             _nbDaysValidity = 365;
+        }
+
+        private static void ResetDownload()
+        { 
+            _isDownloading = false;
+            _dowloadSuccess = false;
+            _downloadError = "";
+            _sharedHash = "";
         }
 
         private static async void StartShareAsync(FlightFile fileToShare, int daysValidity)
@@ -158,20 +242,84 @@ namespace FlightReLive.UI.Share
 
             try
             {
-                string token = await FlightShareService.ShareFlightFileAsync(fileToShare, daysValidity).ConfigureAwait(false);
-                OnShareHashReceived(token ?? string.Empty);
+                FlightFileShareResponse response = await FlightShareService.ShareFlightFileExAsync(fileToShare, daysValidity).ConfigureAwait(false);
+
+                if (response == null)
+                {
+                    throw new Exception("FlightFileShareResponse null value");
+                }
+
+                OnShareHashReceived(response);
             }
             catch (Exception ex)
             {
                 Debug.LogException(ex);
-                OnShareHashReceived(string.Empty);
+                OnShareHashReceived();
             }
         }
 
-        private static void OnShareHashReceived(string hash)
+        private static void OnShareHashReceived()
         {
-            _shareHash = hash;
+            _shareHash = "";
             _isSharing = false;
+        }
+
+        private static void OnShareHashReceived(FlightFileShareResponse response)
+        {
+            _shareHash = response.ShareHash;
+            _isSharing = false;
+        }
+
+        private static async void StartDownloadAsync(string sharedHash)
+        {
+            if (_isDownloading || _dowloadSuccess)
+            {
+                return;
+            }
+
+            _isDownloading = true;
+            _dowloadSuccess = false;
+
+            try
+            {
+                FlightFile flightFile = await FlightShareService.GetFlightFileAsync(sharedHash).ConfigureAwait(false);
+
+                if (flightFile == null)
+                {
+                    OnFlightFileError();
+                }
+                else
+                {
+                    OnFlightFileReceived(flightFile);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        private static void OnFlightFileError()
+        {
+            _isDownloading = false;
+            _dowloadSuccess = false;
+            _downloadError = "SharedHash not found. Please paste a valid Flight ReLive sharedhash.";
+        }
+
+        private static void OnFlightFileReceived(FlightFile flightFile)
+        {
+            _isDownloading = false;
+            _dowloadSuccess = true;
+            _downloadError = "";
+
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                LoadingManager.Instance.StartLoadingScene(flightFile);
+            });
+
+            ResetDownload();
+            Fugui.CloseModal();            
         }
         #endregion
     }

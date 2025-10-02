@@ -83,8 +83,8 @@ namespace FlightReLive.UI
         protected static string _Preferences = "\uE07E";
         public static string Preferences { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Preferences; }
 
-        protected static string _CaptureMode = "\uE07F";
-        public static string CaptureMode { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _CaptureMode; }
+        protected static string _Inspector = "\uE07F";
+        public static string Inspector { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Inspector; }
 
         protected static string _Check = "\uE080";
         public static string Check { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Check; }

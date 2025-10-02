@@ -7,9 +7,9 @@ using ImGuiNET;
 using System;
 using UnityEngine;
 
-namespace FlightReLive.UI.ReLiveView
+namespace FlightReLive.UI.CameraViews
 {
-    internal class FlightReLiveCameraView : FuCameraWindowBehaviour
+    internal class CameraViewManager : FuCameraWindowBehaviour
     {
         #region CONSTANTS
         private const float TOP_BAR_HEIGHT = 26f;

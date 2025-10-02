@@ -2,7 +2,6 @@
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.Metadata;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -12,25 +11,21 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Video;
 
-namespace FlightReLive.UI.Video
+namespace FlightReLive.UI.Inspector
 {
     /// <summary>
-    /// Manager responsible for handling Unity VideoPlayer playback,
-    /// synchronized with the TimeBar. Handles downscaling, DX12 safety,
-    /// and resilient sync logic for problematic DJI video streams.
+    /// Manager responsible for handling Unity VideoPlayer playback, and display all file and datapoint metadata
     /// </summary>
-    internal class VideoPlayerManager : FuWindowBehaviour
+    internal class InspectorViewManager : FuWindowBehaviour
     {
         #region CONSTANTS
         private const float TOP_BAR_HEIGHT = 26f;
         private const float TIMELINE_HEIGHT = 18f;
 
-        //Sync thresholds (seconds)
-        private const double SYNC_THRESHOLD = 0.08;         //Playback speed correction beyond this drift
-        private const double HARD_SYNC_THRESHOLD = 0.45;    //Hard seek beyond this drift
-        private const double SEEK_COOLDOWN = 0.10;          //Avoid seek spam (seconds)
+        private const double SYNC_THRESHOLD = 0.08;
+        private const double HARD_SYNC_THRESHOLD = 0.45;
+        private const double SEEK_COOLDOWN = 0.10;
 
-        //Output RenderTexture max size
         private const int MAX_OUTPUT_WIDTH = 1920;
         private const int MAX_OUTPUT_HEIGHT = 1080;
         #endregion
@@ -39,14 +34,19 @@ namespace FlightReLive.UI.Video
         [SerializeField] private VideoPlayer _videoPlayer;
         private RenderTexture _renderTexture;
 
-        //Sync state
         private double _lastHardSeekRealtime;
         private float _lastAppliedPlaybackSpeed = 1f;
+
+        private bool _hasVideo;
         #endregion
 
         #region PROPERTIES
-        internal static VideoPlayerManager Instance { get; private set; }
-        private bool IsPrepared => _videoPlayer != null && _videoPlayer.isPrepared && _renderTexture != null;
+        internal static InspectorViewManager Instance { get; private set; }
+
+        private bool IsPrepared
+        {
+            get { return _hasVideo && _videoPlayer != null && _videoPlayer.isPrepared && _renderTexture != null; }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -61,8 +61,6 @@ namespace FlightReLive.UI.Video
 
             if (_videoPlayer != null)
             {
-                //Initialize VideoPlayer settings (safe for DX12 and DJI files)
-
                 try
                 {
                     _videoPlayer.playOnAwake = false;
@@ -71,8 +69,6 @@ namespace FlightReLive.UI.Video
                     _videoPlayer.waitForFirstFrame = true;
                     _videoPlayer.sendFrameReadyEvents = false;
                     _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
-
-                    //Disable all audio (avoid DJI corrupted audio tracks)
                     _videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
                     _videoPlayer.controlledAudioTrackCount = 0;
                     try { _videoPlayer.EnableAudioTrack(0, false); } catch { }
@@ -95,6 +91,11 @@ namespace FlightReLive.UI.Video
 
         private void LateUpdate()
         {
+            if (!_hasVideo)
+            {
+                return;
+            }
+
             try
             {
                 if (_videoPlayer == null || !IsPrepared || TimeBarManager.Instance == null || !TimeBarManager.Instance.IsInitialized)
@@ -113,9 +114,9 @@ namespace FlightReLive.UI.Video
 
         private void OnDestroy()
         {
-            if (_videoPlayer != null)
+            if (_hasVideo && _videoPlayer != null)
             {
-                try
+                try 
                 {
                     _videoPlayer.Stop();
                 } 
@@ -133,9 +134,9 @@ namespace FlightReLive.UI.Video
                 _videoPlayer.seekCompleted -= OnSeekCompleted;
 
                 try
-                { 
+                {
                     Destroy(_videoPlayer);
-                } 
+                }
                 catch { }
 
                 _videoPlayer = null;
@@ -144,21 +145,27 @@ namespace FlightReLive.UI.Video
         #endregion
 
         #region METHODS
-        /// <summary>
-        /// Load video from FlightData and prepare the VideoPlayer.
-        /// </summary>
         internal void Load(FlightData flightData)
         {
-            if (flightData == null || _videoPlayer == null || string.IsNullOrEmpty(flightData.VideoPath) || !File.Exists(flightData.VideoPath))
+            if (flightData == null)
             {
+                _hasVideo = false;
                 return;
             }
+
+            if (string.IsNullOrEmpty(flightData.VideoPath) || !File.Exists(flightData.VideoPath) || _videoPlayer == null)
+            {
+                //No video : fallback metadata-only
+                _hasVideo = false;
+                return;
+            }
+
+            _hasVideo = true;
 
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 try
                 {
-                    // Reset state
                     _lastHardSeekRealtime = 0;
                     _lastAppliedPlaybackSpeed = 1f;
 
@@ -172,20 +179,19 @@ namespace FlightReLive.UI.Video
                     _videoPlayer.source = VideoSource.Url;
                     _videoPlayer.url = flightData.VideoPath;
 
-                    //Double safety: disable all audio
                     try
                     { 
-                        _videoPlayer.audioOutputMode = VideoAudioOutputMode.None; 
+                        _videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
                     } 
                     catch { }
 
-                    try
+                    try 
                     { 
                         _videoPlayer.controlledAudioTrackCount = 0;
                     } 
                     catch { }
 
-                    try
+                    try 
                     { 
                         _videoPlayer.EnableAudioTrack(0, false);
                     } 
@@ -200,22 +206,19 @@ namespace FlightReLive.UI.Video
             });
         }
 
-        /// <summary>
-        /// Unload video and cleanup resources.
-        /// </summary>
         internal async Task Unload()
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                if (_videoPlayer == null)
+                if (!_hasVideo || _videoPlayer == null)
                 {
                     return;
                 }
 
-                try
+                try 
                 { 
                     _videoPlayer.Stop();
-                } 
+                }
                 catch { }
 
                 if (_renderTexture != null)
@@ -224,6 +227,8 @@ namespace FlightReLive.UI.Video
                     Destroy(_renderTexture);
                     _renderTexture = null;
                 }
+
+                _hasVideo = false;
             });
         }
         #endregion
@@ -301,49 +306,6 @@ namespace FlightReLive.UI.Video
             }
         }
 
-        private double SafeGetLength()
-        {
-            try
-            { 
-                return _videoPlayer.length;
-            }
-            catch 
-            { 
-                return TimeBarManager.Instance != null ? TimeBarManager.Instance.Duration : 0.0;
-            }
-        }
-
-        private long SafeGetFrameCount()
-        {
-            try
-            { 
-                return (long)_videoPlayer.frameCount;
-            }
-            catch
-            { 
-                return 0;
-            }
-        }
-
-        private double SafeGetFrameRate()
-        {
-            try
-            {
-                if (_videoPlayer.frameRate > 0.0)
-                {
-                    return _videoPlayer.frameRate;
-                }
-
-                double len = SafeGetLength();
-                long fc = SafeGetFrameCount();
-                return (len > 0.0001 && fc > 0) ? (fc / len) : 0.0;
-            }
-            catch
-            { 
-                return 0.0;
-            }
-        }
-
         private int SafeGetWidth()
         {
             try
@@ -382,7 +344,11 @@ namespace FlightReLive.UI.Video
 
         private void TrySetPlaybackSpeed(float s)
         {
-            if (Mathf.Abs(s - _lastAppliedPlaybackSpeed) < 0.001f) return;
+            if (Mathf.Abs(s - _lastAppliedPlaybackSpeed) < 0.001f)
+            {
+                return;
+            }
+
             try
             {
                 _videoPlayer.playbackSpeed = Mathf.Clamp(s, 0.25f, 3.5f);
@@ -546,104 +512,56 @@ namespace FlightReLive.UI.Video
 
         public override void OnUI(FuWindow window, FuLayout windowLayout)
         {
-            if (LoadingManager.Instance.CurrentFlightData == null || _videoPlayer == null || !IsPrepared)
+            if (LoadingManager.Instance.CurrentFlightData == null)
             {
                 return;
             }
 
-            ImDrawListPtr drawList = ImGui.GetWindowDrawList();
-
             using (FuLayout layout = new FuLayout())
             {
-                if (ImGui.GetCursorScreenPos().y <= Fugui.MainContainer.Size.y)
+                if (_hasVideo && _videoPlayer != null && IsPrepared)
                 {
-                    Vector2 availableSize = ImGui.GetContentRegionAvail();
-                    float scale = Fugui.CurrentContext.Scale;
-                    float outerMargin = 12f * scale;
-                    float innerMargin = 6f * scale;
-                    float timelineHeight = TIMELINE_HEIGHT;
-                    float spacingBetweenBlocks = 10f * scale;
-                    float videoRatio = (SafeGetHeight() > 0) ? (float)SafeGetWidth() / SafeGetHeight() : (16f / 9f);
-                    float targetWidth = availableSize.x - 2f * (outerMargin + innerMargin);
-                    float targetHeight = targetWidth / videoRatio;
-
-                    Vector2 cursorPos = ImGui.GetCursorScreenPos();
-                    float totalWidth = targetWidth + 2f * innerMargin;
-                    float blockPosX = cursorPos.x + MathF.Max((availableSize.x - totalWidth) / 2f, outerMargin);
-                    float blockPosY = cursorPos.y + outerMargin;
-                    Vector2 blockPos = new Vector2(blockPosX, blockPosY);
-                    Vector2 blockEnd = blockPos + new Vector2(targetWidth, targetHeight);
-
-                    //Draw video
-                    ImGui.SetCursorScreenPos(blockPos);
-                    DrawVideoImage(targetWidth, targetHeight);
-
-                    //Add orange border around the video
-                    uint borderColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
-                    drawList.AddRect(blockPos, blockEnd, borderColor, 0f, ImDrawFlags.None, 1f * scale);
-
-                    //New overlays (bottom-left & bottom-right)
-                    float margin = 5f * scale;
-                    float radius = 5f * scale;
-
-                    //Background style
-                    Vector4 bgCol = Fugui.Themes.GetColor(FuColors.FrameBg);
-                    bgCol.w = 0.65f; // ~65% opacity
-                    uint bgColor = ImGui.ColorConvertFloat4ToU32(bgCol);
-                    uint borderCol = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Border));
-                    uint textCol = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
-
-                    //Left text (playback speed)
-                    string speedText = $"x{TimeBarManager.Instance.SpeedFactor:0.##}";
-                    Fugui.PushFont(12, FontType.Bold);
-                    Vector2 speedSize = ImGui.CalcTextSize(speedText);
-                    Fugui.PopFont();
-
-                    Vector2 speedMin = new Vector2(blockPos.x + margin, blockEnd.y - margin - speedSize.y - 4f * scale);
-                    Vector2 speedMax = new Vector2(speedMin.x + speedSize.x + 10f * scale, speedMin.y + speedSize.y + 4f * scale);
-                    drawList.AddRectFilled(speedMin, speedMax, bgColor, radius);
-                    drawList.AddRect(speedMin, speedMax, borderCol, radius);
-                    Fugui.PushFont(12, FontType.Bold);
-                    drawList.AddText(new Vector2(speedMin.x + 5f * scale, speedMin.y + 2f * scale), textCol, speedText);
-                    Fugui.PopFont();
-
-                    //Right text (current time)
-                    double curTime = SafeGetTime();
-                    TimeSpan ts = TimeSpan.FromSeconds(curTime);
-                    string timeText = ts.ToString(@"hh\:mm\:ss");
-                    Fugui.PushFont(12, FontType.Bold);
-                    Vector2 timeSize = ImGui.CalcTextSize(timeText);
-                    Fugui.PopFont();
-
-                    Vector2 timeMax = new Vector2(blockEnd.x - margin, blockEnd.y - margin);
-                    Vector2 timeMin = new Vector2(timeMax.x - (timeSize.x + 10f * scale), timeMax.y - (timeSize.y + 4f * scale));
-                    drawList.AddRectFilled(timeMin, timeMax, bgColor, radius);
-                    drawList.AddRect(timeMin, timeMax, borderCol, radius);
-                    Fugui.PushFont(12, FontType.Bold);
-                    drawList.AddText(new Vector2(timeMin.x + 5f * scale, timeMin.y + 2f * scale), textCol, timeText);
-                    Fugui.PopFont();
-
-                    // Add spacing between video and timeline
-                    ImGui.SetCursorScreenPos(new Vector2(blockPos.x, blockPos.y + targetHeight + 12f * scale));
-                    DrawTimeLine(timelineHeight, targetWidth);
-
-                    layout.Spacing();
-
-                    // Metadata
-                    float scrollPanelHeight = ImGui.GetContentRegionAvail().y - 20f * Fugui.CurrentContext.Scale;
-                    Vector2 scrollPanelSize = new Vector2(ImGui.GetContentRegionAvail().x, scrollPanelHeight);
-
-                    ImGui.BeginChild("DataScrollbalePanel", scrollPanelSize, ImGuiChildFlags.AutoResizeY);
-                    int rw = _renderTexture != null ? _renderTexture.width : SafeGetWidth();
-                    int rh = _renderTexture != null ? _renderTexture.height : SafeGetHeight();
-                    double durationSeconds = Math.Max(0.0, SafeGetLength());
-                    double frameRate = SafeGetFrameRate();
-
-                    MetadataViewManager.Instance.DrawVideoMetadata(window, layout, rw, rh, frameRate, durationSeconds);
-                    MetadataViewManager.Instance.DrawMetadata(window, layout);
-                    ImGui.EndChild();
+                    //Normal video UI
+                    DrawVideoAndTimeline(window, layout);
                 }
+
+                //Metadata-only mode
+                MetadataViewManager.Instance.DrawMetadata(window, layout);
             }
+        }
+
+        private void DrawVideoAndTimeline(FuWindow window, FuLayout layout)
+        {
+            ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+            Vector2 availableSize = ImGui.GetContentRegionAvail();
+            float scale = Fugui.CurrentContext.Scale;
+            float outerMargin = 12f * scale;
+            float innerMargin = 6f * scale;
+            float timelineHeight = TIMELINE_HEIGHT;
+            float videoRatio = (SafeGetHeight() > 0) ? (float)SafeGetWidth() / SafeGetHeight() : (16f / 9f);
+            float targetWidth = availableSize.x - 2f * (outerMargin + innerMargin);
+            float targetHeight = targetWidth / videoRatio;
+
+            Vector2 cursorPos = ImGui.GetCursorScreenPos();
+            float totalWidth = targetWidth + 2f * innerMargin;
+            float blockPosX = cursorPos.x + MathF.Max((availableSize.x - totalWidth) / 2f, outerMargin);
+            float blockPosY = cursorPos.y + outerMargin;
+            Vector2 blockPos = new Vector2(blockPosX, blockPosY);
+            Vector2 blockEnd = blockPos + new Vector2(targetWidth, targetHeight);
+
+            //Draw video
+            ImGui.SetCursorScreenPos(blockPos);
+            DrawVideoImage(targetWidth, targetHeight);
+
+            //Border
+            uint borderColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
+            drawList.AddRect(blockPos, blockEnd, borderColor, 0f, ImDrawFlags.None, 1f * scale);
+
+            //Timeline
+            ImGui.SetCursorScreenPos(new Vector2(blockPos.x, blockPos.y + targetHeight + 12f * scale));
+            DrawTimeLine(timelineHeight, targetWidth);
+
+            layout.Spacing();
         }
 
         private void DrawVideoImage(float width, float height)

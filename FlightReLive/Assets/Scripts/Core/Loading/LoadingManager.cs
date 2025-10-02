@@ -9,7 +9,7 @@ using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.FlightCharts;
-using FlightReLive.UI.Video;
+using FlightReLive.UI.Inspector;
 using Fu;
 using Fu.Framework;
 using System;
@@ -188,7 +188,7 @@ namespace FlightReLive.Core.Loading
                 
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);
-                VideoPlayerManager.Instance.Load(flightData);
+                InspectorViewManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
@@ -338,7 +338,7 @@ namespace FlightReLive.Core.Loading
             {
                 TimeBarManager.Instance.Unload(),
                 FlightChartsManager.Instance.Unload(),
-                VideoPlayerManager.Instance.Unload(),
+                InspectorViewManager.Instance.Unload(),
                 ProceduralTerrainManager.Instance.Unload(),
                 PathManager.Instance.Unload(),
                 EnvironmentManager.Instance.Unload(),

@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-namespace FlightReLive.UI.Metadata
+namespace FlightReLive.UI.Inspector
 {
     public class MetadataViewManager : MonoBehaviour
     {
@@ -55,40 +55,34 @@ namespace FlightReLive.UI.Metadata
         #endregion
 
         #region UI
-        internal void DrawVideoMetadata(FuWindow window, FuLayout layout, int width, int height, double frequency, double durationSeconds)
-        {
-            layout.Collapsable(FlightReLiveIcons.VideoFile + "  Video##collapsable", () =>
-            {
-                Fugui.PushFont(14, FontType.Regular);
-
-                using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
-                {
-                    string formattedResolution = $"{width}x{height}";
-                    string formattedFramerate = $"{frequency:F2} FPS";
-                    TimeSpan duration = TimeSpan.FromSeconds(durationSeconds);
-                    string formattedDuration = duration.ToString(@"hh\:mm\:ss");
-
-                    Draw(window, "11", grid, layout, FlightReLiveIcons.Resolution, formattedResolution, "Native resolution");
-                    Draw(window, "12", grid, layout, FlightReLiveIcons.Framerate, formattedFramerate, "Framerate");
-                    Draw(window, "13", grid, layout, FlightReLiveIcons.Duration, formattedDuration, "Duration");
-                }
-
-                Fugui.PopFont();
-            }, FuButtonStyle.Collapsable, defaultOpen: true);
-        }
-
-
         internal void DrawMetadata(FuWindow window, FuLayout layout)
         {
-            if (LoadingManager.Instance.CurrentFlightData == null)
-            {
-                return;
-            }
-
+            float scale = Fugui.CurrentContext.Scale;
+            float scrollPanelHeight = ImGui.GetContentRegionAvail().y - 20f * scale;
+            Vector2 scrollPanelSize = new Vector2(ImGui.GetContentRegionAvail().x, scrollPanelHeight);
             FlightData currentFlightData = LoadingManager.Instance.CurrentFlightData;
+            ImGui.BeginChild("DataScrollbalePanel", scrollPanelSize, ImGuiChildFlags.AutoResizeY);
 
-            if (_currentDataPoint != null)
+            if (_currentDataPoint != null && currentFlightData != null)
             {
+                layout.Collapsable(FlightReLiveIcons.VideoFile + "  Video##collapsable", () =>
+                {
+                    Fugui.PushFont(14, FontType.Regular);
+
+                    using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        string formattedResolution = $"{currentFlightData.Width}x{currentFlightData.Height}";
+                        string formattedFramerate = $"{currentFlightData.Frequency:F2} FPS";
+                        string formattedDuration = currentFlightData.Length.ToString(@"hh\:mm\:ss");
+
+                        Draw(window, "11", grid, layout, FlightReLiveIcons.Resolution, formattedResolution, "Native resolution");
+                        Draw(window, "12", grid, layout, FlightReLiveIcons.Framerate, formattedFramerate, "Framerate");
+                        Draw(window, "13", grid, layout, FlightReLiveIcons.Duration, formattedDuration, "Duration");
+                    }
+
+                    Fugui.PopFont();
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
+
                 layout.Collapsable(FlightReLiveIcons.Drone + "  Drone##collapsable", () =>
                 {
                     Fugui.PushFont(14, FontType.Regular);
@@ -167,6 +161,8 @@ namespace FlightReLive.UI.Metadata
                     Fugui.PopFont();
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
             }
+
+            ImGui.EndChild();
         }
         #endregion
 

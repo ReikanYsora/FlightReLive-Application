@@ -1,19 +1,13 @@
-using FlightReLive.Core.Cameras;
+﻿using FlightReLive.Core.Cameras;
+using FlightReLive.Core.Paths;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.ReLiveView;
-using FlightReLive.UI.TimeBar;
-using Fu;
 
-namespace FlightReLive.UI.POVView
+namespace FlightReLive.UI.CameraViews
 {
-    internal class POVViewManager : FlightReLiveCameraView
+    internal class ReLiveViewManager : CameraViewManager
     {
-        #region ATTRIBUTES
-        private TimeBarViewManager _timeBarViewManager;
-        #endregion
-
         #region PROPERTIES
-        public static POVViewManager Instance { get; private set; }
+        public static ReLiveViewManager Instance { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -42,13 +36,8 @@ namespace FlightReLive.UI.POVView
         #region METHODS
         protected override void InitializeCameraView()
         {
-            POVCameraManipulator.Instance.CameraWindow = CameraWindow;
-        }
-
-        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
-        {
-            _timeBarViewManager = new TimeBarViewManager();
-            _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
+            PathManager.Instance.Camera = CameraWindow;
         }
         #endregion
     }

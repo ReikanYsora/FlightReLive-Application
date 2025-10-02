@@ -132,7 +132,7 @@ namespace FlightReLive.UI.Layout
             //"Flight ReLive" menu
             Fugui.RegisterMainMenuItem(flightReLiveTitle, null);
 
-            Fugui.RegisterMainMenuItem("Import Flight", () =>
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import shared flight", () =>
             {
                 string safePath = Path.Combine(Application.persistentDataPath);
                 FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,

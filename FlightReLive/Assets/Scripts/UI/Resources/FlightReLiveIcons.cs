@@ -154,5 +154,8 @@ namespace FlightReLive.UI
 
         protected static string _Share = "\uE096";
         public static string Share { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Share; }
+
+        protected static string _Import = "\uE097";
+        public static string Import { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Import; }
     }
 }

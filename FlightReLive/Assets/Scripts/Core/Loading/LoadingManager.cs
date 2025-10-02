@@ -80,7 +80,7 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
-        private async void StartLoadingScene(FlightFile flightFile)
+        internal async void StartLoadingScene(FlightFile flightFile)
         {
             await CancelLoading();
 
@@ -194,12 +194,12 @@ namespace FlightReLive.Core.Loading
                 PathManager.Instance.Load(flightData);
                 TimeBarManager.Instance.Load(flightData);
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info);
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info, 3f);
                 OnFlightEndLoading?.Invoke();
             }
             catch (OperationCanceledException)
             {
-                Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning);
+                Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning, 3f);
                 await UnloadFlightDataInModules();
             }
             finally
@@ -328,7 +328,7 @@ namespace FlightReLive.Core.Loading
 
         private void NotifyError(string message)
         {
-            Fugui.Notify("Resource loading error", message, StateType.Danger);
+            Fugui.Notify("Resource loading error", message, StateType.Danger, 3f);
             IsLoading = false;
         }
 

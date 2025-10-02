@@ -12,7 +12,7 @@ namespace FlightReLive.UI
         public static string HeightMap { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _HeightMap; }
 
         protected static string _GoogleMaps = "\uE067";
-        public static string GoogleMaps { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _GoogleMaps; }
+        public static string Maps { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _GoogleMaps; }
 
         protected static string _VideoFile = "\uE068";
         public static string VideoFile { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _VideoFile; }
@@ -152,6 +152,7 @@ namespace FlightReLive.UI
         protected static string _SpeedUltraFast = "\uE095";
         public static string SpeedUltraFast { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SpeedUltraFast; }
 
-
+        protected static string _Share = "\uE096";
+        public static string Share { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Share; }
     }
 }

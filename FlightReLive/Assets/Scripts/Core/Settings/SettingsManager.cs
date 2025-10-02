@@ -1343,7 +1343,7 @@ namespace FlightReLive.Core.Settings
                     Fugui.PopFont();
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
 
-                layout.Collapsable("Clear cache and settings##collapsable", () =>
+                layout.Collapsable("Clear caches and settings##collapsable", () =>
                 {
                     Fugui.PushFont(14, FontType.Bold);
 
@@ -1356,18 +1356,26 @@ namespace FlightReLive.Core.Settings
 
                         uiGrid.SetNextElementToolTipWithLabel("Delete all downloaded tiles stored on this computer.\nVideo files will not be deleted.");
 
-                        if (uiGrid.Button("Clear local cache", FuButtonStyle.Danger))
+                        if (uiGrid.Button("Clear local cache", FuButtonStyle.Info))
                         {
                             CacheManager.ClearCache();
                         }
 
+                        uiGrid.SetNextElementToolTipWithLabel("Delete all saved flights stored on this computer.\nVideo files will not be deleted.");
+
+                        if (uiGrid.Button("Clear workspace", FuButtonStyle.Info))
+                        {
+                            CacheManager.ClearWorkspaceCache();
+                        }
+
                         uiGrid.SetNextElementToolTipWithLabel("Restore the entire application configuration (including settings made from the application's global UI).\nVideo files will not be deleted.");
+                        
                         if (uiGrid.Button("Restore preferences", FuButtonStyle.Danger))
                         {
                             LoadDefaultSettings();
                             LoadAll();
 
-                            Fugui.Notify("Successful operation", "All user preferences have been reset.", StateType.Info);
+                            Fugui.Notify("Successful operation", "All user preferences have been reset.", StateType.Info, 3f);
                         }
                     }
 

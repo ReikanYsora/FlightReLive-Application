@@ -90,7 +90,7 @@ namespace FlightReLive.UI.Inspector
                     using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         string formattedPosition = $"{_currentDataPoint.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
-                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.GoogleMaps, () =>
+                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.Maps, () =>
                         {
                             OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)_currentDataPoint.Latitude, (float)_currentDataPoint.Longitude));
                         }, "Display on OpenStreetMap");

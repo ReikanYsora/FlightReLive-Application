@@ -1,6 +1,9 @@
-﻿using FlightReLive.Core.Loading;
+﻿using FlightReLive.Core;
+using FlightReLive.Core.Cache;
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.Share;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.Helpers;
 using Fu;
@@ -369,7 +372,7 @@ namespace FlightReLive.UI.Workspace
                             }
                             else
                             {
-                                tooltipText += $"Double click to load this video file.\nThis file contains {file.DataPoints.Count} recorded flight points.\n\nClick on {FlightReLiveIcons.GoogleMaps} to display waypoints on OpenStreetMap.";
+                                tooltipText += $"Double click to load this video file.\nThis file contains {file.DataPoints.Count} recorded flight points.\n\nClick on {FlightReLiveIcons.Maps} to display waypoints on OpenStreetMap.\n\nClick on {FlightReLiveIcons.Share} to share your flight.";
                             }
 
                             Vector2 tooltipPadding = new Vector2(12f, 8f) * scale * thumbnailScale;
@@ -439,6 +442,7 @@ namespace FlightReLive.UI.Workspace
                             drawListItem.AddRectFilled(thumbPosition + new Vector2(thumbSize.x - borderThickness, 0f), thumbPosition + new Vector2(thumbSize.x, thumbSize.y), bgColor);
                         }
 
+                        //Bottom-left text (duration)
                         if (file.Duration != null)
                         {
                             Fugui.PushFont(12, FontType.Regular);
@@ -446,27 +450,28 @@ namespace FlightReLive.UI.Workspace
                             Vector2 textSize = ImGui.CalcTextSize(duration);
                             Vector2 padding = new Vector2(4f, 2f) * scale * thumbnailScale;
                             Vector2 bgSize = textSize + padding * 2;
-                            Vector2 pos = thumbPosition + new Vector2(4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
+                            Vector2 pos = thumbPosition + new Vector2(4f * scale * thumbnailScale, thumbSize.y - bgSize.y - 4f * scale * thumbnailScale);
                             Vector2 finalPos = pos + new Vector2((bgSize.x - textSize.x) / 2f, padding.y);
+
                             drawListItem.AddRectFilled(pos, pos + bgSize, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
                             ImGui.SetCursorScreenPos(finalPos);
                             layout.Text(duration, FuTextStyle.Default);
                             Fugui.PopFont();
                         }
 
-                        //Right top icon
+                        //Top-left icon (OpenStreetMap)
                         Fugui.PushFont(12, FontType.Regular);
-                        Vector2 iconSize = file.IsValid ? ImGui.CalcTextSize(FlightReLiveIcons.GoogleMaps) : ImGui.CalcTextSize(FlightReLiveIcons.Warning);
-                        Vector2 iconPadding = new Vector2(4f, 2f) * scale * thumbnailScale;
-                        Vector2 iconBgSize = iconSize + iconPadding * 2;
-                        Vector2 iconPos = thumbPosition + new Vector2(thumbSize.x - iconBgSize.x - 4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
-                        Vector2 iconFinalPosition = iconPos + new Vector2((iconBgSize.x - iconSize.x) / 2f, iconPadding.y);
-                        drawListItem.AddRectFilled(iconPos, iconPos + iconBgSize, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
-                        ImGui.SetCursorScreenPos(iconFinalPosition);
+                        Vector2 iconSizeLeft = file.IsValid ? ImGui.CalcTextSize(FlightReLiveIcons.Maps) : ImGui.CalcTextSize(FlightReLiveIcons.Warning);
+                        Vector2 iconPaddingLeft = new Vector2(4f, 2f) * scale * thumbnailScale;
+                        Vector2 iconBgSizeLeft = iconSizeLeft + iconPaddingLeft * 2;
+                        Vector2 iconPosLeft = thumbPosition + new Vector2(4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
+                        Vector2 iconFinalPositionLeft = iconPosLeft + new Vector2((iconBgSizeLeft.x - iconSizeLeft.x) / 2f, iconPaddingLeft.y);
+                        drawListItem.AddRectFilled(iconPosLeft, iconPosLeft + iconBgSizeLeft, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
+                        ImGui.SetCursorScreenPos(iconFinalPositionLeft);
 
                         if (file.IsValid && !file.HasExtractionError)
                         {
-                            if (layout.ClickableText(FlightReLiveIcons.GoogleMaps, FuTextStyle.Default))
+                            if (layout.ClickableText(FlightReLiveIcons.Maps, FuTextStyle.Default))
                             {
                                 OpenStreetMapHelper.OpenOpenStreetMapBrowser(file.DataPoints.Select(p => new Vector2((float)p.Latitude, (float)p.Longitude)).ToList());
                             }
@@ -475,7 +480,44 @@ namespace FlightReLive.UI.Workspace
                         {
                             layout.Text(FlightReLiveIcons.Warning, FuTextStyle.Danger);
                         }
+                        Fugui.PopFont();
 
+                        //Top-right icon (Share)
+                        Fugui.PushFont(12, FontType.Regular);
+                        Vector2 shareIconSize = ImGui.CalcTextSize(FlightReLiveIcons.Share);
+                        Vector2 shareIconPadding = new Vector2(4f, 2f) * scale * thumbnailScale;
+                        Vector2 shareIconBgSize = shareIconSize + shareIconPadding * 2;
+                        Vector2 shareIconPos = thumbPosition + new Vector2(thumbSize.x - shareIconBgSize.x - 4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
+                        Vector2 shareIconFinalPosition = shareIconPos + new Vector2((shareIconBgSize.x - shareIconSize.x) / 2f, shareIconPadding.y);
+                        drawListItem.AddRectFilled(shareIconPos, shareIconPos + shareIconBgSize, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
+                        ImGui.SetCursorScreenPos(shareIconFinalPosition);
+
+                        if (file.IsValid && !file.HasExtractionError)
+                        {
+                            if (layout.ClickableText(FlightReLiveIcons.Share, FuTextStyle.Default))
+                            {
+                                string safePath = Path.Combine(Application.persistentDataPath);
+                                FileBrowser.SaveFilePanelAsync("Export a Flight Relive Shared file (.frs)", safePath, file.Name, "frs",
+                                async (x) =>
+                                {
+                                    if (!string.IsNullOrEmpty(x))
+                                    {
+                                        await CacheManager.ExportFlightFileAsync(file, x);
+                                    }
+                                });
+
+                                //UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
+                                //{
+                                //    string token = await  FlightShareService.ShareFlightFileAsync(file, 1);
+
+                                //    Debug.Log($"[WorkspaceViewManager] Exported Flight hash: {token}");
+                                //});
+                            }
+                        }
+                        else
+                        {
+                            layout.Text(FlightReLiveIcons.Warning, FuTextStyle.Danger);
+                        }
                         Fugui.PopFont();
 
                         x += itemSize.x + paddingX;

@@ -2,10 +2,12 @@
 using FlightReLive.Core.Cache;
 using FlightReLive.Core.Platform;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System.Diagnostics;
+using System.IO;
 using UnityEngine;
 
 namespace FlightReLive.UI.Layout
@@ -68,6 +70,11 @@ namespace FlightReLive.UI.Layout
                 CacheManager.ClearCache();
             });
 
+            MacOsMainMenuManager.AddMenuEntry("Settings", "Clear workspace cache", () =>
+            {
+                CacheManager.ClearWorkspaceCache();
+            });
+
             MacOsMainMenuManager.AddMenuEntry("Settings", "Reset preferences", () =>
             {
                 SettingsManager.LoadDefaultSettings();
@@ -124,6 +131,22 @@ namespace FlightReLive.UI.Layout
 
             //"Flight ReLive" menu
             Fugui.RegisterMainMenuItem(flightReLiveTitle, null);
+
+            Fugui.RegisterMainMenuItem("Import Flight", () =>
+            {
+                string safePath = Path.Combine(Application.persistentDataPath);
+                FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
+                    async (x) =>
+                    {
+                        if (x.Length > 0)
+                        {
+                            await FlightShareManager.ImportAsync(x[0]);
+                        }
+                    });
+            }, flightReLiveTitle);
+
+            Fugui.RegisterMainMenuSeparator(flightReLiveTitle);
+
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Quit + "  Exit", () => { ApplicationManager.Instance.QuitApplication(); }, flightReLiveTitle);
 
             //Settings menu
@@ -139,6 +162,10 @@ namespace FlightReLive.UI.Layout
             Fugui.RegisterMainMenuItem("Clear local cache", () =>
             {
                 CacheManager.ClearCache();
+            }, flightReLiveSettings);
+            Fugui.RegisterMainMenuItem("Clear workspace cache", () =>
+            {
+                CacheManager.ClearWorkspaceCache();
             }, flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Reset preferences", () =>
             {

@@ -169,7 +169,7 @@ namespace FlightReLive.Core
 
             if (IsRemoteVersionNewer(localVersion, remoteVersion))
             {
-                Fugui.Notify("Update Available", $"A newer version of Flight ReLive is available for your system ({latestVersion.DisplayName}).\nWe recommend updating to enjoy the latest improvements and features.", StateType.Info);
+                Fugui.Notify("Update Available", $"A newer version of Flight ReLive is available for your system ({latestVersion.DisplayName}).\nWe recommend updating to enjoy the latest improvements and features.", StateType.Info, 5f);
             }
         }
 

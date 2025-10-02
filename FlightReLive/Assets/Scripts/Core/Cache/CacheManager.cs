@@ -1,3 +1,4 @@
+using FlightReLive.Core.Workspace;
 using Fu;
 using Fu.Framework;
 using MessagePack;
@@ -6,6 +7,7 @@ using MessagePack.Resolvers;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -15,10 +17,12 @@ namespace FlightReLive.Core.Cache
     {
         #region CONSTANTS
         private const string CACHE_FOLDER_NAME = "Cache";
+        private const string FLIGHTS_CACHE_FOLDER_NAME = ".Flights";
         #endregion
 
         #region ATTRIBUTES
         private static string _cacheFolder;
+        private static string _flightsCacheFolder;
         private static readonly MessagePackSerializerOptions _messagePackOptions = MessagePackSerializerOptions.Standard.WithResolver(CompositeResolver.Create( new IMessagePackFormatter[] { new OpenMapTileFeatureFormatter() }, new IFormatterResolver[] { CustomResolver.Instance, StandardResolverAllowPrivate.Instance }));
         #endregion
 
@@ -33,6 +37,22 @@ namespace FlightReLive.Core.Cache
             if (!Directory.Exists(_cacheFolder))
             {
                 Directory.CreateDirectory(_cacheFolder);
+            }
+
+            //Initialize workspace cache
+            InitializeWorkspaceCache();
+        }
+        
+        /// <summary>
+        /// Initialize workspace cache for FlightFiles
+        /// </summary>
+        private static void InitializeWorkspaceCache()
+        {
+            _flightsCacheFolder = Path.Combine(_cacheFolder, FLIGHTS_CACHE_FOLDER_NAME);
+
+            if (!Directory.Exists(_flightsCacheFolder))
+            {
+                Directory.CreateDirectory(_flightsCacheFolder);
             }
         }
 
@@ -54,13 +74,224 @@ namespace FlightReLive.Core.Cache
                     Directory.CreateDirectory(_cacheFolder);
                 }
 
-                Fugui.Notify("Successful operation", "The local cache has been cleared successfully.", StateType.Info);
+                Fugui.Notify("Successful operation", "The local cache has been cleared successfully.", StateType.Info, 3f);
             }
             catch (Exception ex)
             {
-                Fugui.Notify("Operation failed", $"Unable to clear local cache.\n{ex.GetBaseException().Message}.", StateType.Danger);
+                Fugui.Notify("Operation failed", $"Unable to clear local cache.\n{ex.GetBaseException().Message}.", StateType.Danger, 3f);
             }
         }
+
+        /// <summary>
+        /// Clears the FlightFile workspace cache (.Flights folder)
+        /// </summary>
+        internal static void ClearWorkspaceCache()
+        {
+            try
+            {
+                if (Directory.Exists(_flightsCacheFolder))
+                {
+                    Directory.Delete(_flightsCacheFolder, true);
+                }
+
+                Directory.CreateDirectory(_flightsCacheFolder);
+
+                Fugui.Notify("Successful operation", "The flight workspace cache has been cleared successfully.", StateType.Info, 3f);
+            }
+            catch (Exception ex)
+            {
+                Fugui.Notify("Operation failed", $"Unable to clear flight workspace cache.\n{ex.GetBaseException().Message}.", StateType.Danger, 3f);
+            }
+        }
+
+        /// <summary>
+        /// Generates a unique cache filename based on file name (not full path) + file size
+        /// </summary>
+        private static string ComputeFlightCacheKey(string fileName, long fileSize)
+        {
+            string input = fileName.ToLowerInvariant() + "_" + fileSize;
+
+            using (SHA1 sha1 = SHA1.Create())
+            {
+                byte[] hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        #region FLIGHT FILE METHODS (ASYNC)
+        /// <summary>
+        /// Returns full path for the cached FlightFile
+        /// </summary>
+        private static string GetFlightFileCachePath(string filePath, long fileSize)
+        {
+            string fileNameOnly = Path.GetFileName(filePath);
+            string key = ComputeFlightCacheKey(fileNameOnly, fileSize);
+
+            return Path.Combine(_flightsCacheFolder, $"{key}.mpack");
+        }
+
+        /// <summary>
+        /// Check if a FlightFile exists in cache (by absolute path + file size)
+        /// </summary>
+        internal static Task<bool> FlightFileExistsAsync(string absolutePath, long fileSize)
+        {
+            string path = GetFlightFileCachePath(absolutePath, fileSize);
+
+            return Task.FromResult(File.Exists(path));
+        }
+
+        /// <summary>
+        /// Check if any cached FlightFile exists for a given video file name (not full path).
+        /// Useful when checking duplicates with same name but different locations.
+        /// </summary>
+        internal static bool GetFlightFilePath(string fileNameOnly, out string cachePath)
+        {
+            cachePath = null;
+
+            if (string.IsNullOrEmpty(fileNameOnly) || !Directory.Exists(_flightsCacheFolder))
+            {
+                return false;
+            }
+
+            string[] files = Directory.GetFiles(_flightsCacheFolder, "*.mpack");
+
+            foreach (string f in files)
+            {
+                if (Path.GetFileName(f).Contains(fileNameOnly.ToLowerInvariant()))
+                {
+                    cachePath = f;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Save a FlightFile to cache
+        /// </summary>
+        internal static async Task SaveFlightFileAsync(FlightFile flightFile)
+        {
+            if (flightFile == null || string.IsNullOrEmpty(flightFile.VideoPath))
+            {
+                return;
+            }
+
+            try
+            {
+                FileInfo fi = new FileInfo(flightFile.VideoPath);
+
+                if (!fi.Exists)
+                {
+                    return;
+                }
+
+                string savePath = GetFlightFileCachePath(flightFile.VideoPath, fi.Length);
+                byte[] serialized = MessagePackSerializer.Serialize(flightFile, _messagePackOptions);
+
+                await File.WriteAllBytesAsync(savePath, serialized);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CacheManager] Failed to save FlightFile cache: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Load a FlightFile from cache
+        /// </summary>
+        internal static async Task<FlightFile> LoadFlightFileAsync(string absolutePath, long fileSize)
+        {
+            try
+            {
+                string loadPath = GetFlightFileCachePath(absolutePath, fileSize);
+
+                if (!File.Exists(loadPath))
+                {
+                    return null;
+                }
+
+                byte[] bytes = await File.ReadAllBytesAsync(loadPath);
+                FlightFile file = MessagePackSerializer.Deserialize<FlightFile>(bytes, _messagePackOptions);
+
+                return file;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CacheManager] Failed to load FlightFile cache: {ex.Message}");
+                return null;
+            }
+        }
+        #endregion
+
+        #region FLIGHT FILE IMPORT/EXPORT (ASYNC)
+        /// <summary>
+        /// Export a FlightFile to a .FRS file at the given path.
+        /// </summary>
+        internal static async Task<bool> ExportFlightFileAsync(FlightFile flightFile, string exportPath)
+        {
+            if (flightFile == null)
+            {
+                Debug.LogWarning("[CacheManager] Cannot export null FlightFile.");
+                return false;
+            }
+
+            try
+            {
+                //Encode textures before saving (ensure byte[] are filled)
+                flightFile.EncodeTextures();
+                flightFile.VideoPath = string.Empty;
+                flightFile.ErrorMessages = new List<string>();
+
+                byte[] serialized = MessagePackSerializer.Serialize(flightFile, _messagePackOptions);
+                string safePath = Path.ChangeExtension(exportPath, ".frs");
+
+                using (FileStream fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                {
+                    await fs.WriteAsync(serialized, 0, serialized.Length);
+                }
+
+                Fugui.Notify("Successful operation", "The FRS file has been exported successfully.", StateType.Info, 3f);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Fugui.Notify("Operation failed", $"Unable to export FRS filee.\n{ex.Message}.", StateType.Danger, 3f);
+                Debug.LogWarning($"[CacheManager] Failed to export FlightFile: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Import a FlightFile from a .FRS file.
+        /// </summary>
+        internal static async Task<FlightFile> ImportFlightFileAsync(string importPath)
+        {
+            if (string.IsNullOrEmpty(importPath) || !File.Exists(importPath))
+            {
+                Debug.LogWarning($"[CacheManager] Import failed: invalid path {importPath}");
+                return null;
+            }
+
+            try
+            {
+                byte[] bytes = await File.ReadAllBytesAsync(importPath);
+
+                FlightFile file = MessagePackSerializer.Deserialize<FlightFile>(bytes, _messagePackOptions);
+
+                // Rebuild textures from stored byte[] if needed
+                file.DecodeTextures();
+                return file;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CacheManager] Failed to import FlightFile: {ex.Message}");
+                return null;
+            }
+        }
+        #endregion
+
+        #endregion
 
         #region SATELLITE TILE METHODS (ASYNC)
         internal static Task<bool> SatelliteTileExistsAsync(int zoom, int tileX, int tileY)
@@ -273,7 +504,6 @@ namespace FlightReLive.Core.Cache
                 return null;
             }
         }
-        #endregion
         #endregion
     }
 }

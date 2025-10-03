@@ -9,6 +9,7 @@ namespace FlightReLive.UI.CameraViews
     {
         #region ATTRIBUTES
         private TimeBarViewManager _timeBarViewManager;
+        private CameraSensorView _sensorView;
         #endregion
 
         #region PROPERTIES
@@ -48,6 +49,9 @@ namespace FlightReLive.UI.CameraViews
         {
             _timeBarViewManager = new TimeBarViewManager();
             _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+
+            _sensorView = new CameraSensorView(Camera);
+            _sensorView.DisplaySensorOverlay(windowDefinition, CameraWindow);
         }
         #endregion
     }

@@ -61,7 +61,7 @@ namespace FlightReLive.UI.TimeBar
             //Seek bar
             float barHeight = SEAK_BAR_HEIGHT * scale;
             float barWidth = availBefore.x - SEAK_BAR_HORIZONTAL_PADDING * scale;
-            Vector2 barPos = new Vector2(cursorPos.x + (SEAK_BAR_HORIZONTAL_PADDING * 0.5f) * scale, cursorPos.y + 10f * scale);
+            Vector2 barPos = new Vector2(cursorPos.x + (SEAK_BAR_HORIZONTAL_PADDING * 0.5f) * scale, cursorPos.y + 5f * scale);
             Vector2 barSize = new Vector2(barWidth, barHeight);
             Vector2 barEnd = barPos + barSize;
 
@@ -77,9 +77,11 @@ namespace FlightReLive.UI.TimeBar
 
             //Global background
             float totalBarHeight = SEAK_BAR_HEIGHT * scale + 20f * scale + MEDIA_BUTTON_HEIGHT * scale + 15f * scale;
-            Vector2 globalMin = cursorPos;
-            Vector2 globalMax = new Vector2(cursorPos.x + availBefore.x, cursorPos.y + totalBarHeight);
-            drawList.AddRectFilled(globalMin, globalMax, bgColor, MEDIA_BUTTON_RADIUS * scale);
+
+            //Background rounded rect
+            Vector2 globalMin = new Vector2(cursorPos.x, cursorPos.y - (SEAK_BAR_HORIZONTAL_PADDING / 2f));
+            Vector2 globalMax = new Vector2(cursorPos.x + availBefore.x, cursorPos.y + TIME_BAR_OVERLAY_HEIGHT - SEAK_BAR_HORIZONTAL_PADDING);
+            drawList.AddRectFilled(globalMin, globalMax, bgColor, MEDIA_BUTTON_RADIUS * scale, ImDrawFlags.RoundCornersAll);
 
             //Seak bar background
             drawList.AddRectFilled(barPos, barEnd, seakBgColor, 4f);
@@ -173,7 +175,7 @@ namespace FlightReLive.UI.TimeBar
             }
 
             //Reserve vertical space under the bar
-            float seakBarHeight = barSize.y + 20f * scale;
+            float seakBarHeight = barSize.y + 15f * scale;
             ImGui.Dummy(new Vector2(availBefore.x, seakBarHeight));
 
             //Buttons and text line

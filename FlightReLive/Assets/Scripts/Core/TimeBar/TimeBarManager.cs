@@ -153,6 +153,12 @@ namespace FlightReLive.Core.TimeBar
             {
                 CurrentTime += UnityEngine.Time.deltaTime * SpeedFactor;
                 CurrentTime = Math.Min(CurrentTime, Duration);
+
+                if (CurrentTime >= Duration)
+                {
+                    CurrentTime = Duration;
+                    Pause();
+                }
             }
 
             // Synchronize with points

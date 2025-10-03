@@ -1,6 +1,7 @@
 using FlightReLive.Core.Cameras;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.TimeBar;
+using FlightReLive.Core.UI.Overlays;
+using FlightReLive.UI.Overlays;
 using Fu;
 
 namespace FlightReLive.UI.CameraViews
@@ -8,8 +9,9 @@ namespace FlightReLive.UI.CameraViews
     internal class POVViewManager : CameraViewManager
     {
         #region ATTRIBUTES
-        private TimeBarViewManager _timeBarViewManager;
-        private CameraSensorView _sensorView;
+        private TimeBarOverlay _timeBarViewOverlay;
+        private CameraSensorOverlay _sensorOverlay;
+        private POVCameraZoomOverlay _povCameraZoomOverlay;
         #endregion
 
         #region PROPERTIES
@@ -43,15 +45,20 @@ namespace FlightReLive.UI.CameraViews
         protected override void InitializeCameraView()
         {
             POVCameraManipulator.Instance.CameraWindow = CameraWindow;
+            POVCameraManipulator.Instance.SensorOverlay = _sensorOverlay;
+            POVCameraManipulator.Instance.POVCameraZoomOverlay = _povCameraZoomOverlay;
         }
 
         public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
         {
-            _timeBarViewManager = new TimeBarViewManager();
-            _timeBarViewManager.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+            _timeBarViewOverlay = new TimeBarOverlay();
+            _timeBarViewOverlay.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
 
-            _sensorView = new CameraSensorView(Camera);
-            _sensorView.DisplaySensorOverlay(windowDefinition, CameraWindow);
+            _sensorOverlay = new CameraSensorOverlay(Camera);
+            _sensorOverlay.DisplaySensorOverlay(windowDefinition, CameraWindow);
+
+            _povCameraZoomOverlay = new POVCameraZoomOverlay();
+            _povCameraZoomOverlay.DisplayPOVCameraZoomOverlay(windowDefinition, CameraWindow);
         }
         #endregion
     }

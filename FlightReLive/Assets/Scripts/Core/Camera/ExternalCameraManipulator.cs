@@ -1,8 +1,14 @@
 ﻿using FlightReLive.Core.Loading;
+using FlightReLive.Core.Paths;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.UI.Overlays;
+using FlightReLive.UI;
 using Fu;
+using Fu.Framework;
+using ImGuiNET;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace FlightReLive.Core.Cameras
 {
@@ -19,13 +25,13 @@ namespace FlightReLive.Core.Cameras
         #endregion
 
         #region ATTRIBUTES
-
         [Header("Camera")]
         [SerializeField] private Camera _targetCamera;
 
         [Header("Camera Settings")]
         [SerializeField] private float _distance = 5f;
         [SerializeField] private Transform _droneAnchorTransform;
+        [SerializeField] private CameraMode _mode = CameraMode.Tracking;
 
         [Header("Y Angle Limits")]
         [SerializeField] private float _minYAngle = 5f;
@@ -33,7 +39,10 @@ namespace FlightReLive.Core.Cameras
 
         [Header("Zoom Limits")]
         [SerializeField] private float _minDistance = 1f;
-        [SerializeField] private float _maxDistance = 20f;
+        [SerializeField] private float _maxDistance = 200f;
+
+        [Header("Free Camera Settings")]
+        [SerializeField] private float _panSensitivity = 1f;
 
         private float _initialDistance;
         private float _initialX;
@@ -49,17 +58,42 @@ namespace FlightReLive.Core.Cameras
         private float _velocityX;
         private float _velocityY;
         private float _zoomVelocity;
+
+        // Free mode position
+        private Vector3 _freePosition = Vector3.zero;
+        private Vector3 _targetFreePosition = Vector3.zero;
+        private Vector3 _freeVelocity;
         #endregion
 
         #region PROPERTIES
+        public CameraMode Mode
+        {
+            get
+            {
+                return _mode;
+            }
+            set
+            {
+                if (_mode != value)
+                {
+                    _mode = value;
+
+                    if (_mode == CameraMode.Free)
+                    {
+                        InitializeFreeCamera();
+                    }
+                }
+            }
+        }
 
         public FuCameraWindow CameraWindow { internal set; get; }
 
         public static ExternalCameraManipulator Instance { get; private set; }
+
+        internal CameraModeOverlay CameraModeOverlay { get; set; }
         #endregion
 
         #region UNITY METHODS
-
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -76,6 +110,9 @@ namespace FlightReLive.Core.Cameras
             _initialDistance = _distance;
             _initialX = _currentX;
             _initialY = _currentY;
+
+            _freePosition = Vector3.zero;
+            _targetFreePosition = Vector3.zero;
         }
 
         private void Start()
@@ -83,10 +120,12 @@ namespace FlightReLive.Core.Cameras
             SettingsManager.OnCameraRotationSpeedChanged += OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged += OnCameraZoomSpeedChanged;
             SettingsManager.OnCameraInertiaChanged += OnCameraInertiaChanged;
+            LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
+            LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
 
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
-            _inertia = SettingsManager.CurrentSettings.CameraInertia;
+            _inertia = SettingsManager.CurrentSettings.CameraInertia;  
         }
 
         private void LateUpdate()
@@ -102,11 +141,18 @@ namespace FlightReLive.Core.Cameras
                 return;
             }
 
-            if (_droneAnchorTransform != null)
+            if (_mode == CameraMode.Tracking && _droneAnchorTransform != null)
             {
                 HandleZoom();
                 HandleRotationInput();
-                UpdateCameraTransform();
+                UpdateCameraTransformTracking();
+            }
+            else if (_mode == CameraMode.Free)
+            {
+                HandleZoom();
+                HandleRotationInput();
+                HandlePanInput();
+                UpdateCameraTransformFree();
             }
         }
 
@@ -115,11 +161,55 @@ namespace FlightReLive.Core.Cameras
             SettingsManager.OnCameraRotationSpeedChanged -= OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged -= OnCameraZoomSpeedChanged;
             SettingsManager.OnCameraInertiaChanged -= OnCameraInertiaChanged;
+            LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
+            LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
-
         #endregion
 
         #region METHODS
+
+        /// <summary>
+        /// Called when switching to Free mode: centers the camera on the Path3D bounding box.
+        /// </summary>
+        private void InitializeFreeCamera()
+        {
+            if (_targetCamera == null || PathManager.Instance == null || !PathManager.Instance.IsPathVisible)
+            {
+                return;
+            }
+
+            Bounds bounds = PathManager.Instance.GetPathBoundingBox();
+            if (bounds.size == Vector3.zero)
+            {
+                return;
+            }
+
+            //Center horizontally, but use max Y for vertical pivot
+            Vector3 center = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+
+            _freePosition = center;
+            _targetFreePosition = center;
+
+            //Compute distance to fit bounds
+            float fovRad = _targetCamera.fieldOfView * Mathf.Deg2Rad;
+
+            float halfHeight = bounds.extents.y;
+            float halfWidth = bounds.extents.magnitude;
+
+            float requiredDistanceByHeight = halfHeight / Mathf.Tan(fovRad * 0.5f);
+            float requiredDistanceByWidth = halfWidth / Mathf.Tan(fovRad * 0.5f * _targetCamera.aspect);
+
+            float requiredDistance = Mathf.Max(requiredDistanceByHeight, requiredDistanceByWidth);
+
+            _distance = requiredDistance * 1.2f;
+            _targetDistance = _distance;
+
+            //Initial point of view
+            _currentX = _targetX = 0f;
+            _currentY = _targetY = 45f;
+        }
+
+
         private void HandleZoom()
         {
             if (CameraWindow.IsHoveredContent)
@@ -139,7 +229,7 @@ namespace FlightReLive.Core.Cameras
 
         private void HandleRotationInput()
         {
-            if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right) == true)
+            if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();
                 _targetX += delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
@@ -152,11 +242,38 @@ namespace FlightReLive.Core.Cameras
             _currentY = Mathf.SmoothDamp(_currentY, _targetY, ref _velocityY, damping);
         }
 
-        private void UpdateCameraTransform()
+        private void HandlePanInput()
+        {
+            if (CameraWindow.Mouse.IsPressed(FuMouseButton.Center))
+            {
+                Vector2 delta = Mouse.current.delta.ReadValue();
+
+                Vector3 right = _targetCamera.transform.right;
+                Vector3 up = _targetCamera.transform.up;
+
+                Vector3 panDelta = (-right * delta.x + -up * delta.y) * _panSensitivity * INPUT_SENSITIVITY_FACTOR;
+                _targetFreePosition += panDelta;
+            }
+
+            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
+            _freePosition = Vector3.SmoothDamp(_freePosition, _targetFreePosition, ref _freeVelocity, damping);
+        }
+
+        private void UpdateCameraTransformTracking()
         {
             Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
             Vector3 offset = rot * new Vector3(0, 0, -_distance);
             Vector3 desiredPosition = _droneAnchorTransform.position + offset;
+
+            _targetCamera.transform.position = desiredPosition;
+            _targetCamera.transform.rotation = rot;
+        }
+
+        private void UpdateCameraTransformFree()
+        {
+            Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
+            Vector3 offset = rot * new Vector3(0, 0, -_distance);
+            Vector3 desiredPosition = _freePosition + offset;
 
             _targetCamera.transform.position = desiredPosition;
             _targetCamera.transform.rotation = rot;
@@ -179,24 +296,34 @@ namespace FlightReLive.Core.Cameras
             _targetCamera.transform.position = desiredPosition;
             _targetCamera.transform.rotation = rot;
         }
-
         #endregion
 
         #region CALLBACKS
-
         private void OnCameraZoomSpeedChanged(float zoomSpeed)
-        {
-            _zoomSensitivity = zoomSpeed;
-        }
+            => _zoomSensitivity = zoomSpeed;
 
         private void OnCameraRotationSpeedChanged(float rotationSpeed)
-        {
-            _rotationSensitivity = rotationSpeed;
-        }
+            => _rotationSensitivity = rotationSpeed;
 
         private void OnCameraInertiaChanged(float inertia)
+            => _inertia = inertia;
+
+        private void OnFlightEndLoading()
         {
-            _inertia = inertia;
+            InitializeFreeCamera();
+
+            if (CameraModeOverlay != null)
+            {
+                CameraModeOverlay.IsVisible = true;
+            }
+        }
+
+        private void OnFlightUnloaded()
+        {
+            if (CameraModeOverlay != null)
+            {
+                CameraModeOverlay.IsVisible = false;
+            }
         }
         #endregion
     }

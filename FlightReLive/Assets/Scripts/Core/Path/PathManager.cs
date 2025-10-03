@@ -105,36 +105,38 @@ namespace FlightReLive.Core.Paths
             }
 
             //3D path ray interaction
-            Ray ray = Camera.GetCameraRay();
-
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f, _raycastMask))
+            if (Camera.IsHoveredContent)
             {
-                //Hover on 3D path
-                float hoverProgress = GetProgressFromHit(hit.point);
-                _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
+                Ray ray = Camera.GetCameraRay();
 
-                //Propagate hover to TimeBar as Path3D owner
-                TimeBarManager.Instance.SetHover("PathManager", hoverProgress);
-
-                //Click on path
-                if (Camera.Mouse.IsPressed(FuMouseButton.Left))
+                if (Physics.Raycast(ray, out RaycastHit hit, 100f, _raycastMask))
                 {
-                    long totalFrames = TimeBarManager.Instance.TotalFrameCount;
-                    long targetFrame = Mathf.FloorToInt(hoverProgress * totalFrames);
-                    TimeBarManager.Instance.SetFrame(targetFrame, false);
-                    _glowTimer = _glowDuration;
+                    //Hover on 3D path
+                    float hoverProgress = GetProgressFromHit(hit.point);
+                    _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
+
+                    //Propagate hover to TimeBar as Path3D owner
+                    TimeBarManager.Instance.SetHover("PathManager", hoverProgress);
+
+                    //Click on path
+                    if (Camera.Mouse.IsPressed(FuMouseButton.Left))
+                    {
+                        long totalFrames = TimeBarManager.Instance.TotalFrameCount;
+                        long targetFrame = Mathf.FloorToInt(hoverProgress * totalFrames);
+                        TimeBarManager.Instance.SetFrame(targetFrame, false);
+                        _glowTimer = _glowDuration;
+                    }
                 }
-            }
-            else
-            {
-                //No ray hit
-                if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID == "PathManager")
+                else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID == "PathManager")
                 {
                     //If the hover is still marked as Path3D but no ray hit, clear hover
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
                     TimeBarManager.Instance.ClearHover("PathManager");
                 }
-                else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID != "PathManager")
+            }
+            else
+            {                
+                if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID != "PathManager")
                 {
                     //Just mirror the SeekBar hover
                     float hoverProgress = TimeBarManager.Instance.HoverRatio;
@@ -570,6 +572,32 @@ namespace FlightReLive.Core.Paths
             }
 
             return 0f;
+        }
+
+        /// <summary>
+        /// Returns the world-space bounding box (AABB) of the current 3D path.
+        /// If no path is available, returns an empty Bounds centered at Vector3.zero.
+        /// </summary>
+        internal Bounds GetPathBoundingBox()
+        {
+            if (_fullPath == null || _fullPath.Count == 0)
+            {
+                return new Bounds(Vector3.zero, Vector3.zero);
+            }
+
+            Vector3 min = _fullPath[0].Position;
+            Vector3 max = _fullPath[0].Position;
+
+            for (int i = 1; i < _fullPath.Count; i++)
+            {
+                Vector3 p = _fullPath[i].Position;
+                min = Vector3.Min(min, p);
+                max = Vector3.Max(max, p);
+            }
+
+            Bounds bounds = new Bounds();
+            bounds.SetMinMax(min, max);
+            return bounds;
         }
 
         private float GetProgressFromHit(Vector3 hitPoint)

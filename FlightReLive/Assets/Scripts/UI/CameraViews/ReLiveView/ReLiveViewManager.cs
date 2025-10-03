@@ -1,11 +1,19 @@
 ﻿using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.TimeBar;
+using FlightReLive.Core.UI.Overlays;
+using FlightReLive.UI.Overlays;
+using Fu;
 
 namespace FlightReLive.UI.CameraViews
 {
     internal class ReLiveViewManager : CameraViewManager
     {
+        #region ATTRIBUTES
+        private TimeBarOverlay _timeBarOverlay;
+        private CameraModeOverlay _cameraModeOverlay;
+        #endregion
+
         #region PROPERTIES
         public static ReLiveViewManager Instance { get; private set; }
         #endregion
@@ -37,7 +45,17 @@ namespace FlightReLive.UI.CameraViews
         protected override void InitializeCameraView()
         {
             ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
+            ExternalCameraManipulator.Instance.CameraModeOverlay = _cameraModeOverlay;
             PathManager.Instance.Camera = CameraWindow;
+        }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            _timeBarOverlay = new TimeBarOverlay();
+            _timeBarOverlay.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+
+            _cameraModeOverlay = new CameraModeOverlay();
+            _cameraModeOverlay.DisplayCameraModeOverlay(windowDefinition, CameraWindow);
         }
         #endregion
     }

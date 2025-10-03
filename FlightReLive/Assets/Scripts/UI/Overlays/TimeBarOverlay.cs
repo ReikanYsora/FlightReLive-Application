@@ -6,9 +6,9 @@ using UnityEngine;
 using System;
 using FlightReLive.Core.Loading;
 
-namespace FlightReLive.UI.TimeBar
+namespace FlightReLive.UI.Overlays
 {
-    public class TimeBarViewManager
+    public class TimeBarOverlay
     {
         #region CONSTANTS
         private const int TIME_BAR_OVERLAY_WIDTH = 450;
@@ -79,8 +79,8 @@ namespace FlightReLive.UI.TimeBar
             float totalBarHeight = SEAK_BAR_HEIGHT * scale + 20f * scale + MEDIA_BUTTON_HEIGHT * scale + 15f * scale;
 
             //Background rounded rect
-            Vector2 globalMin = new Vector2(cursorPos.x, cursorPos.y - (SEAK_BAR_HORIZONTAL_PADDING / 2f));
-            Vector2 globalMax = new Vector2(cursorPos.x + availBefore.x, cursorPos.y + TIME_BAR_OVERLAY_HEIGHT - SEAK_BAR_HORIZONTAL_PADDING);
+            Vector2 globalMin = new Vector2(cursorPos.x, cursorPos.y - (SEAK_BAR_HORIZONTAL_PADDING * 0.5f * scale));
+            Vector2 globalMax = new Vector2(cursorPos.x + availBefore.x, cursorPos.y + (TIME_BAR_OVERLAY_HEIGHT * scale) - (SEAK_BAR_HORIZONTAL_PADDING * scale));
             drawList.AddRectFilled(globalMin, globalMax, bgColor, MEDIA_BUTTON_RADIUS * scale, ImDrawFlags.RoundCornersAll);
 
             //Seak bar background

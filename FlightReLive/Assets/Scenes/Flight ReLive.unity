@@ -771,10 +771,12 @@ MonoBehaviour:
   _targetCamera: {fileID: 796242730}
   _distance: 20
   _droneAnchorTransform: {fileID: 283911657}
+  _mode: 0
   _minYAngle: -10
   _maxYAngle: 70
   _minDistance: 3
   _maxDistance: 50
+  _panSensitivity: 1
 --- !u!114 &289568085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -789,8 +791,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Cameras.POVCameraManipulator
   _targetCamera: {fileID: 137108794}
   _followPosition: {fileID: 283911657}
-  _minFOV: 30
-  _maxFOV: 90
+  _minFOVSerialized: 30
+  _maxFOVSerialized: 90
 --- !u!1 &311396843
 GameObject:
   m_ObjectHideFlags: 0
@@ -1553,9 +1555,9 @@ MonoBehaviour:
   moonPhase: 0.2
   moonPhaseRotation: 0
   earthshine: 1
-  flareSize: 1
+  flareSize: 0
   flareTint: {r: 1, g: 1, b: 1, a: 1}
-  flareFalloff: 4
+  flareFalloff: 10
   flareMultiplier: 0.8
   surfaceTexture: {fileID: 0}
   surfaceTint: {r: 1, g: 1, b: 1, a: 1}

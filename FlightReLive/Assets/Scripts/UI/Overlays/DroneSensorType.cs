@@ -1,4 +1,4 @@
-namespace FlightReLive.Core.Cameras
+namespace FlightReLive.Core.UI.Overlays
 {
     /// <summary>
     /// Common drone sensor sizes.

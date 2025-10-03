@@ -3,7 +3,6 @@ using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.UI.TimeBar;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;

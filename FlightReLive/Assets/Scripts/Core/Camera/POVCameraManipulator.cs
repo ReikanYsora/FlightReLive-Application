@@ -1,4 +1,6 @@
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.UI.Overlays;
 using Fu;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -27,22 +29,17 @@ namespace FlightReLive.Core.Cameras
         [SerializeField] private Transform _followPosition;
 
         [Header("Zoom Limits (FOV)")]
-        [SerializeField] private float _minFOV = 30f;
-        [SerializeField] private float _maxFOV = 90f;
+        [SerializeField] private float _minFOVSerialized = 30f;
+        [SerializeField] private float _maxFOVSerialized = 90f;
 
         private float _zoomSensitivity = 10f;
         private float _rotationSensitivity = 3f;
         private float _inertia = 10f;
-
         private float _targetX = 0f;
         private float _targetY = 30f;
-
         private float _currentX = 0f;
         private float _currentY = 30f;
-
         private float _targetFOV;
-        private float _currentFOV;
-
         private float _velocityX;
         private float _velocityY;
         private float _zoomVelocity;
@@ -50,7 +47,18 @@ namespace FlightReLive.Core.Cameras
 
         #region PROPERTIES
         public FuCameraWindow CameraWindow { internal set; get; }
+
         public static POVCameraManipulator Instance { get; private set; }
+
+        internal CameraSensorOverlay SensorOverlay { get; set; }
+
+        internal POVCameraZoomOverlay POVCameraZoomOverlay { get; set; }
+
+        internal float CurrentFOV { get; private set; }
+
+        internal float MinFOV { get; private set; }
+
+        internal float MaxFOV { get; private set; }
         #endregion
 
         #region UNITY METHODS
@@ -63,6 +71,9 @@ namespace FlightReLive.Core.Cameras
             }
 
             Instance = this;
+
+            MinFOV = _minFOVSerialized;
+            MaxFOV = _maxFOVSerialized;
         }
 
         private void Start()
@@ -70,8 +81,10 @@ namespace FlightReLive.Core.Cameras
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
             _inertia = SettingsManager.CurrentSettings.CameraInertia;
+            LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
+            LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
 
-            _targetFOV = _currentFOV = _targetCamera.fieldOfView;
+            _targetFOV = CurrentFOV = _targetCamera.fieldOfView;
         }
 
         private void Update()
@@ -94,6 +107,8 @@ namespace FlightReLive.Core.Cameras
             SettingsManager.OnCameraRotationSpeedChanged -= OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged -= OnCameraZoomSpeedChanged;
             SettingsManager.OnCameraInertiaChanged -= OnCameraInertiaChanged;
+            LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
+            LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
         #endregion
 
@@ -103,16 +118,17 @@ namespace FlightReLive.Core.Cameras
             if (CameraWindow.IsHoveredContent)
             {
                 float scrollValue = CameraWindow.Mouse.Wheel.y;
+
                 if (Mathf.Abs(scrollValue) > 0.01f)
                 {
                     float zoomDelta = scrollValue * _zoomSensitivity * ZOOM_PLATFORM_MULTIPLIER;
-                    _targetFOV = Mathf.Clamp(_targetFOV - zoomDelta, _minFOV, _maxFOV);
+                    _targetFOV = Mathf.Clamp(_targetFOV - zoomDelta, MinFOV, MaxFOV);
                 }
             }
 
             float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            _currentFOV = Mathf.SmoothDamp(_currentFOV, _targetFOV, ref _zoomVelocity, damping);
-            _targetCamera.fieldOfView = _currentFOV;
+            CurrentFOV = Mathf.SmoothDamp(CurrentFOV, _targetFOV, ref _zoomVelocity, damping);
+            _targetCamera.fieldOfView = CurrentFOV;
         }
 
         private void HandleLook()
@@ -157,6 +173,37 @@ namespace FlightReLive.Core.Cameras
         private void OnCameraInertiaChanged(float inertia)
         {
             _inertia = inertia;
+        }
+
+        private void OnFlightEndLoading()
+        {
+            if (SensorOverlay != null)
+            {
+                SensorOverlay.IsVisible = true;
+            }
+
+            if (POVCameraZoomOverlay != null)
+            {
+                POVCameraZoomOverlay.IsVisible = true;
+            }
+        }
+
+        private void OnFlightUnloaded()
+        {
+            if (SensorOverlay != null)
+            {
+                SensorOverlay.IsVisible = false;
+            }
+
+            if (POVCameraZoomOverlay != null)
+            {
+                POVCameraZoomOverlay.IsVisible = false;
+            }
+        }
+
+        internal void SetTargetFOV(float newFOV)
+        {
+            _targetFOV = Mathf.Clamp(newFOV, MinFOV, MaxFOV);
         }
         #endregion
     }

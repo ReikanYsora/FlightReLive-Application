@@ -5,16 +5,15 @@ using ImGuiNET;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace FlightReLive.Core.Cameras
+namespace FlightReLive.Core.UI.Overlays
 {
-    internal class CameraSensorView
+    internal class CameraSensorOverlay
     {
         #region CONSTANTS
         private const int SENSOR_OVERLAY_WIDTH = 260;
         private const int SENSOR_OVERLAY_HEIGHT = 40;
         private const int SENSOR_OVERLAY_GRID_PADDING = 10;
         private const float OVERLAY_RADIUS = 8f;
-        private const float OVERLAY_PADDING = 6f;
         #endregion
 
         #region ATTRIBUTES
@@ -35,10 +34,15 @@ namespace FlightReLive.Core.Cameras
         private Camera _camera;
         #endregion
 
+        #region PROPERTIES
+        internal bool IsVisible { get; set; }
+        #endregion
+
         #region CONSTRUCTOR
-        public CameraSensorView(Camera camera)
+        public CameraSensorOverlay(Camera camera)
         {
             _camera = camera;
+            IsVisible = false;
         }
         #endregion
 
@@ -110,7 +114,7 @@ namespace FlightReLive.Core.Cameras
         #region UI
         private void DisplaySensorOverlayUI()
         {
-            if (_camera == null)
+            if (!IsVisible)
             {
                 return;
             }
@@ -124,13 +128,14 @@ namespace FlightReLive.Core.Cameras
             uint bgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBgHovered));
 
             //Background rounded rect
-            Vector2 globalMin = new Vector2(cursorPos.x, cursorPos.y - (SENSOR_OVERLAY_GRID_PADDING / 2f));
-            Vector2 globalMax = new Vector2(cursorPos.x + avail.x, cursorPos.y + SENSOR_OVERLAY_HEIGHT - SENSOR_OVERLAY_GRID_PADDING);
+            Vector2 globalMin = new Vector2(cursorPos.x, cursorPos.y - (SENSOR_OVERLAY_GRID_PADDING * 0.5f * scale));
+            Vector2 globalMax = new Vector2(cursorPos.x + avail.x, cursorPos.y + (SENSOR_OVERLAY_HEIGHT * scale) - (SENSOR_OVERLAY_GRID_PADDING * scale));
             drawList.AddRectFilled(globalMin, globalMax, bgColor, OVERLAY_RADIUS * scale, ImDrawFlags.RoundCornersAll);
 
             //Grid + Combobox
-            using (FuGrid uiGrid = new FuGrid("SensorGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, SENSOR_OVERLAY_GRID_PADDING))
+            using (FuGrid uiGrid = new FuGrid("SensorGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.NoAutoLabels, 2, 2, SENSOR_OVERLAY_GRID_PADDING))
             {
+                uiGrid.FramedText("Camera sensor size");
                 uiGrid.SetNextElementToolTipWithLabel("Camera sensor type");
                 uiGrid.Combobox("Camera sensor size##SensorCombobox", DisplayNames[_currentSensor], () =>
                 {

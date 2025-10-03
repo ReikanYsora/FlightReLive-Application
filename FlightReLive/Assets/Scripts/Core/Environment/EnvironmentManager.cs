@@ -492,36 +492,20 @@ namespace FlightReLive.Core.Environment
                 return;
             }
 
-            float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
-            float elevationRad = Mathf.Deg2Rad * sun.Elevation;
-            float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
-
-            Vector3 dir = new Vector3(
-                Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad),
-                Mathf.Sin(elevationRad),
-                Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad)
-            );
-
-            _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
-
-            // Base curve (zenith ~3.5, horizon ~0.1)
-            float cappedFactor = Mathf.Pow(elevationFactor, 1.2f);
-            float intensity = Mathf.Lerp(0.1f, 3.5f, cappedFactor);
-
-            // Réduction générale en plein jour (au-dessus de 10°)
-            intensity *= 0.75f; // -25%
-
-            // Réduction supplémentaire si soleil proche de l’horizon
-            if (sun.Elevation < 10f)
+            if (_mainLight != null)
             {
-                float lowFade = Mathf.InverseLerp(0f, 10f, sun.Elevation);
-                // moitié à l’horizon, progressivement vers 100% à 10°
-                intensity *= Mathf.Lerp(0.5f, 1f, lowFade);
-            }
+                float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
+                float elevationRad = Mathf.Deg2Rad * sun.Elevation;
+                float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
 
-            _baseMainLightIntensity = intensity;
-            _mainLight.intensity = _baseMainLightIntensity;
-            RenderSettings.sun = _mainLight;
+
+                Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
+                _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
+                float cappedFactor = Mathf.Pow(elevationFactor, 1.2f);
+                _baseMainLightIntensity = Mathf.Lerp(0.2f, 3.5f, cappedFactor);
+                _mainLight.intensity = _baseMainLightIntensity;
+                RenderSettings.sun = _mainLight;
+            }
         }
 
         /// <summary>

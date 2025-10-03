@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.UI.Overlays;
 using FlightReLive.UI;
@@ -274,6 +275,25 @@ namespace FlightReLive.Core.Cameras
             Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
             Vector3 offset = rot * new Vector3(0, 0, -_distance);
             Vector3 desiredPosition = _freePosition + offset;
+
+            if (ProceduralTerrainManager.Instance != null)
+            {
+                Bounds terrainBounds = ProceduralTerrainManager.Instance.TerrainBounds;
+                float margin = 10f;
+                float maxAltitudeExtra = 500f;
+
+                desiredPosition.x = Mathf.Clamp(desiredPosition.x,
+                    terrainBounds.min.x + margin,
+                    terrainBounds.max.x - margin);
+
+                desiredPosition.y = Mathf.Clamp(desiredPosition.y,
+                    terrainBounds.min.y + 5f,
+                    terrainBounds.max.y + maxAltitudeExtra);
+
+                desiredPosition.z = Mathf.Clamp(desiredPosition.z,
+                    terrainBounds.min.z + margin,
+                    terrainBounds.max.z - margin);
+            }
 
             _targetCamera.transform.position = desiredPosition;
             _targetCamera.transform.rotation = rot;

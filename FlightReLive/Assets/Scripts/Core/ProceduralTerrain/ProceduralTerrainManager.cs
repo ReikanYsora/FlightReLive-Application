@@ -20,10 +20,13 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         [Header("Material Settings")]
         [SerializeField] private Material _hdrpTerrainMaterial;
+        private Bounds _terrainBounds;
         #endregion
 
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
+
+        internal Bounds TerrainBounds => _terrainBounds;
         #endregion
 
         #region UNITY METHODS
@@ -236,6 +239,39 @@ namespace FlightReLive.Core.ProceduralTerrain
             {
                 tile.SatelliteTexture = null;
             }
+
+            //Calculate terrain global bounding box
+            float minXWorld = float.MaxValue, maxXWorld = float.MinValue;
+            float minYWorld = float.MaxValue, maxYWorld = float.MinValue;
+            float minZWorld = float.MaxValue, maxZWorld = float.MinValue;
+
+            foreach (Terrain terrain in _terrains)
+            {
+                Vector3 pos = terrain.transform.position;
+                Vector3 size = terrain.terrainData.size;
+
+                minXWorld = Mathf.Min(minXWorld, pos.x);
+                minYWorld = Mathf.Min(minYWorld, pos.y);
+                minZWorld = Mathf.Min(minZWorld, pos.z);
+
+                maxXWorld = Mathf.Max(maxXWorld, pos.x + size.x);
+                maxYWorld = Mathf.Max(maxYWorld, pos.y + size.y);
+                maxZWorld = Mathf.Max(maxZWorld, pos.z + size.z);
+            }
+
+            Vector3 center = new Vector3(
+                (minXWorld + maxXWorld) * 0.5f,
+                (minYWorld + maxYWorld) * 0.5f,
+                (minZWorld + maxZWorld) * 0.5f
+            );
+
+            Vector3 sizeBounds = new Vector3(
+                (maxXWorld - minXWorld),
+                (maxYWorld - minYWorld),
+                (maxZWorld - minZWorld)
+            );
+
+            _terrainBounds = new Bounds(center, sizeBounds);
         }
 
         internal async Task Unload()

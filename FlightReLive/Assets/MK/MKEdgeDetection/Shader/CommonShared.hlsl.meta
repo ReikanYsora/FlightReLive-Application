@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ee0224b955cf1e148acc346a3200aae0
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 284760
+  packageName: MK Edge Detection - Screen Space Lines Shader
+  packageVersion: 1.3.0C
+  assetPath: Assets/MK/MKEdgeDetection/Shader/CommonShared.hlsl
+  uploadId: 760505

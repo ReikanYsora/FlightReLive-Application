@@ -1,0 +1,24 @@
+{
+    "name": "MKEdgeDetectionInstallWizard",
+    "rootNamespace": "",
+    "references": [
+        "GUID:dfc0ddded8febcc44b7627f30a830ebb"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "0",
+            "define": "MK_URP_COMPONENT"
+        }
+    ],
+    "noEngineReferences": false
+}

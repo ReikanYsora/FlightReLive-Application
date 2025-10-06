@@ -1,5 +1,4 @@
 using System;
-using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Settings
@@ -8,10 +7,6 @@ namespace FlightReLive.Core.Settings
     {
         #region ATTRIBUTES
         public bool DisplayWizard;
-        public UpscalerName UpscalerName;
-        public UpscalerQuality UpscalerQuality;
-        public bool UpscalerSharpeningEnabled;
-        public float UpscalerSharpeness;
         public int ApplicationTargetFPS;
         public int ApplicationIdleFPS;
         public bool DontAskWelcomeVersion;
@@ -33,17 +28,11 @@ namespace FlightReLive.Core.Settings
         public bool BuildingVisibility;
         public Color BuildingColor;
         public float BuildingAO;
-        public bool ContactShadowsEnabled;
-        public float ContactShadowsMinDistance;
-        public float ContactShadowsMaxDistance;
-        public float ContactShadowsOpacity;
         public float VignettingIntensity;
         public float ContrastOffset;
-        public float ExposureOffset;
         public float SaturationOffset;
-        public float IndirectLightningOffset;
+        public bool OutlineEnabled;
         public string CurrentVersion;
-        public CloudStyle CloudStyle;
         #endregion
     }
 }

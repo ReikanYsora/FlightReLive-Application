@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 484cf1710e0835f499a5b5bbd0ff9d29, type: 3}
+  m_Name: BuildPreProcessorData
+  m_EditorClassIdentifier: 
+  inputDataDepth: 1
+  inputDataNormal: 1
+  inputDataSceneColor: 1
+  fade: 1
+  enhanceDetails: 1
+  precisionHigh: 1
+  precisionMedium: 1
+  precisionLow: 1
+  kernelSobel_Scharr_Prewitt: 1
+  kernelRobertsCrossDiagonal: 1
+  kernelRobertsCrossAxis: 1
+  kernelHalfCrossHorizontal: 1
+  kernelHalfCrossVertical: 1
+  visualizeEdges: 1

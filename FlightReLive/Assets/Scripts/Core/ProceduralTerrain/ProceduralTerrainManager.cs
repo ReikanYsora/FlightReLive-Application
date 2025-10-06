@@ -17,9 +17,6 @@ namespace FlightReLive.Core.ProceduralTerrain
     {
         #region ATTRIBUTES
         private List<Terrain> _terrains;
-
-        [Header("Material Settings")]
-        [SerializeField] private Material _hdrpTerrainMaterial;
         private Bounds _terrainBounds;
         #endregion
 
@@ -183,7 +180,6 @@ namespace FlightReLive.Core.ProceduralTerrain
                 terrainGO.transform.SetParent(transform, false);
 
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
-                terrain.materialTemplate = _hdrpTerrainMaterial;
                 terrain.drawHeightmap = true;
                 terrain.allowAutoConnect = true;
                 terrain.drawTreesAndFoliage = false;

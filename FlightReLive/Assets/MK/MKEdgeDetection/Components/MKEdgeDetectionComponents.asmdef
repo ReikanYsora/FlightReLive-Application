@@ -1,0 +1,43 @@
+{
+    "name": "MKEdgeDetectionComponents",
+    "rootNamespace": "",
+    "references": [
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:3eae0364be2026648bf74846acb8a731",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:c579267770062bf448e75eb160330b7f",
+        "GUID:c10c5a6714ba6de4a9d23fab2e840521",
+        "GUID:d2ab2dbbacba87c45bad39ea902dc045",
+        "GUID:d60799ab2a985554ea1a39cd38695018",
+        "GUID:a35efad8797223d499f8c68b1f545dbc",
+        "GUID:457756d89b35d2941b3e7b37b4ece6f1",
+        "GUID:78bd2ddd6e276394a9615c203e574844",
+        "GUID:dfc0ddded8febcc44b7627f30a830ebb",
+        "GUID:8e4f82417646781469160fd044ca117c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "0",
+            "define": "MK_URP"
+        },
+        {
+            "name": "com.unity.postprocessing",
+            "expression": "0",
+            "define": "MK_POST_PROCESSING_STACK_V2"
+        },
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "0",
+            "define": "MK_HDRP"
+        }
+    ],
+    "noEngineReferences": false
+}

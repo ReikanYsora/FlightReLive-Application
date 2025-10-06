@@ -2,13 +2,12 @@
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
-using NUnit.Compatibility;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering.Universal;
+using MKEdgeDetection = MK.EdgeDetection.UniversalVolumeComponents.MKEdgeDetection;
 
 namespace FlightReLive.Core.Environment
 {
@@ -23,29 +22,20 @@ namespace FlightReLive.Core.Environment
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
         [SerializeField] private LensFlareComponentSRP _lensFlare;
+        [SerializeField] private VolumeProfile _volumeProfile;
+        [SerializeField] private MKEdgeDetection _edgeDetection;
 
-        //HDRP volume + overrides
-        private Volume _globalVolume;
-        private VolumeProfile _globalVolumeProfile;
-        private GameObject _volumeInstance;
+        //Sun
+        private Gradient _sunColorGradient;
+        private Gradient _ambientGradient;
 
-        private Exposure _exposure;
-        private VisualEnvironment _visualEnvironment;
-        private PhysicallyBasedSky _sky;
-        private Fog _fog;
-        private VolumetricClouds _clouds;
-        private ContactShadows _contactShadows;
-        private ColorAdjustments _colorAdjustments;
+        //Post-processing elements
         private Vignette _vignette;
-        private Bloom _bloom;
-        private IndirectLightingController _indirectLighting;
-        private DepthOfField _dof;
+        private ColorAdjustments _colorAdjustments;
 
         //Baseline values
-        private float _baseExposureComp;
         private float _baseContrast;
         private float _baseSaturation;
-        private float _baseIndirect;
         private float _baseMainLightIntensity;
         private float _baseLensFlareIntensity;
         private float _baseLensFlareScale;
@@ -66,48 +56,51 @@ namespace FlightReLive.Core.Environment
             }
             Instance = this;
 
-            if (_mainLight != null)
+            _baseContrast = 0.0f;
+            _baseSaturation = 0.0f;
+
+            if (_volumeProfile != null && _volumeProfile.TryGet(out Vignette vignette))
             {
-                HDAdditionalLightData hdLight = _mainLight.GetComponent<HDAdditionalLightData>();
-                if (hdLight != null)
-                {
-                    hdLight.volumetricDimmer = 1.0f;
-                }
+                _vignette = vignette;
+                _vignette.active = false;
             }
+
+            if (_volumeProfile != null && _volumeProfile.TryGet(out ColorAdjustments colorAdjusments))
+            {
+                _colorAdjustments = colorAdjusments;
+                _colorAdjustments.active = false;
+            }
+
+            if (_volumeProfile != null && _volumeProfile.TryGet(out MKEdgeDetection edgeDetection))
+            {
+                _edgeDetection = edgeDetection;
+                _edgeDetection.active = false;
+            }
+
+            //Initialize gradient
+            InitializeSunGradients();
         }
 
         private void Start()
         {
-            SettingsManager.OnExposureOffsetChanged += OnExposureOffsetChanged;
             SettingsManager.OnContrastOffsetChanged += OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged += OnSaturationOffsetChanged;
-            SettingsManager.OnIndirectLightningOffsetChanged += OnIndirectOffsetChanged;
-            SettingsManager.OnContactShadowsEnabledChanged += OnContactShadowsEnabledChanged;
-            SettingsManager.OnContactShadowsMinDistanceChanged += OnContactShadowsMinDistanceChanged;
-            SettingsManager.OnContactShadowsMaxDistanceChanged += OnContactShadowsMaxDistanceChanged;
-            SettingsManager.OnContactShadowsOpacityChanged += OnContactShadowsOpacityChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
-            SettingsManager.OnCloudStyleChanged += OnCloudStyleChanged;
+            SettingsManager.OnOutlineEnabledChanged += OnOutlineEnabledChanged;
 
             UninitializedVolumeProfile();
         }
 
         private void OnDestroy()
         {
-            SettingsManager.OnExposureOffsetChanged -= OnExposureOffsetChanged;
             SettingsManager.OnContrastOffsetChanged -= OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged -= OnSaturationOffsetChanged;
-            SettingsManager.OnIndirectLightningOffsetChanged -= OnIndirectOffsetChanged;
-            SettingsManager.OnContactShadowsEnabledChanged -= OnContactShadowsEnabledChanged;
-            SettingsManager.OnContactShadowsMinDistanceChanged -= OnContactShadowsMinDistanceChanged;
-            SettingsManager.OnContactShadowsMaxDistanceChanged -= OnContactShadowsMaxDistanceChanged;
-            SettingsManager.OnContactShadowsOpacityChanged -= OnContactShadowsOpacityChanged;
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
-            SettingsManager.OnCloudStyleChanged -= OnCloudStyleChanged;
+            SettingsManager.OnOutlineEnabledChanged -= OnOutlineEnabledChanged;
         }
         #endregion
 
-        #region METHODS : Public API
+        #region METHODS
         /// <summary>
         /// Configure sky/fog/clouds, sun direction and baseline tonemapping from flight date/location.
         /// Resets user offsets so each flight starts fresh.
@@ -126,6 +119,7 @@ namespace FlightReLive.Core.Environment
                 DateTime flightUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
 
                 ConfigureSceneRendering(flightUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+                UpdateLighting(flightUtc, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
         }
 
@@ -139,9 +133,7 @@ namespace FlightReLive.Core.Environment
                 UninitializedVolumeProfile();
             });
         }
-        #endregion
 
-        #region METHODS : Core
         /// <summary>
         /// Build baseline from sun then apply user offsets.
         /// </summary>
@@ -153,36 +145,160 @@ namespace FlightReLive.Core.Environment
 
             //Apply user customs offsets
             ApplyVignettingIntensity();
-            ApplyExposure();
             ApplyContrast();
             ApplySaturation();
-            ApplyIndirectLightning();
-            ApplyContactShadowsState();
-            ApplyContactShadowsDistances();
-            ApplyContactShadowsOpacity();
-            ApplyCloudStyle();
-
+            ApplyOutline();
         }
 
         /// <summary>
-        /// Sun spherical coordinates for HDRP lighting decisions.
+        /// Computes precise sun position (azimuth/elevation) from UTC date, latitude and longitude using NOAA algorithm.
         /// </summary>
         public static SunPosition CalculateSunPosition(DateTime utcTime, double latitude, double longitude)
         {
+            //Convert to Julian Day
             double julianDay = utcTime.ToOADate() + 2415018.5;
-            double solarDeclination = 23.44 * Math.Cos((360.0 / 365.25) * (julianDay - 172.0) * Math.PI / 180.0);
-            double solarTime = utcTime.TimeOfDay.TotalHours + (longitude / 15.0);
-            double hourAngle = (solarTime - 12.0) * 15.0;
-            double latRad = latitude * Math.PI / 180.0;
-            double declRad = solarDeclination * Math.PI / 180.0;
-            double haRad = hourAngle * Math.PI / 180.0;
-            double elevationRad = Math.Asin(Math.Sin(latRad) * Math.Sin(declRad) + Math.Cos(latRad) * Math.Cos(declRad) * Math.Cos(haRad));
-            float elevation = (float)(elevationRad * 180.0 / Math.PI);
-            double azimuthRad = Math.Atan2(-Math.Sin(haRad), Math.Tan(declRad) * Math.Cos(latRad) - Math.Sin(latRad) * Math.Cos(haRad));
-            double azimuthDeg = (azimuthRad * 180.0 / Math.PI + 360.0) % 360.0;
-            float unityAzimuth = (float)((360.0 - azimuthDeg) % 360.0);
+            double julianCentury = (julianDay - 2451545.0) / 36525.0;
 
-            return new SunPosition { Elevation = elevation, Azimuth = unityAzimuth, AzimuthPhysical = (float)azimuthDeg };
+            //Mean longitude, anomaly, eccentricity
+            double geomMeanLongSun = (280.46646 + julianCentury * (36000.76983 + julianCentury * 0.0003032)) % 360.0;
+            double geomMeanAnomSun = 357.52911 + julianCentury * (35999.05029 - 0.0001537 * julianCentury);
+            double eccentEarthOrbit = 0.016708634 - julianCentury * (0.000042037 + 0.0000001267 * julianCentury);
+
+            //Sun equation of center
+            double sunEqOfCenter = Math.Sin(Mathf.Deg2Rad * (float)geomMeanAnomSun) * (1.914602 - julianCentury * (0.004817 + 0.000014 * julianCentury))
+                                 + Math.Sin(Mathf.Deg2Rad * (float)(2 * geomMeanAnomSun)) * (0.019993 - 0.000101 * julianCentury)
+                                 + Math.Sin(Mathf.Deg2Rad * (float)(3 * geomMeanAnomSun)) * 0.000289;
+
+            //True longitude
+            double sunTrueLong = geomMeanLongSun + sunEqOfCenter;
+
+            //Apparent longitude (correction nutation + aberration)
+            double omega = 125.04 - 1934.136 * julianCentury;
+            double sunAppLong = sunTrueLong - 0.00569 - 0.00478 * Math.Sin(Mathf.Deg2Rad * (float)omega);
+
+            //Mean obliquity of ecliptic
+            double meanObliqEcliptic = 23.0 + (26.0 + ((21.448 - julianCentury * (46.815 + julianCentury * (0.00059 - julianCentury * 0.001813)))) / 60.0) / 60.0;
+            double obliqCorr = meanObliqEcliptic + 0.00256 * Math.Cos(Mathf.Deg2Rad * (float)omega);
+
+            //Declination
+            double declination = Math.Asin(Math.Sin(Mathf.Deg2Rad * (float)obliqCorr) * Math.Sin(Mathf.Deg2Rad * (float)sunAppLong));
+
+            //Equation of time (in minutes)
+            double y = Math.Tan(Mathf.Deg2Rad * (float)(obliqCorr / 2.0)) * Math.Tan(Mathf.Deg2Rad * (float)(obliqCorr / 2.0));
+            double eqTime = 4.0 * (y * Math.Sin(2.0 * Mathf.Deg2Rad * (float)geomMeanLongSun)
+                - 2.0 * eccentEarthOrbit * Math.Sin(Mathf.Deg2Rad * (float)geomMeanAnomSun)
+                + 4.0 * eccentEarthOrbit * y * Math.Sin(Mathf.Deg2Rad * (float)geomMeanAnomSun) * Math.Cos(2.0 * Mathf.Deg2Rad * (float)geomMeanLongSun)
+                - 0.5 * y * y * Math.Sin(4.0 * Mathf.Deg2Rad * (float)geomMeanLongSun)
+                - 1.25 * eccentEarthOrbit * eccentEarthOrbit * Math.Sin(2.0 * Mathf.Deg2Rad * (float)geomMeanAnomSun));
+
+            //True solar time (degrees)
+            double timeOffset = eqTime + 4.0 * longitude - 0.0; // UTC offset already zero
+            double trueSolarTime = (utcTime.TimeOfDay.TotalMinutes + timeOffset) % 1440.0;
+
+            //Hour angle
+            double hourAngle = (trueSolarTime / 4.0 < 0) ? trueSolarTime / 4.0 + 180.0 : trueSolarTime / 4.0 - 180.0;
+
+            //Elevation
+            double haRad = Mathf.Deg2Rad * (float)hourAngle;
+            double latRad = Mathf.Deg2Rad * (float)latitude;
+            double declRad = declination;
+            double elevationRad = Math.Asin(Math.Sin(latRad) * Math.Sin(declRad) + Math.Cos(latRad) * Math.Cos(declRad) * Math.Cos(haRad));
+
+            double elevation = elevationRad * Mathf.Rad2Deg;
+
+            //Azimuth
+            double azimuth = (Math.Atan2(Math.Sin(haRad), Math.Cos(haRad) * Math.Sin(latRad) - Math.Tan(declRad) * Math.Cos(latRad)) * Mathf.Rad2Deg + 180.0) % 360.0;
+            float unityAzimuth = (float)((360.0 - azimuth) % 360.0);
+
+            float factor = Mathf.Clamp01((float)((elevation + 6.0) / 96.0)); // -6°=twilight start, 90°=zenith
+
+            return new SunPosition
+            {
+                Elevation = (float)elevation,
+                Azimuth = unityAzimuth,
+                AzimuthPhysical = (float)azimuth,
+                DistanceFactor = factor
+            };
+        }
+
+        private void InitializeSunGradients()
+        {
+            //Sun color
+            _sunColorGradient = new Gradient();
+            _sunColorGradient.SetKeys(new GradientColorKey[] 
+                {
+                    new GradientColorKey(new Color(0.05f, 0.1f, 0.3f), 0f),
+                    new GradientColorKey(new Color(1.0f, 0.35f, 0.1f), 0.25f),
+                    new GradientColorKey(new Color(1.0f, 0.95f, 0.8f), 0.6f),
+                    new GradientColorKey(new Color(1.0f, 0.9f, 0.7f), 1f),
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 1f)
+                });
+
+            //Sun intensity
+            _ambientGradient = new Gradient();
+            _ambientGradient.SetKeys(
+                new GradientColorKey[]
+                {
+                    new GradientColorKey(new Color(0.01f, 0.02f, 0.05f), 0f),
+                    new GradientColorKey(new Color(0.2f, 0.25f, 0.35f), 0.25f),
+                    new GradientColorKey(new Color(0.5f, 0.6f, 0.7f), 0.6f),
+                    new GradientColorKey(new Color(0.8f, 0.85f, 0.9f), 1f),
+                },
+                new GradientAlphaKey[]
+                {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 1f)
+                });
+        }
+
+        private void UpdateLighting(DateTime currentDateUTC, double latitude, double longitude)
+        {
+            SunPosition sunPosition = CalculateSunPosition(currentDateUTC, latitude, longitude);
+
+            OrientSun(sunPosition);
+            UpdateLightingColors(sunPosition);
+        }
+
+        private void OrientSun(SunPosition sunPosition)
+        {
+            if (_mainLight == null)
+            {
+                return;
+            }
+
+            float azimuthRad = Mathf.Deg2Rad * sunPosition.AzimuthPhysical;
+            float elevationRad = Mathf.Deg2Rad * sunPosition.Elevation;
+
+            Vector3 dir = new Vector3(
+                Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad),
+                Mathf.Sin(elevationRad),
+                Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad)
+            );
+
+            _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
+
+            float intensity = Mathf.Lerp(0.02f, 3.5f, Mathf.SmoothStep(0f, 1f, sunPosition.DistanceFactor));
+            _mainLight.intensity = intensity;
+        }
+
+        private void UpdateLightingColors(SunPosition sunPosition)
+        {
+            float f = sunPosition.DistanceFactor;
+
+            _mainLight.color = _sunColorGradient.Evaluate(f);
+
+            RenderSettings.ambientLight = _ambientGradient.Evaluate(f);
+            if (RenderSettings.skybox != null)
+            {
+                RenderSettings.skybox.SetColor("_Tint", _ambientGradient.Evaluate(f));
+                RenderSettings.skybox.SetFloat("_Exposure", Mathf.Lerp(0.5f, 1.2f, f));
+            }
+
+            DynamicGI.UpdateEnvironment();
         }
 
         /// <summary>
@@ -197,282 +313,12 @@ namespace FlightReLive.Core.Environment
             //Processing elevation factor : 0 - horizon/night, 1 - zenith
             float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
 
-            //Create volume if needed
-            if (_globalVolume == null)
-            {
-                _volumeInstance = new GameObject("Global Environment Volume (HDRP)");
-                _volumeInstance.transform.SetParent(transform);
-                _volumeInstance.layer = 0;
-                _globalVolume = _volumeInstance.AddComponent<Volume>();
-                _globalVolume.isGlobal = true;
-                _globalVolume.priority = 0f;
-                _globalVolumeProfile = ScriptableObject.CreateInstance<VolumeProfile>();
-                _globalVolume.sharedProfile = _globalVolumeProfile;
-                _exposure = _globalVolumeProfile.Add<Exposure>(true);
-                _visualEnvironment = _globalVolumeProfile.Add<VisualEnvironment>(true);
-                _sky = _globalVolumeProfile.Add<PhysicallyBasedSky>(true);
-                _fog = _globalVolumeProfile.Add<Fog>(true);
-                _clouds = _globalVolumeProfile.Add<VolumetricClouds>(true);
-                _contactShadows = _globalVolumeProfile.Add<ContactShadows>(true);
-                _colorAdjustments = _globalVolumeProfile.Add<ColorAdjustments>(true);
-                _vignette = _globalVolumeProfile.Add<Vignette>(true);
-                _bloom = _globalVolumeProfile.Add<Bloom>(true);
-                _indirectLighting = _globalVolumeProfile.Add<IndirectLightingController>(true);
-                _dof = _globalVolumeProfile.Add<DepthOfField>(true);
-
-                // Cameras render sky (not solid color) in ReLive/POV
-                if (_reliveCamera != null)
-                {
-                    HDAdditionalCameraData hdCam = _reliveCamera.GetComponent<HDAdditionalCameraData>();
-
-                    if (hdCam != null)
-                    { 
-                        hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Sky;
-                    }
-                }
-                if (_povCamera != null)
-                {
-                    HDAdditionalCameraData hdCam = _povCamera.GetComponent<HDAdditionalCameraData>();
-
-                    if (hdCam != null) 
-                    { 
-                        hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Sky;
-                    }
-                }
-            }
-
-            //Exposure (automatic)
-            if (_exposure != null)
-            {
-                _exposure.mode.Override(ExposureMode.Fixed);
-                _exposure.fixedExposure.overrideState = false;
-
-                _baseExposureComp = Mathf.Lerp(4f, 0f, Mathf.Pow(elevationFactor, 1.1f));
-
-                float middayDip = Mathf.Exp(-Mathf.Pow((elevationFactor - 0.8f) * 4f, 2f));
-                _baseExposureComp -= 0.15f * middayDip;
-
-                //Sunset boost (+1 when elevation < 20°)
-                float sunsetBoost = Mathf.SmoothStep(1f, 0f, elevationFactor / 0.2f);
-                _baseExposureComp += 1.0f * sunsetBoost;
-
-                //Smooth mMidday clamp
-                if (hour >= 12.5f && hour <= 15.5f)
-                {
-                    float middayFactor = 1f - Mathf.Clamp01(Mathf.Abs(hour - 14f) / 1.5f);
-                    _baseExposureComp -= 0.4f * middayFactor;
-                }
-
-                //Base boost (more "HDR" type rendering)
-                _baseExposureComp += 0.5f;
-
-                _exposure.compensation.Override(_baseExposureComp);
-            }
-
-            //Visual Environment & wind flavor (subtle atmosphere variety)
-            if (_visualEnvironment != null)
-            {
-                float windSpeed = hour >= 18 || hour < 6 ? 25f : 8f;
-
-                _visualEnvironment.skyType.Override((int)SkyType.PhysicallyBased);
-                _visualEnvironment.windOrientation.Override(29);
-                _visualEnvironment.windSpeed.Override(windSpeed);
-                _visualEnvironment.skyAmbientMode.Override(SkyAmbientMode.Dynamic);
-            }
-
-            //Sky (Physically Based)
-            if (_sky != null)
-            {
-                _sky.active = true;
-                _sky.type.Override(PhysicallyBasedSkyModel.EarthAdvanced);
-                _sky.atmosphericScattering.Override(true);
-                _sky.renderingMode.Override(PhysicallyBasedSky.RenderingMode.Default);
-                _sky.planetRotation.Override(Vector3.zero);
-                _sky.aerosolTint.Override(Color.white);
-                _sky.aerosolAnisotropy.Override(0.8f);
-                _sky.aerosolMaximumAltitude.Override(8000f);
-                _sky.aerosolDensity.Override(Mathf.Lerp(0.012f, 0.02f, elevationFactor));
-                _sky.ozoneDensityDimmer.Override(Mathf.Lerp(0.9f, 1.15f, elevationFactor));
-                _sky.colorSaturation.Override(1f);
-                _sky.alphaSaturation.Override(1f);
-                _sky.alphaMultiplier.Override(1f);
-                _sky.horizonTint.Override(Color.white);
-                _sky.horizonZenithShift.Override(0f);
-                _sky.updateMode.Override(EnvironmentUpdateMode.Realtime);
-                _sky.updatePeriod.Override(0f);
-                _sky.skyIntensityMode.Override(SkyIntensityMode.Exposure);
-                _sky.exposure.Override(0.5f);
-                _sky.includeSunInBaking.overrideState = false;
-            }
-
-            //Fog
-            if (_fog != null)
-            {
-                _fog.active = true;
-                _fog.enabled.Override(true);
-                _fog.enableVolumetricFog.Override(true);
-                _fog.meanFreePath.Override(1000f);
-                _fog.baseHeight.overrideState = false;
-                _fog.maximumHeight.Override(500f);
-                _fog.maxFogDistance.overrideState = false;
-                _fog.colorMode.Override(FogColorMode.SkyColor);
-                _fog.tint.overrideState = false;
-                _fog.albedo.overrideState = false;
-                _fog.globalLightProbeDimmer.Override(1f);
-                _fog.volumetricFogBudget = 64f;
-                _fog.denoisingMode.Override(FogDenoisingMode.Gaussian);
-            }
-
-            //Clouds: light/quality preset
-            if (_clouds != null)
-            {
-                VolumetricClouds.CloudPresets cloudPreset;
-
-                switch (SettingsManager.CurrentSettings.CloudStyle)
-                {
-                    case CloudStyle.Sparse:
-                        cloudPreset = VolumetricClouds.CloudPresets.Sparse;
-                        break;
-                    default:
-                    case CloudStyle.Cloudy:
-                        cloudPreset = VolumetricClouds.CloudPresets.Cloudy;
-                        break;
-                    case CloudStyle.Overcast:
-                        cloudPreset = VolumetricClouds.CloudPresets.Overcast;
-                        break;
-                    case CloudStyle.Stormy:
-                        cloudPreset = VolumetricClouds.CloudPresets.Stormy;
-                        break;
-                }
-
-                _clouds.active = true;
-                _clouds.enable.Override(true);
-                _clouds.cloudControl.Override(VolumetricClouds.CloudControl.Simple);
-                _clouds.cloudSimpleMode.Override(VolumetricClouds.CloudSimpleMode.Quality);
-                _clouds.cloudPreset = cloudPreset;
-                _clouds.shadows.Override(true);
-                _clouds.shapeFactor.Override(0.95f);
-                _clouds.shapeScale.Override(5f);
-                _clouds.erosionScale.Override(107f);
-                _clouds.bottomAltitude.Override(3000f);
-                _clouds.altitudeRange.Override(1000f);
-                _clouds.ambientLightProbeDimmer.Override(1f);
-                _clouds.sunLightDimmer.Override(1f);
-                _clouds.scatteringTint.overrideState = false;
-            }
-
-            //Contact shadows
-            if (_contactShadows != null)
-            {
-                bool enabled = SettingsManager.CurrentSettings.ContactShadowsEnabled;
-                float minDist = SettingsManager.CurrentSettings.ContactShadowsMinDistance;
-                float maxDist = SettingsManager.CurrentSettings.ContactShadowsMaxDistance;
-                float opacity = SettingsManager.CurrentSettings.ContactShadowsOpacity;
-
-                _contactShadows.enable.overrideState = enabled;
-                _contactShadows.active = enabled;
-                _contactShadows.enable.Override(enabled);
-                _contactShadows.length.Override(0.2f);
-                _contactShadows.distanceScaleFactor.Override(0.65f);
-                _contactShadows.minDistance.Override(minDist);
-                _contactShadows.maxDistance.Override(maxDist);
-                _contactShadows.fadeInDistance.overrideState = false;
-                _contactShadows.fadeDistance.overrideState = false;
-                _contactShadows.opacity.Override(opacity);
-                _contactShadows.rayBias.overrideState = false;
-                _contactShadows.thicknessScale.overrideState = false;
-                _contactShadows.sampleCount = 10;
-            }
-
-            //Color adjustments baseline
-            if (_colorAdjustments != null)
-            { 
-                _baseContrast = 50f;
-                float middayFade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.7f, 0.9f, elevationFactor));
-                _baseSaturation = Mathf.Lerp(20f, 15f, middayFade);
-                _colorAdjustments.contrast.Override(_baseContrast);
-                _colorAdjustments.saturation.Override(_baseSaturation);
-
-                //We intentionally avoid postExposure here to keep exposure pipeline coherent
-                _colorAdjustments.colorFilter.overrideState = false;
-                _colorAdjustments.hueShift.overrideState = false;
-            }
-
-            //Vignette as an artistic control (absolute)
-            if (_vignette != null)
-            {
-                _vignette.active = true;
-                _vignette.mode.Override(VignetteMode.Procedural);
-                _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
-                _vignette.color.overrideState = false;
-                _vignette.center.overrideState = false;
-                _vignette.smoothness.overrideState = false;
-                _vignette.roundness.overrideState = false;
-                _vignette.rounded.overrideState = false;
-            }
-
-            //Bloom for highlights
-            if (_bloom != null)
-            {
-                _bloom.threshold.Override(0.15f);
-                _bloom.intensity.Override(0.1f);
-                _bloom.tint.overrideState = false;
-                _bloom.scatter.overrideState = false;
-                _bloom.dirtIntensity.overrideState = false;
-                _bloom.dirtTexture.overrideState = false;
-            }
-
-            //Indirect lightning
-            if (_indirectLighting != null)
-            {
-                _baseIndirect = Mathf.Lerp(4.5f, 1.2f, elevationFactor);
-
-                if (elevationFactor > 0.7f)
-                {
-                    float middayFade = Mathf.InverseLerp(0.7f, 1f, elevationFactor);
-                    _baseIndirect *= Mathf.Lerp(1f, 0.8f, middayFade);
-                }
-
-                //Sunset boost (+0.5 when elevation < 20°)
-                float sunsetBoostIndirect = Mathf.SmoothStep(0.5f, 0f, elevationFactor / 0.2f);
-                _baseIndirect += sunsetBoostIndirect;
-
-                //Smooth midday clamp
-                if (hour >= 12.5f && hour <= 15.5f)
-                {
-                    float middayFactor = 1f - Mathf.Clamp01(Mathf.Abs(hour - 14f) / 1.5f);
-                    _baseIndirect -= 0.3f * middayFactor;
-                }
-
-                _indirectLighting.indirectDiffuseLightingMultiplier.Override(_baseIndirect);
-            }
-
-            //Deaph of field
-            if (_dof != null)
-            {
-                _dof.focusMode.Override(DepthOfFieldMode.Manual);
-                _dof.nearFocusStart.overrideState = false;
-                _dof.nearFocusEnd.overrideState = false;
-                _dof.farFocusStart.Override(500f);
-                _dof.farFocusEnd.Override(5000f);
-            }
-
-            _globalVolume.enabled = true;
-
-            HDAdditionalLightData hdLight = _mainLight.GetComponent<HDAdditionalLightData>();
-
-            if (hdLight != null)
-            {
-                hdLight.angularDiameter = 0.53f;
-            }
-
             //Lens flare baseline from elevation
             if (_lensFlare != null)
             {
                 _baseLensFlareIntensity = Mathf.Lerp(2f, 3f, Mathf.Pow(elevationFactor, 3f));
                 _baseLensFlareScale = Mathf.Lerp(0.5f, 1.5f, Mathf.Pow(elevationFactor, 0.3f));
                 _baseLensFlareOccRadius = Mathf.Lerp(0.3f, 1f, elevationFactor);
-
                 _lensFlare.intensity = _baseLensFlareIntensity;
                 _lensFlare.scale = _baseLensFlareScale;
                 _lensFlare.occlusionRadius = _baseLensFlareOccRadius;
@@ -481,6 +327,7 @@ namespace FlightReLive.Core.Environment
                 _lensFlare.enabled = true;
             }
         }
+
 
         /// <summary>
         /// Orient the sun and compute baseline intensity from elevation.
@@ -498,7 +345,6 @@ namespace FlightReLive.Core.Environment
                 float elevationRad = Mathf.Deg2Rad * sun.Elevation;
                 float elevationFactor = Mathf.Clamp01(sun.Elevation / 90f);
 
-
                 Vector3 dir = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
                 _mainLight.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
                 float cappedFactor = Mathf.Pow(elevationFactor, 1.2f);
@@ -509,151 +355,52 @@ namespace FlightReLive.Core.Environment
         }
 
         /// <summary>
-        /// Apply vignetting intensity from user settings
+        /// Apply vignetting intensity from user settings (URP)
         /// </summary>
         private void ApplyVignettingIntensity()
         {
-            if (_globalVolume == null || _globalVolumeProfile == null || _vignette == null)
+            if (_vignette != null)
             {
-                return;
-            }
-
-            _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
-            _vignette.active = true;
-        }
-
-        /// <summary>
-        /// Apply contact shadows state from user settings
-        /// </summary>
-        private void ApplyContactShadowsState()
-        {
-            if (_globalVolume == null || _globalVolumeProfile == null || _contactShadows == null)
-            {
-                return;
-            }
-
-            bool state = SettingsManager.CurrentSettings.ContactShadowsEnabled;
-            _contactShadows.enable.overrideState = state;
-            _contactShadows.active = state;
-            _contactShadows.enable.Override(state);
-        }
-
-        /// <summary>
-        /// Apply contact shadows distances (min / max) from user settings
-        /// </summary>
-        private void ApplyContactShadowsDistances()
-        {
-            if (_globalVolume == null || _globalVolumeProfile == null || _contactShadows == null)
-            {
-                return;
-            }
-
-            if (_contactShadows != null)
-            {
-                _contactShadows.minDistance.Override(SettingsManager.CurrentSettings.ContactShadowsMinDistance);
-                _contactShadows.maxDistance.Override(SettingsManager.CurrentSettings.ContactShadowsMaxDistance);
+                _vignette.active = true;
+                _vignette.intensity.value = SettingsManager.CurrentSettings.VignettingIntensity;
             }
         }
 
         /// <summary>
-        /// Apply contact shadows opacity from user settings
-        /// </summary>
-        private void ApplyContactShadowsOpacity()
-        {
-            if (_globalVolume == null || _globalVolumeProfile == null || _contactShadows == null)
-            {
-                return;
-            }
-
-            if (_contactShadows != null)
-            {
-                _contactShadows.opacity.Override(SettingsManager.CurrentSettings.ContactShadowsOpacity);
-            }
-        }
-
-        /// <summary>
-        /// Apply exposure custom settings
-        /// </summary>
-        private void ApplyExposure()
-        {
-            if (_globalVolume == null || _globalVolumeProfile == null || _exposure == null)
-            {
-                return;
-            }
-
-            _exposure.compensation.Override(_baseExposureComp + SettingsManager.CurrentSettings.ExposureOffset);
-        }
-
-        /// <summary>
-        /// Apply contrast custom settings
+        /// Apply contrast custom settings (URP)
         /// </summary>
         private void ApplyContrast()
         {
-            if (_globalVolume == null || _globalVolumeProfile == null || _colorAdjustments == null)
+            if (_colorAdjustments != null)
             {
-                return;
+                float contrast = _baseContrast + (20f * SettingsManager.CurrentSettings.ContrastOffset);
+                _colorAdjustments.active = true;
+                _colorAdjustments.contrast.value = contrast;
             }
-
-            _colorAdjustments.contrast.Override(_baseContrast + (20f * SettingsManager.CurrentSettings.ContrastOffset));
         }
 
         /// <summary>
-        /// Apply saturation custom settings
+        /// Apply saturation custom settings (URP)
         /// </summary>
         private void ApplySaturation()
         {
-            if (_globalVolume == null || _globalVolumeProfile == null || _colorAdjustments == null)
+            if (_colorAdjustments != null)
             {
-                return;
+                float saturation = _baseSaturation + (20f * SettingsManager.CurrentSettings.SaturationOffset);
+                _colorAdjustments.active = true;
+                _colorAdjustments.saturation.value = saturation;
             }
-
-            _colorAdjustments.saturation.Override(_baseSaturation + (20f * SettingsManager.CurrentSettings.SaturationOffset));
         }
 
         /// <summary>
-        /// Apply indirect lightning custom settings
+        /// Apply saturation custom settings (URP)
         /// </summary>
-        private void ApplyIndirectLightning()
+        private void ApplyOutline()
         {
-            if (_globalVolume == null || _globalVolumeProfile == null || _indirectLighting == null)
+            if (_edgeDetection != null)
             {
-                return;
+                _edgeDetection.active = SettingsManager.CurrentSettings.OutlineEnabled;
             }
-
-            float indOffset = SettingsManager.CurrentSettings.IndirectLightningOffset;
-            _indirectLighting.indirectDiffuseLightingMultiplier.Override(_baseIndirect + indOffset);
-        }
-
-        /// <summary>
-        /// Apply cloud style from user settings
-        /// </summary>
-        private void ApplyCloudStyle()
-        {
-            if (_globalVolume == null || _globalVolumeProfile == null || _clouds == null)
-            {
-                return;
-            }
-
-            VolumetricClouds.CloudPresets cloudPreset;
-
-            switch (SettingsManager.CurrentSettings.CloudStyle)
-            {
-                case CloudStyle.Sparse:
-                    cloudPreset = VolumetricClouds.CloudPresets.Sparse;
-                    break;
-                default:
-                case CloudStyle.Cloudy:
-                    cloudPreset = VolumetricClouds.CloudPresets.Cloudy;
-                    break;
-                case CloudStyle.Overcast:
-                    cloudPreset = VolumetricClouds.CloudPresets.Overcast;
-                    break;
-                case CloudStyle.Stormy:
-                    cloudPreset = VolumetricClouds.CloudPresets.Stormy;
-                    break;
-            }
-
-            _clouds.cloudPreset = cloudPreset;
         }
         #endregion
 
@@ -665,63 +412,13 @@ namespace FlightReLive.Core.Environment
         {
             if (_reliveCamera != null)
             {
-                HDAdditionalCameraData hdCam = _reliveCamera.GetComponent<HDAdditionalCameraData>();
-
-                if (hdCam != null)
-                { 
-                    hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Color;
-                }
-
                 _reliveCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
             }
 
             if (_povCamera != null)
             {
-                HDAdditionalCameraData hdCam = _povCamera.GetComponent<HDAdditionalCameraData>();
-
-                if (hdCam != null)
-                {
-                    hdCam.clearColorMode = HDAdditionalCameraData.ClearColorMode.Color;
-                }
-
                 _povCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
             }
-
-            if (_globalVolume != null)
-            {
-                _globalVolume.enabled = false;
-
-                if (_volumeInstance != null)
-                {
-                    Destroy(_volumeInstance);
-                    _volumeInstance = null;
-                }
-
-                _globalVolume = null;
-            }
-
-            if (_globalVolumeProfile != null)
-            {
-                Destroy(_globalVolumeProfile);
-                _globalVolumeProfile = null;
-            }
-
-            _exposure = null;
-            _visualEnvironment = null;
-            _sky = null;
-            _fog = null;
-            _clouds = null;
-            _contactShadows = null;
-            _colorAdjustments = null;
-            _vignette = null;
-            _bloom = null;
-            _indirectLighting = null;
-            _dof = null;
-            _baseExposureComp = 0f;
-            _baseContrast = 0f;
-            _baseSaturation = 0f;
-            _baseIndirect = 0f;
-            _baseMainLightIntensity = 0f;
 
             RenderSettings.sun = null;
 
@@ -729,14 +426,13 @@ namespace FlightReLive.Core.Environment
             {
                 _lensFlare.enabled = false;
             }
+
+            _baseContrast = 0f;
+            _baseSaturation = 0f;
         }
         #endregion
 
         #region CALLBACKS
-        private void OnExposureOffsetChanged(float offset)
-        {
-            ApplyExposure();
-        }
 
         private void OnContrastOffsetChanged(float offset)
         {
@@ -748,39 +444,14 @@ namespace FlightReLive.Core.Environment
             ApplySaturation();
         }
 
-        private void OnIndirectOffsetChanged(float offset)
-        {
-            ApplyIndirectLightning();
-        }
-
         private void OnVignettingIntensityChanged(float intensity)
         {
             ApplyVignettingIntensity();
         }
 
-        private void OnContactShadowsEnabledChanged(bool state)
+        private void OnOutlineEnabledChanged(bool obj)
         {
-            ApplyContactShadowsState();
-        }
-
-        private void OnContactShadowsMinDistanceChanged(float min)
-        {
-            ApplyContactShadowsDistances();
-        }
-
-        private void OnContactShadowsMaxDistanceChanged(float max)
-        {
-            ApplyContactShadowsDistances();
-        }
-
-        private void OnContactShadowsOpacityChanged(float opacity)
-        {
-            ApplyContactShadowsOpacity();
-        }
-
-        private void OnCloudStyleChanged(CloudStyle cloudStyle)
-        {
-            ApplyCloudStyle();
+            ApplyOutline();
         }
         #endregion
 
@@ -810,46 +481,11 @@ namespace FlightReLive.Core.Environment
             }
 
             layout.Separator();
-            layout.FramedText("Sky");
-            layout.Separator();
-
-            using (FuGrid grid = new FuGrid("gridEnvOffsets", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
-            {
-                SettingsManager.DisplaySettingsComboboxWithReset<CloudStyle>(
-                grid,
-                "Sky type",
-                "Change the type of sky in the scene.",
-                "Reset the type of sky to default value",
-                SettingsManager.CurrentSettings.CloudStyle,
-                SettingsManager.CLOUD_STYLE_DEFAULT_VALUE,
-                SettingsManager.GetEnumLabel,
-                Enum.GetValues(typeof(CloudStyle)).Cast<CloudStyle>(),
-                (x) => SettingsManager.SaveCloudStyle(x),
-                () => SettingsManager.ResetCloudStyle()
-                );
-            }
-
-            layout.Separator();
             layout.FramedText("Lighting & Color");
             layout.Separator();
 
             using (FuGrid grid = new FuGrid("gridEnvOffsets", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                //Display exposure custom settings
-                SettingsManager.DisplaySettingsSliderWithReset(grid,
-                    "Exposure",
-                    "Define a custom exposure offset for the scene.",
-                    $"Reset exposure offset to default value ({SettingsManager.EXPOSURE_OFFSET_DEFAULT_VALUE}).",
-                    SettingsManager.CurrentSettings.ExposureOffset,
-                    -1.0f,
-                    1.0f,
-                    0.01f,
-                    SettingsManager.EXPOSURE_OFFSET_DEFAULT_VALUE,
-                    "%.2f",
-                     (x) => SettingsManager.SaveExposureOffset(x),
-                     () => SettingsManager.ResetExposureOffset());
-
-
                 //Display contrast custom settings
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "Contrast",
@@ -877,79 +513,25 @@ namespace FlightReLive.Core.Environment
                     "%.2f",
                      (x) => SettingsManager.SaveSaturationOffset(x),
                      () => SettingsManager.ResetSaturationOffset());
-
-                //Indirect lightning settings
-                SettingsManager.DisplaySettingsSliderWithReset(grid,
-                    "Indirect lightning",
-                    "Define a custom indirect lightning offset for the scene.",
-                    $"Reset indirect lightning offset to default value ({SettingsManager.INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE}).",
-                    SettingsManager.CurrentSettings.IndirectLightningOffset,
-                    -1.0f,
-                    1.0f,
-                    0.01f,
-                    SettingsManager.INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE,
-                    "%.2f",
-                     (x) => SettingsManager.SaveIndirectLightningOffset(x),
-                     () => SettingsManager.ResetIndirectLightningOffset());
             }
 
             layout.Separator();
-            layout.FramedText("Contact shadows");
+            layout.FramedText("Outline");
             layout.Separator();
 
-            using (FuGrid grid = new FuGrid("gridContact", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
+            using (FuGrid grid = new FuGrid("gridVignettingOffset", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                bool enabled = SettingsManager.CurrentSettings.ContactShadowsEnabled;
+                //Display outline custom settings
+                bool outline = SettingsManager.CurrentSettings.OutlineEnabled;
 
                 SettingsManager.DisplaySettingsToggleWithReset(grid,
-                    "Contact shadows",
-                    "Enable or disable contact shadows on terrain.",
-                    "Reset contact shadows state to default value.",
-                    enabled,
-                    SettingsManager.CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE,
-                    (x) => SettingsManager.SaveContactShadowsEnabled(x),
-                    () => SettingsManager.ResetContactShadowsEnabled());
-
-                if (!enabled)
-                {
-                    grid.DisableNextElements();
-                }
-
-                SettingsManager.DisplaySettingsRangeWithReset(grid,
-                    "Min / max distances",
-                    "Select minimum / maximum distances of contact shadows.",
-                    $"Reset minimum / maximum contact shadows distances to default value (Min: {SettingsManager.CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE} / Max:{SettingsManager.CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE}).",
-                    SettingsManager.CurrentSettings.ContactShadowsMinDistance,
-                    SettingsManager.CurrentSettings.ContactShadowsMaxDistance,
-                    0f,
-                    1000f,
-                    1f,
-                    SettingsManager.CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE,
-                    SettingsManager.CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE,
-                    (min, max) =>
-                    {
-                        SettingsManager.SaveContactShadowsMinDistance(min);
-                        SettingsManager.SaveContactShadowsMaxDistance(max);
-                    },
-                    () =>
-                    {
-                        SettingsManager.ResetContactShadowsMinDistance();
-                        SettingsManager.ResetContactShadowsMaxDistance();
-                    });
-
-                //Contact shadows opacity settings
-                SettingsManager.DisplaySettingsSliderWithReset(grid,
-                    "Opacity",
-                    "Define contact shadows opacity.",
-                    $"Reset contact shadows opacity to default value ({SettingsManager.CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE}).",
-                    SettingsManager.CurrentSettings.ContactShadowsOpacity,
-                    0.0f,
-                    1.0f,
-                    0.01f,
-                    SettingsManager.CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE,
-                    "%.2f",
-                     (x) => SettingsManager.SaveContactShadowsOpacity(x),
-                     () => SettingsManager.ResetContactShadowsOpacity());
+                    "Outline",
+                    "Enabled or disabled outline on 3D elements.",
+                    $"Reset outline state to default value ({SettingsManager.OUTLINE_DISPLAY_STATE_DEFAULT_VALUE}).",
+                    outline,
+                    SettingsManager.OUTLINE_DISPLAY_STATE_DEFAULT_VALUE,
+                     (x) => SettingsManager.SaveOutlineEnabled(x),
+                     () => SettingsManager.ResetOutlineEnabled());
             }
         }
 

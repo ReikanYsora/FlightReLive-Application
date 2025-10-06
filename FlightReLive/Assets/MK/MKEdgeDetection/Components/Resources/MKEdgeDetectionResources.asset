@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c49d4cdc2c5b754ba4edf6680ec2a45, type: 3}
+  m_Name: MKEdgeDetectionResources
+  m_EditorClassIdentifier: 
+  _shaderMain: {fileID: 4800000, guid: f751bd9ddf5a13a45abbf01f030ee1e1, type: 3}
+  _shaderURPCopy: {fileID: 4800000, guid: 4ade192a56c3f7542b4d6af021dab2e3, type: 3}
+  _shaderSketch: {fileID: 4800000, guid: 4647c4a6dc74443429bc6ddffac8a330, type: 3}
+  _pixelPerfection: 1

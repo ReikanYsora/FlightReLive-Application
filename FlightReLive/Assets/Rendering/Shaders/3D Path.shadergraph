@@ -2313,7 +2313,7 @@
     "m_Title": "Hover disabled",
     "m_Position": {
         "x": -3137.0,
-        "y": 1940.0
+        "y": 1939.9998779296875
     }
 }
 
@@ -3662,7 +3662,7 @@
     "m_ObjectId": "4ab2457d66a7441fbd34ba61fc261a96",
     "m_Title": "StripedColor",
     "m_Position": {
-        "x": -6730.0,
+        "x": -6729.99951171875,
         "y": 773.0
     }
 }
@@ -4978,8 +4978,8 @@
     "m_ObjectId": "73656740ea8e42ba9a613cef5c2f6e1e",
     "m_Title": "isPlayedSimple",
     "m_Position": {
-        "x": -5609.0,
-        "y": 1394.0
+        "x": -5608.99951171875,
+        "y": 1393.9998779296875
     }
 }
 
@@ -5052,7 +5052,7 @@
     "m_ObjectId": "764c793929d14d7eab4a4fc0f9540f4a",
     "m_Title": "displacedPos",
     "m_Position": {
-        "x": -2005.0,
+        "x": -2004.999755859375,
         "y": -1291.0
     }
 }
@@ -6320,7 +6320,7 @@
     "m_Title": "IsHovered",
     "m_Position": {
         "x": -4455.0,
-        "y": 1684.0
+        "y": 1683.9998779296875
     }
 }
 
@@ -6406,7 +6406,7 @@
     "m_ObjectId": "9d96faf45bfa4ada86574e303cea01dc",
     "m_Title": "Progress Mask",
     "m_Position": {
-        "x": -4848.0,
+        "x": -4847.99951171875,
         "y": 4193.0
     }
 }
@@ -7735,8 +7735,8 @@
     "m_ObjectId": "cd98869113bd4be9b0f6b69d2db02377",
     "m_Title": "Hover Mask",
     "m_Position": {
-        "x": -4839.0,
-        "y": 5077.0
+        "x": -4838.99951171875,
+        "y": 5076.99951171875
     }
 }
 
@@ -9239,7 +9239,7 @@
     "m_ObjectId": "fc05dcc27d3e46c4a9689b26c2884a12",
     "m_Title": "Glow Strength",
     "m_Position": {
-        "x": -5986.0,
+        "x": -5985.99951171875,
         "y": 3231.0
     }
 }

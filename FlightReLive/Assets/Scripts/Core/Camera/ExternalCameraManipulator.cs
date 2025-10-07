@@ -3,13 +3,11 @@ using FlightReLive.Core.Paths;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.UI.Overlays;
-using FlightReLive.UI;
 using Fu;
-using Fu.Framework;
-using ImGuiNET;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace FlightReLive.Core.Cameras
 {

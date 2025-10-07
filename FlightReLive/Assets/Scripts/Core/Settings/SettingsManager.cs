@@ -14,7 +14,7 @@ namespace FlightReLive.Core.Settings
 {
     public static class SettingsManager
     {
-        #region CONSTANTS
+        #region ATTRIBUTES
         internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.2f;
         internal static Color PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE = Color.white;
         internal static Color PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE = Color.black;
@@ -24,10 +24,10 @@ namespace FlightReLive.Core.Settings
         internal static float VIGNETTING_DEFAULT_VALUE = 0.3f;
         internal static float CONTRAST_OFFSET_DEFAULT_VALUE = 0f;
         internal static float SATURATION_OFFSET_DEFAULT_VALUE = 0f;
-        internal static bool OUTLINE_DISPLAY_STATE_DEFAULT_VALUE = true;
-        #endregion
+        internal static CloudsPreset CLOUD_PRESET_DEFAULT_VALUE = CloudsPreset.Sparse;
+        internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
+        internal static WindType WIND_TYPE_DEFAULT_VALUE = WindType.Slow;
 
-        #region ATTRIBUTES
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
         {
@@ -83,7 +83,9 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnContrastOffsetChanged;
         public static event Action<float> OnSaturationOffsetChanged;
-        public static event Action<bool> OnOutlineEnabledChanged;
+        public static event Action<CloudsPreset> OnCloudsPresetChanged;
+        public static event Action<bool> OnCloudShadowsEnabledChanged;
+        public static event Action<WindType> OnWindTypeChanged;
         #endregion
 
         #region METHODS
@@ -233,11 +235,18 @@ namespace FlightReLive.Core.Settings
         internal static void LoadSaturationOffset() =>
             CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.SaturationOffset), SATURATION_OFFSET_DEFAULT_VALUE);
 
-        internal static void LoadOutlineEnabled()
+        internal static void LoadCloudsPreset() =>
+            CurrentSettings.CloudsPreset = (CloudsPreset)PlayerPrefs.GetInt(nameof(Settings.CloudsPreset), (int)CLOUD_PRESET_DEFAULT_VALUE);
+
+
+        internal static void LoadCloudShadowsEnabled()
         {
-            int intBool = OUTLINE_DISPLAY_STATE_DEFAULT_VALUE ? 1 : 0;
-            CurrentSettings.OutlineEnabled = PlayerPrefs.GetInt(nameof(Settings.OutlineEnabled), intBool) == 1;
+            int intBool = CLOUD_SHADOW_ENABLED_DEFAULT_STATE ? 1 : 0;
+            CurrentSettings.CloudShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.CloudShadowsEnabled), intBool) == 1;
         }
+
+        internal static void LoadWindType() =>
+            CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
 
         internal static void SaveDisplayWizard(bool value)
         {
@@ -447,12 +456,27 @@ namespace FlightReLive.Core.Settings
             OnVignettingIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveOutlineEnabled(bool value)
+        internal static void SaveCloudsPreset(CloudsPreset value)
         {
-            CurrentSettings.OutlineEnabled = value;
-            PlayerPrefs.SetInt(nameof(Settings.OutlineEnabled), value ? 1 : 0);
+            CurrentSettings.CloudsPreset = value;
+            PlayerPrefs.SetInt(nameof(Settings.CloudsPreset), (int)value);
             PlayerPrefs.Save();
-            OnOutlineEnabledChanged?.Invoke(value);
+            OnCloudsPresetChanged?.Invoke(value);
+        }
+        internal static void SaveCloudShadowsEnabled(bool value)
+        {
+            CurrentSettings.CloudShadowsEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.CloudShadowsEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnCloudShadowsEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SaveWindType(WindType value)
+        {
+            CurrentSettings.WindType = value;
+            PlayerPrefs.SetInt(nameof(Settings.WindType), (int)value);
+            PlayerPrefs.Save();
+            OnWindTypeChanged?.Invoke(value);
         }
 
         internal static void LoadAll()
@@ -488,7 +512,9 @@ namespace FlightReLive.Core.Settings
             LoadVignettingIntensity();
             LoadContrastOffset();
             LoadSaturationOffset();
-            LoadOutlineEnabled();
+            LoadCloudsPreset();
+            LoadCloudShadowsEnabled();
+            LoadWindType();
         }
 
         internal static void LoadDefaultSettings()
@@ -521,7 +547,9 @@ namespace FlightReLive.Core.Settings
             SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
-            SaveOutlineEnabled(OUTLINE_DISPLAY_STATE_DEFAULT_VALUE);
+            SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
+            SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
+            SaveWindType(WIND_TYPE_DEFAULT_VALUE);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -897,92 +925,6 @@ namespace FlightReLive.Core.Settings
             {
                 bool isLoading = LoadingManager.Instance.IsLoading;
 
-                //layout.Collapsable("Upscaler settings##collapsable", () =>
-                //{
-                //    using (FuGrid upscalerGrid = new FuGrid("upscalerGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                //    {
-                //        upscalerGrid.SetNextElementToolTipWithLabel("Choose your upscaling method for rendering performance and quality.");
-
-                //        UpscalerName currentUpscaler = CurrentSettings.UpscalerName;
-                //        string upscalerLabel = GetUpscalerLabel(currentUpscaler);
-
-                //        upscalerGrid.Combobox("Upscaler##UpscalerCombobox", upscalerLabel, () =>
-                //        {
-                //            List<UpscalerName> allowedUpscalers = new List<UpscalerName>() { UpscalerName.None };
-                //            allowedUpscalers.AddRange(TNDUpscaler.GetSupported());
-
-                //            foreach (UpscalerName upscaler in allowedUpscalers)
-                //            {
-                //                bool isSelected = upscaler == currentUpscaler;
-                //                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerLabel(upscaler)}";
-
-                //                if (ImGui.Selectable(label))
-                //                {
-                //                    SaveUpscalerName(upscaler);
-                //                }
-                //            }
-                //        });
-
-                //        if (upscalerLabel == "None")
-                //        {
-                //            upscalerGrid.DisableNextElements();
-                //        }
-
-                //        upscalerGrid.SetNextElementToolTipWithLabel("Select the upscaling quality level (higher = better visuals, lower = better performance) for the ReLive camera scene.");
-
-                //        UpscalerQuality currentQuality = CurrentSettings.UpscalerQuality;
-                //        string qualityLabel = GetUpscalerQualityLabel(currentQuality);
-
-                //        upscalerGrid.Combobox("Upscaler quality##UpscalerQualityCombobox", qualityLabel, () =>
-                //        {
-                //            UpscalerQuality[] allowedQualities = new[]
-                //            {
-                //                UpscalerQuality.NativeAA,
-                //                UpscalerQuality.UltraQuality,
-                //                UpscalerQuality.Quality,
-                //                UpscalerQuality.Balanced,
-                //                UpscalerQuality.Performance,
-                //                UpscalerQuality.UltraPerformance,
-                //                UpscalerQuality.Off
-                //            };
-
-                //            foreach (UpscalerQuality quality in allowedQualities)
-                //            {
-                //                bool isSelected = quality == currentQuality;
-                //                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerQualityLabel(quality)}";
-
-                //                if (ImGui.Selectable(label))
-                //                {
-                //                    SaveUpscalerQuality(quality);
-                //                }
-                //            }
-                //        });
-
-                //        upscalerGrid.SetNextElementToolTip("Enhances edge clarity and texture detail after upscaling. Recommended to preserve visual sharpness.");
-                //        bool sharpeningEnabled = CurrentSettings.UpscalerSharpeningEnabled;
-
-                //        if (upscalerGrid.Toggle("Upscaler sharpening", ref sharpeningEnabled))
-                //        {
-                //            SaveUpscalerSharpeningEnabled(sharpeningEnabled);
-                //        }
-
-                //        if (!sharpeningEnabled)
-                //        {
-                //            upscalerGrid.DisableNextElement();
-                //        }
-
-                //        upscalerGrid.SetNextElementToolTipWithLabel("Adjust how sharp the image appears after upscaling. Higher values increase detail, but may introduce noise.");
-                //        float sharpeness = CurrentSettings.UpscalerSharpeness;
-
-                //        if (upscalerGrid.Slider("Upscaler sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.2f"))
-                //        {
-                //            SaveUpscalerSharpeness(sharpeness);
-                //        }
-                //    }
-
-                //    Fugui.PopFont();
-                //}, FuButtonStyle.Collapsable, defaultOpen: true);
-
                 layout.Collapsable("FPS settings##collapsable", () =>
                 {
                     using (FuGrid fpsSettings = new FuGrid("fpsSettingsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
@@ -1290,10 +1232,22 @@ namespace FlightReLive.Core.Settings
             LoadVignettingIntensity();
         }
 
-        internal static void ResetOutlineEnabled()
+        internal static void ResetCloudsPreset()
         {
-            SaveOutlineEnabled(OUTLINE_DISPLAY_STATE_DEFAULT_VALUE);
-            LoadOutlineEnabled();
+            SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
+            LoadCloudsPreset();
+        }
+
+        internal static void ResetCloudShadowsEnabled()
+        {
+            SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
+            LoadCloudShadowsEnabled();
+        }
+
+        internal static void ResetWindType()
+        {
+            SaveWindType(WIND_TYPE_DEFAULT_VALUE);
+            LoadWindType();
         }
         #endregion
     }

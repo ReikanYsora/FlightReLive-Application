@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.jiaozi158.unity-physically-based-sky-urp": {
+      "version": "https://github.com/jiaozi158/UnityPhysicallyBasedSkyURP.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.render-pipelines.universal": "14.0.7"
+      },
+      "hash": "f8f1f3fbc4708f378252b6188ce416a57ccd06af"
+    },
     "com.keksls.fugui": {
       "version": "https://github.com/Keksls/fugui.git",
       "depth": 0,

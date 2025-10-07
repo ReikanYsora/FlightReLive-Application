@@ -31,7 +31,9 @@ namespace FlightReLive.Core.Settings
         public float VignettingIntensity;
         public float ContrastOffset;
         public float SaturationOffset;
-        public bool OutlineEnabled;
+        public CloudsPreset CloudsPreset;
+        public bool CloudShadowsEnabled;
+        public WindType WindType;
         public string CurrentVersion;
         #endregion
     }

@@ -60,7 +60,8 @@ namespace FlightReLive.UI.Share
                 {
                     using (FuGrid sharedHashOpenGrid = new FuGrid("sharedHashOpenGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, 10))
                     {
-                        float width = (sharedHashOpenGrid.GetAvailableWidth() / 2f) - (PADDING / 2f);
+                        float available = sharedHashOpenGrid.GetAvailableWidth();
+                        float width = (available / uiScale / 2f) - (PADDING / 2f);
                         sharedHashOpenGrid.TextInput("Paste the sharedhash you want to load", "", ref _sharedHash);
                         sharedHashOpenGrid.NextColumn();
 
@@ -136,7 +137,8 @@ namespace FlightReLive.UI.Share
                             onlineGrid.Slider("Validity (days)", ref _nbDaysValidity, 1, 365);
                             onlineGrid.NextColumn();
 
-                            float width = onlineGrid.GetAvailableWidth() - (PADDING / 2f);
+                            float available = onlineGrid.GetAvailableWidth();
+                            float width = (available / uiScale) - (PADDING / 2f);
 
                             if (onlineGrid.Button("Get a sharing hashcode", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
                             {
@@ -196,7 +198,8 @@ namespace FlightReLive.UI.Share
                     {
                         offlineGrid.NextColumn();
 
-                        float width = offlineGrid.GetAvailableWidth() - (PADDING / 2f);
+                        float available = offlineGrid.GetAvailableWidth();
+                        float width = (available / uiScale) - (PADDING / 2f);
 
                         if (offlineGrid.Button("Export flight to file", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
                         {

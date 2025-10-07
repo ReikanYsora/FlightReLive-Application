@@ -32,7 +32,7 @@ RenderSettings:
   m_FlareFadeSpeed: 3
   m_HaloTexture: {fileID: 0}
   m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
-  m_DefaultReflectionMode: 0
+  m_DefaultReflectionMode: 1
   m_DefaultReflectionResolution: 1024
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
@@ -161,9 +161,9 @@ Camera:
   m_GameObject: {fileID: 137108791}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0.122641504, g: 0.122641504, b: 0.122641504, a: 1}
-  m_projectionMatrixMode: 2
+  m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
   m_Iso: 200
@@ -220,7 +220,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
-  m_RendererIndex: -1
+  m_RendererIndex: 1
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -427,7 +427,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
-  m_RendererIndex: -1
+  m_RendererIndex: 0
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -649,7 +649,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: ff48cb707abe61444b1e21160a3d3747, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 933d834b017b501458cec014c2c479d2, type: 2}
 --- !u!1 &445681717
 GameObject:
   m_ObjectHideFlags: 0
@@ -865,7 +865,7 @@ Camera:
   m_GameObject: {fileID: 796242729}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0.122641504, g: 0.122641504, b: 0.122641504, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -939,7 +939,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
-  m_RendererIndex: -1
+  m_RendererIndex: 1
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -1406,9 +1406,9 @@ MonoBehaviour:
   _mainLight: {fileID: 954186476}
   _reliveCamera: {fileID: 796242730}
   _povCamera: {fileID: 137108794}
+  _cameraBackground: {r: 0, g: 0, b: 0, a: 0}
   _lensFlare: {fileID: 954186474}
-  _volumeProfile: {fileID: 11400000, guid: ff48cb707abe61444b1e21160a3d3747, type: 2}
-  _edgeDetection: {fileID: 0}
+  _volumeProfile: {fileID: 11400000, guid: 933d834b017b501458cec014c2c479d2, type: 2}
 --- !u!1 &1289900096
 GameObject:
   m_ObjectHideFlags: 0

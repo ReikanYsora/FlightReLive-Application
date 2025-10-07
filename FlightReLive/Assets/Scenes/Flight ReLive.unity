@@ -1406,9 +1406,10 @@ MonoBehaviour:
   _mainLight: {fileID: 954186476}
   _reliveCamera: {fileID: 796242730}
   _povCamera: {fileID: 137108794}
-  _cameraBackground: {r: 0, g: 0, b: 0, a: 0}
+  _cameraBackground: {r: 0.084905684, g: 0.084905684, b: 0.084905684, a: 1}
   _lensFlare: {fileID: 954186474}
   _volumeProfile: {fileID: 11400000, guid: 933d834b017b501458cec014c2c479d2, type: 2}
+  _spaceBackground: {fileID: 8900000, guid: 997719748a5428d4597d4b1197438e17, type: 3}
 --- !u!1 &1289900096
 GameObject:
   m_ObjectHideFlags: 0

@@ -511,6 +511,11 @@ namespace FlightReLive.Core.Building
         {
             using (FuGrid grid = new FuGrid("gridBuildingsSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
+                if (_buildingGameobjects.Count == 0)
+                {
+                    grid.DisableNextElements();
+                }
+
                 bool buildingEnabled = SettingsManager.CurrentSettings.BuildingVisibility;
 
                 //Display buildings settings

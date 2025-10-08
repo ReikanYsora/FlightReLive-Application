@@ -3,6 +3,7 @@ using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -27,9 +28,10 @@ namespace FlightReLive.Core.Environment
         [SerializeField] private Cubemap _spaceBackground;
 
         //Post-processing elements
+        private bool _environmentLoaded;
         private Vignette _vignette;
         private ColorAdjustments _colorAdjustments;
-        private Tonemapping _tonemapping;
+        private Tonemapping _toneMapping;
         private PhysicallyBasedSky _physicallyBasedSky;
         private Fog _fog;
         private VisualEnvironment _visualEnvironment;
@@ -60,6 +62,7 @@ namespace FlightReLive.Core.Environment
                 Destroy(gameObject);
                 return;
             }
+
             Instance = this;
 
             _baseContrast = 0.0f;
@@ -68,13 +71,17 @@ namespace FlightReLive.Core.Environment
 
         private void Start()
         {
+            //Initialize post-processing components
+            InitializePostProcessingComponents();
+
             SettingsManager.OnContrastOffsetChanged += OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged += OnSaturationOffsetChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
             SettingsManager.OnCloudsPresetChanged += OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged += OnCloudShadowsEnabledChanged;
             SettingsManager.OnWindTypeChanged += OnWindTypeChanged;
-            UnitializeEnvironment();
+
+            UninitializeEnvironment();
         }
 
         private void OnDestroy()
@@ -85,11 +92,89 @@ namespace FlightReLive.Core.Environment
             SettingsManager.OnCloudsPresetChanged -= OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged -= OnCloudShadowsEnabledChanged;
             SettingsManager.OnWindTypeChanged -= OnWindTypeChanged;
-            UnitializeEnvironment();
         }
         #endregion
 
         #region METHODS
+
+        /// <summary>
+        /// Initialize all post-processing components
+        /// </summary>
+        private void InitializePostProcessingComponents()
+        {
+            if (_volumeProfile.TryGet(out Vignette vignette))
+            {
+                _vignette = vignette;
+                _vignette.active = false;
+                _vignette.center.overrideState = false;
+                _vignette.rounded.overrideState = false;
+            }
+
+            if (_volumeProfile.TryGet(out ColorAdjustments colorAdjustments))
+            {
+                _colorAdjustments = colorAdjustments;
+                _colorAdjustments.active = false;
+                _colorAdjustments.postExposure.overrideState = false;
+                _colorAdjustments.hueShift.overrideState = false;
+            }
+
+            if (_volumeProfile.TryGet(out Tonemapping toneMapping))
+            {
+                _toneMapping = toneMapping;
+                _toneMapping.active = false;
+            }
+
+            if (_volumeProfile.TryGet(out PhysicallyBasedSky physicallyBasedSky))
+            {
+                _physicallyBasedSky = physicallyBasedSky;
+                _physicallyBasedSky.active = false;
+                _physicallyBasedSky.planetRotation.overrideState = false;
+                _physicallyBasedSky.groundColorTexture.overrideState = false;
+                _physicallyBasedSky.groundTint.overrideState = false;
+                _physicallyBasedSky.groundEmissionTexture.overrideState = false;
+                _physicallyBasedSky.groundEmissionMultiplier.overrideState = false;
+                _physicallyBasedSky.colorSaturation.overrideState = false;
+                _physicallyBasedSky.alphaSaturation.overrideState = false;
+                _physicallyBasedSky.alphaMultiplier.overrideState = false;
+                _physicallyBasedSky.skyIntensityMode.overrideState = false;
+                _physicallyBasedSky.exposure.overrideState = false;
+            }
+
+            if (_volumeProfile.TryGet(out Fog fog))
+            {
+                _fog = fog;
+                _fog.active = false;
+                _fog.tint.overrideState = false;
+                _fog.underWater.overrideState = false;
+            }
+
+            if (_volumeProfile.TryGet(out VisualEnvironment visualEnvironment))
+            {
+                _visualEnvironment = visualEnvironment;
+                _visualEnvironment.active = false;
+                _visualEnvironment.planetRadius.overrideState = false;
+                _visualEnvironment.renderingSpace.overrideState = false;
+            }
+
+            if (_volumeProfile.TryGet(out VolumetricClouds volumetricClouds))
+            {
+                _volumetricClouds = volumetricClouds;
+                _volumetricClouds.active = false;
+                _volumetricClouds.state.Override(false);
+                _volumetricClouds.localClouds.overrideState = false;
+                _volumetricClouds.shapeOffset.overrideState = false;
+                _volumetricClouds.earthCurvature.overrideState = false;
+                _volumetricClouds.verticalErosionWindSpeed.overrideState = false;
+                _volumetricClouds.verticalShapeWindSpeed.overrideState = false;
+                _volumetricClouds.ambientLightProbeDimmer.overrideState = false;
+                _volumetricClouds.sunLightDimmer.overrideState = false;
+                _volumetricClouds.scatteringTint.overrideState = false;
+                _volumetricClouds.perceptualBlending.overrideState = false;
+                _volumetricClouds.numLightSteps.overrideState = false;
+                _volumetricClouds.fadeInMode.overrideState = false;
+            }
+        }
+
         /// <summary>
         /// Configure sky/fog/clouds, sun direction and baseline tonemapping from flight date/location.
         /// Resets user offsets so each flight starts fresh.
@@ -103,7 +188,6 @@ namespace FlightReLive.Core.Environment
                     return;
                 }
 
-
                 //Calculate sun position
                 TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
                 DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
@@ -115,6 +199,9 @@ namespace FlightReLive.Core.Environment
                 _latitude = flightData.GPSOrigin.Latitude;
                 _longitude = flightData.GPSOrigin.Longitude;
                 _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
+
+                //Initialize volume profile
+                InitializeEnvironment();
 
                 //Apply environment base on current flightdata and datetime
                 ApplyEnvironment(_dateTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
@@ -133,7 +220,7 @@ namespace FlightReLive.Core.Environment
                 _latitude = 0;
                 _longitude = 0;
 
-                UnitializeEnvironment();
+                UninitializeEnvironment();
             });
         }
 
@@ -148,117 +235,62 @@ namespace FlightReLive.Core.Environment
             {
                 return;
             }
+
             SunPosition sun = SunHelper.CalculateSunPosition(dateTime, latitude, longitude);
 
             //Vignetting
-            _vignette = GetOrAddVolumeComponent<Vignette>();
             _vignette.color.Override(Color.black);
-            _vignette.center.Override(new Vector2(0.5f, 0.5f));
             _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
             _vignette.smoothness.Override(0.3f);
-            _vignette.rounded.overrideState = false;
 
             //Color Adjustments (Contrast: low at twilight, high at zenith. Saturation: warmer tones at low sun, neutral at zenith)
-            _colorAdjustments = GetOrAddVolumeComponent<ColorAdjustments>();
             _colorAdjustments.active = true;
             _baseContrast = Mathf.Lerp(-20f, 20f, sun.ElevationFactor);
-            _colorAdjustments.postExposure.overrideState = false;
             _colorAdjustments.contrast.value = _baseContrast + (20f * SettingsManager.CurrentSettings.ContrastOffset);
             Color lowSunTint = new Color(1f, 0.93f, 0.85f);
             Color highSunTint = Color.white;
             _colorAdjustments.colorFilter.value = Color.Lerp(lowSunTint, highSunTint, Mathf.SmoothStep(0f, 1f, sun.ElevationFactor));
-            _colorAdjustments.hueShift.overrideState = false;
             _baseSaturation = Mathf.Lerp(-10f, 10f, sun.ElevationFactor);
             _colorAdjustments.saturation.value = _baseSaturation + (20f * SettingsManager.CurrentSettings.SaturationOffset);
 
             //Tonemapping
-            _tonemapping = GetOrAddVolumeComponent<Tonemapping>();
-            _tonemapping.active = true;
-            _tonemapping.mode.value = TonemappingMode.ACES;
+            _toneMapping.mode.value = TonemappingMode.ACES;
 
             //Physically Based Sky
-            _physicallyBasedSky = GetOrAddVolumeComponent<PhysicallyBasedSky>();
-            _physicallyBasedSky.active = true;
             _physicallyBasedSky.type.Override(PhysicallyBasedSky.PhysicallyBasedSkyModel.EarthAdvanced);
             _physicallyBasedSky.atmosphericScattering.Override(true);
-            _physicallyBasedSky.planetRotation.overrideState = false;
-            _physicallyBasedSky.groundColorTexture.overrideState = false;
-            _physicallyBasedSky.groundTint.overrideState = false;
-            _physicallyBasedSky.groundEmissionTexture.overrideState = false;
-            _physicallyBasedSky.groundEmissionMultiplier.overrideState = false;
-            _physicallyBasedSky.spaceRotation.overrideState = false;
+            float lstDeg = GetLocalSiderealDegrees(dateTime, longitude);
+            _physicallyBasedSky.spaceRotation.Override(new Vector3(0f, lstDeg, 0f));
             _physicallyBasedSky.spaceEmissionTexture.Override(_spaceBackground);
-            float spaceEmission = 5f * Mathf.Clamp01(1f - sun.ElevationFactor);
+            float nightFactor = 1.0f / (1.0f + Mathf.Exp(0.28f * (sun.Elevation - -6.0f)));
+            nightFactor = Mathf.Pow(nightFactor, 1.2f);
+            float spaceEmission = 8f * nightFactor;
             _physicallyBasedSky.spaceEmissionMultiplier.Override(spaceEmission);
             _physicallyBasedSky.aerosolDensity.Override(0.05f);
             _physicallyBasedSky.aerosolTint.Override(Color.white);
             _physicallyBasedSky.aerosolAnisotropy.Override(0.85f);
             _physicallyBasedSky.aerosolMaximumAltitude.Override(2000f);
             _physicallyBasedSky.ozoneDensityDimmer.Override(1f);
-            _physicallyBasedSky.colorSaturation.overrideState = false;
-            _physicallyBasedSky.alphaSaturation.overrideState = false;
-            _physicallyBasedSky.alphaMultiplier.overrideState = false;
             _physicallyBasedSky.horizonTint.Override(Color.white);
             _physicallyBasedSky.horizonZenithShift.Override(0f);
             _physicallyBasedSky.zenithTint.Override(Color.white);
-            _physicallyBasedSky.skyIntensityMode.overrideState = false;
-            _physicallyBasedSky.exposure.overrideState = false;
             _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
 
             //Fog
-            _fog = GetOrAddVolumeComponent<Fog>();
             _fog.enabled.Override(true);
-            _fog.active = true;
             _fog.meanFreePath.Override(500f);
             _fog.baseHeight.Override(0f);
             _fog.maximumHeight.Override(250f);
             _fog.maxFogDistance.Override(5000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
-            _fog.tint.overrideState = false;
-            _fog.underWater.overrideState = false;
 
             //Visual Environment
-            _visualEnvironment = GetOrAddVolumeComponent<VisualEnvironment>();
-            _visualEnvironment.active = true; 
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
             _visualEnvironment.skyAmbientMode.Override(VisualEnvironment.SkyAmbientMode.Dynamic);
-            _visualEnvironment.planetRadius.overrideState = false;
-            _visualEnvironment.renderingSpace.overrideState = false;
 
             //Volumetric Clouds
-            _volumetricClouds = GetOrAddVolumeComponent<VolumetricClouds>();
-            _volumetricClouds.state.Override(true);
-            _volumetricClouds.active = true;
-            _volumetricClouds.localClouds.overrideState = false;
-            _volumetricClouds.shapeOffset.overrideState = false;
-            _volumetricClouds.earthCurvature.overrideState = false;
-            _volumetricClouds.verticalErosionWindSpeed.overrideState = false;
-            _volumetricClouds.verticalShapeWindSpeed.overrideState = false;
-            _volumetricClouds.ambientLightProbeDimmer.overrideState = false;
-            _volumetricClouds.sunLightDimmer.overrideState = false;
-            _volumetricClouds.scatteringTint.overrideState = false;
             _volumetricClouds.temporalAccumulationFactor.Override(1);
-            _volumetricClouds.perceptualBlending.overrideState = false;
             _volumetricClouds.numPrimarySteps.Override(100);
-            _volumetricClouds.numLightSteps.overrideState = false;
-            _volumetricClouds.fadeInMode.overrideState = false;
-
-            //Relive camera
-            if (_reliveCamera != null)
-            {
-                _reliveCamera.clearFlags = CameraClearFlags.Skybox;
-            }
-
-            //POV camera
-            if (_povCamera != null)
-            {
-                _povCamera.clearFlags = CameraClearFlags.Skybox;
-            }
-
-            if (_mainLight == null)
-            {
-                return;
-            }
 
             //Sun orientation
             float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
@@ -267,21 +299,36 @@ namespace FlightReLive.Core.Environment
             _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
             float elevation = Mathf.Max(sun.Elevation, -5f);
             float t = Mathf.Clamp01((elevation + 5f) / 95f);
-            float lux = Mathf.Max(0f, 120000f * Mathf.Sin(elevationRad));
-            float unityIntensity = Mathf.Pow(lux / 10000f, 0.5f);
-            unityIntensity = Mathf.Clamp(unityIntensity, 0.001f, 12f);
-            Color sunColor = Color.white;
 
-            if (sun.Elevation < 10f)
+            // Approximate illuminance in lux
+            float lux = Mathf.Max(0f, 120000f * Mathf.Sin(Mathf.Max(elevationRad, Mathf.Deg2Rad * -5f)));
+
+            // Boosted daylight mapping: lower exponent + direct gain
+            float unityIntensity = Mathf.Pow(lux / 6000f, 0.30f); // 0.30 → plus linéaire, plus fort
+            unityIntensity *= 1.35f; // global gain (~+35 %)
+
+            // Keep early morning and late evening a bit brighter
+            float horizonBoost = Mathf.Lerp(0.75f, 1f, t);
+            unityIntensity *= horizonBoost;
+
+            // Clamp safely for URP exposure range (you can push to 24f if desired)
+            unityIntensity = Mathf.Clamp(unityIntensity, 0.002f, 22f);
+
+            // Sun color (slightly warmer below 15°)
+            Color sunColor = Color.white;
+            if (sun.Elevation < 15f)
             {
-                float warmFactor = Mathf.InverseLerp(-5f, 10f, sun.Elevation);
-                sunColor = Color.Lerp(new Color(1f, 0.6f, 0.3f), Color.white, warmFactor);
+                float warmFactor = Mathf.InverseLerp(-5f, 15f, sun.Elevation);
+                sunColor = Color.Lerp(new Color(1f, 0.55f, 0.28f), Color.white, warmFactor);
             }
 
             //Main lights settings
-            _mainLight.intensity = unityIntensity;
-            _mainLight.color = sunColor;
-            RenderSettings.sun = _mainLight;
+            if (_mainLight != null)
+            {
+                _mainLight.intensity = unityIntensity;
+                _mainLight.color = sunColor;
+                RenderSettings.sun = _mainLight;
+            }
 
             //Lens flare baseline from elevation
             if (_lensFlare != null)
@@ -307,11 +354,41 @@ namespace FlightReLive.Core.Environment
         }
 
         /// <summary>
+        /// Add all post-processing components on the serialized VolumeProfile, initialize camera and light properties
+        /// </summary>
+        private void InitializeEnvironment()
+        {
+            //Relive camera
+            if (_reliveCamera != null)
+            {
+                _reliveCamera.clearFlags = CameraClearFlags.Skybox;
+            }
+
+            //POV camera
+            if (_povCamera != null)
+            {
+                _povCamera.clearFlags = CameraClearFlags.Skybox;
+            }
+
+            _vignette.active = true;
+            _colorAdjustments.active = true;
+            _toneMapping.active = true;
+            _physicallyBasedSky.active = true;
+            _fog.active = true;
+            _visualEnvironment.active = true;
+            _volumetricClouds.state.Override(true);
+            _volumetricClouds.active = true;
+            _environmentLoaded = true;
+        }
+
+        /// <summary>
         /// Remove all post-processing components from the serialized VolumeProfile, reset cameras and light properties.
         /// Ensures each effect are deleted.
         /// </summary>
-        private void UnitializeEnvironment()
+        private void UninitializeEnvironment()
         {
+            _environmentLoaded = false;
+
             if (_reliveCamera != null)
             {
                 _reliveCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -324,24 +401,20 @@ namespace FlightReLive.Core.Environment
                 _povCamera.backgroundColor = _cameraBackground;
             }
 
-            _vignette = null;
-            _colorAdjustments = null;
-            _tonemapping = null;
-            _physicallyBasedSky = null;
-            _visualEnvironment = null;
-            _fog = null;
-            _volumetricClouds = null;
+            _vignette.active = false;
+            _colorAdjustments.active = false;
+            _toneMapping.active = false;
+            _physicallyBasedSky.active = false;
+            _fog.active = false;
+            _visualEnvironment.active = false;
+            _volumetricClouds.state.Override(false);
+            _volumetricClouds.active = false;
 
-            _volumeProfile.Remove<Vignette>();
-            _volumeProfile.Remove<ColorAdjustments>();
-            _volumeProfile.Remove<Tonemapping>();
-            _volumeProfile.Remove<PhysicallyBasedSky>();
-            _volumeProfile.Remove<VisualEnvironment>();
-            _volumeProfile.Remove<Fog>();
-            _volumeProfile.Remove<VolumetricClouds>();
-
-            _mainLight.intensity = 0f;
-            _mainLight.color = Color.white;
+            if (_mainLight != null)
+            {
+                _mainLight.intensity = 0f;
+                _mainLight.color = Color.white;
+            }
 
             if (_lensFlare != null)
             {
@@ -356,24 +429,27 @@ namespace FlightReLive.Core.Environment
         }
 
         /// <summary>
-        /// Generic method to add or get post-processing volume component
+        /// Returns local sidereal time (degrees 0..360) for a given UTC datetime and longitude (east positive).
         /// </summary>
-        /// <typeparam name="T">VolumeComponent</typeparam>
-        /// <returns>VolumeComponent</returns>
-        private T GetOrAddVolumeComponent<T>() where T : VolumeComponent, new()
+        private static float GetLocalSiderealDegrees(DateTime utc, double longitude)
         {
-            if (_volumeProfile == null)
+            if (utc.Kind != DateTimeKind.Utc)
             {
-                return null;
+                utc = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
             }
 
-            if (!_volumeProfile.TryGet<T>(out var component))
+            DateTime j2000 = new DateTime(2000, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+            double d = (utc - j2000).TotalDays;
+            double gmst = 280.46061837 + 360.98564736629 * d;
+            double lst = gmst + longitude;
+            lst = lst % 360.0;
+
+            if (lst < 0.0)
             {
-                component = _volumeProfile.Add<T>(true);
+                lst += 360.0;
             }
 
-            component.active = true;
-            return component;
+            return (float)lst;
         }
 
         /// <summary>
@@ -566,6 +642,11 @@ namespace FlightReLive.Core.Environment
 
             using (FuGrid grid = new FuGrid("gridVignettingOffset", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
+                if (!_environmentLoaded)
+                {
+                    grid.DisableNextElements();
+                }
+
                 //Display vignetting custom settings
                 float vignetting = SettingsManager.CurrentSettings.VignettingIntensity;
 
@@ -589,6 +670,11 @@ namespace FlightReLive.Core.Environment
 
             using (FuGrid grid = new FuGrid("gridEnvOffsets", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
+                if (!_environmentLoaded)
+                {
+                    grid.DisableNextElements();
+                }
+
                 //Display contrast custom settings
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "Contrast",
@@ -624,6 +710,11 @@ namespace FlightReLive.Core.Environment
 
             using (FuGrid grid = new FuGrid("gridSkyCloud", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
+                if (!_environmentLoaded)
+                {
+                    grid.DisableNextElements();
+                }
+
                 CloudsPreset savedCloudsPreset = SettingsManager.CurrentSettings.CloudsPreset;
                 SettingsManager.DisplaySettingsComboboxWithReset<CloudsPreset>(grid,
                     "Clouds type",
@@ -657,11 +748,6 @@ namespace FlightReLive.Core.Environment
                     Enum.GetValues(typeof(WindType)).Cast<WindType>(),
                     (x) => SettingsManager.SaveWindType(x),
                     () => SettingsManager.ResetWindType());
-
-                if (_originalTimeUTC == DateTime.MinValue || _latitude == 0 || _longitude == 0)
-                {
-                    grid.DisableNextElements();
-                }
 
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "Day cycle",

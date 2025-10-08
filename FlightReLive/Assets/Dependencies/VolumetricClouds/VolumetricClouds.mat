@@ -120,10 +120,10 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudNearPlane: 977.7862
+    - _CloudNearPlane: 2999.497
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DensityMultiplier: 0.24499999
+    - _DensityMultiplier: 0.32000002
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -131,20 +131,20 @@ Material:
     - _EarthCurvature: 0
     - _EarthRadius: 6378100
     - _EnvironmentReflections: 1
-    - _ErosionFactor: 0.75
+    - _ErosionFactor: 0.8
     - _ErosionFactorCompensation: 1
     - _ErosionOcclusion: 0.1
     - _ErosionScale: 107
     - _Exposure: 1.3
-    - _FadeInDistance: 1500
-    - _FadeInStart: 1000
+    - _FadeInDistance: 300
+    - _FadeInStart: 200
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _HighestCloudAltitude: 6384100
-    - _LowestCloudAltitude: 6379100
+    - _HighestCloudAltitude: 6382100
+    - _LowestCloudAltitude: 6381100
     - _MaxStep: 24
-    - _MaxStepSize: 625
+    - _MaxStepSize: 125
     - _MediumWindSpeed: 1
     - _Metallic: 0
     - _MicroErosionFactor: 0.5
@@ -159,7 +159,7 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Seed: 0
-    - _ShapeFactor: 0.85
+    - _ShapeFactor: 0.95
     - _ShapeScale: 5
     - _SmallWindSpeed: 0.25
     - _Smoothness: 0.5
@@ -173,9 +173,9 @@ Material:
     - _SunSize: 0.04
     - _SunSizeConvergence: 5
     - _Surface: 0
-    - _VerticalErosionWindDisplacement: -9.897796
+    - _VerticalErosionWindDisplacement: -0.8464942
     - _VerticalShapeNoiseOffset: 0
-    - _VerticalShapeWindDisplacement: -14702.6455
+    - _VerticalShapeWindDisplacement: -846.49426
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

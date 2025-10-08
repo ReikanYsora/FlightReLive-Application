@@ -16,6 +16,7 @@ namespace FlightReLive.Core.ProceduralTerrain
     public class ProceduralTerrainManager : MonoBehaviour
     {
         #region ATTRIBUTES
+        [SerializeField] private Material _terrainMaterial;
         private List<Terrain> _terrains;
         private Bounds _terrainBounds;
         #endregion
@@ -180,12 +181,14 @@ namespace FlightReLive.Core.ProceduralTerrain
                 terrainGO.transform.SetParent(transform, false);
 
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
+                terrain.materialTemplate = _terrainMaterial;
                 terrain.drawHeightmap = true;
                 terrain.allowAutoConnect = true;
                 terrain.drawTreesAndFoliage = false;
                 terrain.drawInstanced = true;
                 terrain.groupingID = 0;
                 terrain.enabled = true;
+
 
                 float posX = (tile.X - minX) * terrainSize + centerOffsetX;
                 float posZ = (maxY - tile.Y) * terrainSize + centerOffsetZ;

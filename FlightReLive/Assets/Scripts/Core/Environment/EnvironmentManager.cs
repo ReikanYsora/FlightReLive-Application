@@ -1,9 +1,10 @@
 ﻿using FlightReLive.Core.Building;
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -71,9 +72,6 @@ namespace FlightReLive.Core.Environment
 
         private void Start()
         {
-            //Initialize post-processing components
-            InitializePostProcessingComponents();
-
             SettingsManager.OnContrastOffsetChanged += OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged += OnSaturationOffsetChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
@@ -86,6 +84,8 @@ namespace FlightReLive.Core.Environment
 
         private void OnDestroy()
         {
+            UninitializeEnvironment();
+
             SettingsManager.OnContrastOffsetChanged -= OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged -= OnSaturationOffsetChanged;
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
@@ -96,7 +96,6 @@ namespace FlightReLive.Core.Environment
         #endregion
 
         #region METHODS
-
         /// <summary>
         /// Initialize all post-processing components
         /// </summary>
@@ -143,6 +142,7 @@ namespace FlightReLive.Core.Environment
             if (_volumeProfile.TryGet(out Fog fog))
             {
                 _fog = fog;
+                _fog.enabled.Override(false);
                 _fog.active = false;
                 _fog.tint.overrideState = false;
                 _fog.underWater.overrideState = false;
@@ -153,7 +153,6 @@ namespace FlightReLive.Core.Environment
                 _visualEnvironment = visualEnvironment;
                 _visualEnvironment.active = false;
                 _visualEnvironment.planetRadius.overrideState = false;
-                _visualEnvironment.renderingSpace.overrideState = false;
             }
 
             if (_volumeProfile.TryGet(out VolumetricClouds volumetricClouds))
@@ -244,17 +243,14 @@ namespace FlightReLive.Core.Environment
             _vignette.smoothness.Override(0.3f);
 
             //Color Adjustments (Contrast: low at twilight, high at zenith. Saturation: warmer tones at low sun, neutral at zenith)
-            _colorAdjustments.active = true;
             _baseContrast = Mathf.Lerp(-20f, 20f, sun.ElevationFactor);
-            _colorAdjustments.contrast.value = _baseContrast + (20f * SettingsManager.CurrentSettings.ContrastOffset);
             Color lowSunTint = new Color(1f, 0.93f, 0.85f);
             Color highSunTint = Color.white;
-            _colorAdjustments.colorFilter.value = Color.Lerp(lowSunTint, highSunTint, Mathf.SmoothStep(0f, 1f, sun.ElevationFactor));
+            _colorAdjustments.colorFilter.Override(Color.Lerp(lowSunTint, highSunTint, Mathf.SmoothStep(0f, 1f, sun.ElevationFactor)));
             _baseSaturation = Mathf.Lerp(-10f, 10f, sun.ElevationFactor);
-            _colorAdjustments.saturation.value = _baseSaturation + (20f * SettingsManager.CurrentSettings.SaturationOffset);
 
             //Tonemapping
-            _toneMapping.mode.value = TonemappingMode.ACES;
+            _toneMapping.mode.Override(TonemappingMode.ACES);
 
             //Physically Based Sky
             _physicallyBasedSky.type.Override(PhysicallyBasedSky.PhysicallyBasedSkyModel.EarthAdvanced);
@@ -274,47 +270,38 @@ namespace FlightReLive.Core.Environment
             _physicallyBasedSky.horizonTint.Override(Color.white);
             _physicallyBasedSky.horizonZenithShift.Override(0f);
             _physicallyBasedSky.zenithTint.Override(Color.white);
-            _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
 
             //Fog
-            _fog.enabled.Override(true);
             _fog.meanFreePath.Override(500f);
             _fog.baseHeight.Override(0f);
-            _fog.maximumHeight.Override(250f);
-            _fog.maxFogDistance.Override(5000f);
+            _fog.maximumHeight.Override(125f);
+            _fog.maxFogDistance.Override(10000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
 
             //Visual Environment
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
             _visualEnvironment.skyAmbientMode.Override(VisualEnvironment.SkyAmbientMode.Dynamic);
+            _visualEnvironment.renderingSpace.Override(VisualEnvironment.RenderingSpace.Camera);
 
             //Volumetric Clouds
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
+            _volumetricClouds.shadowOpacity.Override(0.3f);
 
             //Sun orientation
             float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
             float elevationRad = Mathf.Deg2Rad * sun.Elevation;
             Vector3 direction = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
-            _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
             float elevation = Mathf.Max(sun.Elevation, -5f);
             float t = Mathf.Clamp01((elevation + 5f) / 95f);
-
-            // Approximate illuminance in lux
             float lux = Mathf.Max(0f, 120000f * Mathf.Sin(Mathf.Max(elevationRad, Mathf.Deg2Rad * -5f)));
-
-            // Boosted daylight mapping: lower exponent + direct gain
-            float unityIntensity = Mathf.Pow(lux / 6000f, 0.30f); // 0.30 → plus linéaire, plus fort
-            unityIntensity *= 1.35f; // global gain (~+35 %)
-
-            // Keep early morning and late evening a bit brighter
+            float unityIntensity = Mathf.Pow(lux / 6000f, 0.30f); 
+            unityIntensity *= 1.35f;
             float horizonBoost = Mathf.Lerp(0.75f, 1f, t);
             unityIntensity *= horizonBoost;
-
-            // Clamp safely for URP exposure range (you can push to 24f if desired)
             unityIntensity = Mathf.Clamp(unityIntensity, 0.002f, 22f);
 
-            // Sun color (slightly warmer below 15°)
+            //Sun color
             Color sunColor = Color.white;
             if (sun.Elevation < 15f)
             {
@@ -325,6 +312,7 @@ namespace FlightReLive.Core.Environment
             //Main lights settings
             if (_mainLight != null)
             {
+                _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
                 _mainLight.intensity = unityIntensity;
                 _mainLight.color = sunColor;
                 RenderSettings.sun = _mainLight;
@@ -358,6 +346,9 @@ namespace FlightReLive.Core.Environment
         /// </summary>
         private void InitializeEnvironment()
         {
+            //Initialize post-processing components
+            InitializePostProcessingComponents();
+
             //Relive camera
             if (_reliveCamera != null)
             {
@@ -375,6 +366,7 @@ namespace FlightReLive.Core.Environment
             _toneMapping.active = true;
             _physicallyBasedSky.active = true;
             _fog.active = true;
+            _fog.enabled.Override(true);
             _visualEnvironment.active = true;
             _volumetricClouds.state.Override(true);
             _volumetricClouds.active = true;
@@ -401,14 +393,41 @@ namespace FlightReLive.Core.Environment
                 _povCamera.backgroundColor = _cameraBackground;
             }
 
-            _vignette.active = false;
-            _colorAdjustments.active = false;
-            _toneMapping.active = false;
-            _physicallyBasedSky.active = false;
-            _fog.active = false;
-            _visualEnvironment.active = false;
-            _volumetricClouds.state.Override(false);
-            _volumetricClouds.active = false;
+            if (_vignette != null)
+            {
+                _vignette.active = false;
+            }
+
+            if (_colorAdjustments != null)
+            {
+                _colorAdjustments.active = false;
+            }
+
+            if (_toneMapping != null)
+            {
+                _toneMapping.active = false;
+            }
+
+            if (_physicallyBasedSky != null)
+            {
+                _physicallyBasedSky.active = false;
+            }
+
+            if (_fog != null)
+            {
+                _fog.active = false;
+            }
+
+            if (_visualEnvironment != null)
+            {
+                _visualEnvironment.active = false;
+            }
+
+            if (_volumetricClouds != null)
+            {
+                _volumetricClouds.state.Override(false);
+                _volumetricClouds.active = false;
+            }
 
             if (_mainLight != null)
             {
@@ -471,9 +490,8 @@ namespace FlightReLive.Core.Environment
         {
             if (_colorAdjustments != null)
             {
-                float contrast = _baseContrast + (20f * SettingsManager.CurrentSettings.ContrastOffset);
-                _colorAdjustments.active = true;
-                _colorAdjustments.contrast.value = contrast;
+                float contrast = _baseContrast + (30f * SettingsManager.CurrentSettings.ContrastOffset);
+                _colorAdjustments.contrast.Override(contrast);
             }
         }
 
@@ -484,9 +502,8 @@ namespace FlightReLive.Core.Environment
         {
             if (_colorAdjustments != null)
             {
-                float saturation = _baseSaturation + (20f * SettingsManager.CurrentSettings.SaturationOffset);
-                _colorAdjustments.active = true;
-                _colorAdjustments.saturation.value = saturation;
+                float saturation = _baseSaturation + (30f * SettingsManager.CurrentSettings.SaturationOffset);
+                _colorAdjustments.saturation.Override(saturation);
             }
         }
 

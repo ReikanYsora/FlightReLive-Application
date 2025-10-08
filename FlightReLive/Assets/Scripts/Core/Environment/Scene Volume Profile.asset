@@ -18,16 +18,16 @@ MonoBehaviour:
     m_Value: 0
   contrast:
     m_OverrideState: 1
-    m_Value: -1.4961803
+    m_Value: 38.36794
   colorFilter:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 0.96107984, b: 0.9165997, a: 1}
+    m_Value: {r: 1, g: 0.98948884, b: 0.97747606, a: 1}
   hueShift:
     m_OverrideState: 0
     m_Value: 0
   saturation:
     m_OverrideState: 1
-    m_Value: -0.74809015
+    m_Value: 5.1090717
 --- !u!114 &-5072858145530427496
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -103,10 +103,10 @@ MonoBehaviour:
     m_Value: {fileID: 8900000, guid: 997719748a5428d4597d4b1197438e17, type: 3}
   spaceEmissionMultiplier:
     m_OverrideState: 1
-    m_Value: 0.0000008958898
+    m_Value: 1.2768236e-10
   spaceRotation:
     m_OverrideState: 1
-    m_Value: {x: 0, y: 179.94246, z: 0}
+    m_Value: {x: 0, y: 101.08508, z: 0}
   colorSaturation:
     m_OverrideState: 0
     m_Value: 1
@@ -132,8 +132,8 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 0
   multiplier:
-    m_OverrideState: 0
-    m_Value: 1
+    m_OverrideState: 1
+    m_Value: 0.73
   upperHemisphereLuxValue:
     m_OverrideState: 0
     m_Value: 1
@@ -352,10 +352,10 @@ MonoBehaviour:
     m_Value: 0.25
   verticalShapeWindSpeed:
     m_OverrideState: 1
-    m_Value: 250
+    m_Value: 1000
   verticalErosionWindSpeed:
     m_OverrideState: 1
-    m_Value: 250
+    m_Value: 1000
   ambientLightProbeDimmer:
     m_OverrideState: 0
     m_Value: 1
@@ -492,7 +492,7 @@ MonoBehaviour:
     m_Value: 0
   maximumHeight:
     m_OverrideState: 1
-    m_Value: 125
+    m_Value: 50
   meanFreePath:
     m_OverrideState: 1
     m_Value: 500

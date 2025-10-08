@@ -1,10 +1,8 @@
 ﻿using FlightReLive.Core.Building;
 using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -20,6 +18,8 @@ namespace FlightReLive.Core.Environment
     {
         #region ATTRIBUTES
         [Header("Light & Camera")]
+        [SerializeField, Range(0f, 50f)] private float _sunMaxIntensity = 18f;
+        [SerializeField] private AnimationCurve _sunIntensityByElevation;
         [SerializeField] private Light _mainLight;
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
@@ -46,9 +46,6 @@ namespace FlightReLive.Core.Environment
         private double _longitude;
         private float _baseContrast;
         private float _baseSaturation;
-        private float _baseLensFlareIntensity;
-        private float _baseLensFlareScale;
-        private float _baseLensFlareOccRadius;
         #endregion
 
         #region PROPERTIES
@@ -237,13 +234,21 @@ namespace FlightReLive.Core.Environment
 
             SunPosition sun = SunHelper.CalculateSunPosition(dateTime, latitude, longitude);
 
+            //Sun orientation and intensity processing
+            float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
+            float elevationRad = Mathf.Deg2Rad * sun.Elevation;
+            Vector3 direction = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
+            float factor01 = Mathf.Clamp01(sun.ElevationFactor);
+            float sunFactor = Mathf.Clamp01(_sunIntensityByElevation.Evaluate(factor01));
+            float unityIntensity = Mathf.Clamp(_sunMaxIntensity * sunFactor, 0f, _sunMaxIntensity);
+
             //Vignetting
             _vignette.color.Override(Color.black);
             _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
             _vignette.smoothness.Override(0.3f);
 
             //Color Adjustments (Contrast: low at twilight, high at zenith. Saturation: warmer tones at low sun, neutral at zenith)
-            _baseContrast = Mathf.Lerp(-20f, 20f, sun.ElevationFactor);
+            _baseContrast = sunFactor * 40f;
             Color lowSunTint = new Color(1f, 0.93f, 0.85f);
             Color highSunTint = Color.white;
             _colorAdjustments.colorFilter.Override(Color.Lerp(lowSunTint, highSunTint, Mathf.SmoothStep(0f, 1f, sun.ElevationFactor)));
@@ -274,7 +279,7 @@ namespace FlightReLive.Core.Environment
             //Fog
             _fog.meanFreePath.Override(500f);
             _fog.baseHeight.Override(0f);
-            _fog.maximumHeight.Override(125f);
+            _fog.maximumHeight.Override(50f);
             _fog.maxFogDistance.Override(10000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
 
@@ -287,19 +292,6 @@ namespace FlightReLive.Core.Environment
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
             _volumetricClouds.shadowOpacity.Override(0.3f);
-
-            //Sun orientation
-            float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
-            float elevationRad = Mathf.Deg2Rad * sun.Elevation;
-            Vector3 direction = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
-            float elevation = Mathf.Max(sun.Elevation, -5f);
-            float t = Mathf.Clamp01((elevation + 5f) / 95f);
-            float lux = Mathf.Max(0f, 120000f * Mathf.Sin(Mathf.Max(elevationRad, Mathf.Deg2Rad * -5f)));
-            float unityIntensity = Mathf.Pow(lux / 6000f, 0.30f); 
-            unityIntensity *= 1.35f;
-            float horizonBoost = Mathf.Lerp(0.75f, 1f, t);
-            unityIntensity *= horizonBoost;
-            unityIntensity = Mathf.Clamp(unityIntensity, 0.002f, 22f);
 
             //Sun color
             Color sunColor = Color.white;
@@ -321,12 +313,9 @@ namespace FlightReLive.Core.Environment
             //Lens flare baseline from elevation
             if (_lensFlare != null)
             {
-                _baseLensFlareIntensity = Mathf.Lerp(2f, 3f, Mathf.Pow(sun.ElevationFactor, 3f));
-                _baseLensFlareScale = Mathf.Lerp(0.5f, 1.5f, Mathf.Pow(sun.ElevationFactor, 0.3f));
-                _baseLensFlareOccRadius = Mathf.Lerp(0.3f, 1f, sun.ElevationFactor);
-                _lensFlare.intensity = _baseLensFlareIntensity;
-                _lensFlare.scale = _baseLensFlareScale;
-                _lensFlare.occlusionRadius = _baseLensFlareOccRadius;
+                _lensFlare.intensity = Mathf.Lerp(0.5f, 3f, sunFactor * sunFactor);
+                _lensFlare.scale = Mathf.Lerp(0.6f, 1.5f, Mathf.Sqrt(sunFactor));
+                _lensFlare.occlusionRadius = Mathf.Lerp(0.3f, 1f, sunFactor);
                 _lensFlare.attenuationByLightShape = true;
                 _lensFlare.environmentOcclusion = true;
                 _lensFlare.enabled = true;
@@ -682,7 +671,7 @@ namespace FlightReLive.Core.Environment
             }
 
             layout.Separator();
-            layout.FramedText("Lighting & Color");
+            layout.FramedText("Color adjustments");
             layout.Separator();
 
             using (FuGrid grid = new FuGrid("gridEnvOffsets", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
@@ -720,8 +709,10 @@ namespace FlightReLive.Core.Environment
                      (x) => SettingsManager.SaveSaturationOffset(x),
                      () => SettingsManager.ResetSaturationOffset());
             }
+        }
 
-            layout.Separator();
+        internal void DrawSunCloudsSettings(FuLayout layout)
+        {
             layout.FramedText("Sky & Clouds");
             layout.Separator();
 
@@ -767,15 +758,15 @@ namespace FlightReLive.Core.Environment
                     () => SettingsManager.ResetWindType());
 
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
-                    "Day cycle",
-                    "Define a custom saturation offset for the scene.",
-                    $"Reset saturation offset to default value ({SettingsManager.SATURATION_OFFSET_DEFAULT_VALUE}).",
+                    "Day time",
+                    "Define a custom day time",
+                    $"Reset time to default time value.",
                     _dayTime,
                     0.0f,
                     1.0f,
-                    0.01f,
+                    0.001f,
                     GetNormalizedTimeOfDay(_originalTimeUTC),
-                    "%.2f",
+                    "%.3f",
                      (x) => ApplyTimeOfDay(_dateTimeUTC, _latitude, _longitude, x),
                      () =>
                      {

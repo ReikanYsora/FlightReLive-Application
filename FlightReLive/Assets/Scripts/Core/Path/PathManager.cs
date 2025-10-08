@@ -672,6 +672,9 @@ namespace FlightReLive.Core.Paths
         #region UI
         internal void DrawPathSettings(FuLayout layout)
         {
+            layout.FramedText("Path settings");
+            layout.Separator();
+
             using (FuGrid grid = new FuGrid("grdSceneSettings",
                        new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }),
                        FuGridFlag.AutoToolTipsOnLabels,

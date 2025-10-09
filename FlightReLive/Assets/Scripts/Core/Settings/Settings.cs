@@ -32,6 +32,7 @@ namespace FlightReLive.Core.Settings
         public float SaturationOffset;
         public CloudsPreset CloudsPreset;
         public bool CloudShadowsEnabled;
+        public float CloudShadowsOpacity;
         public WindType WindType;
         public string CurrentVersion;
         #endregion

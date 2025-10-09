@@ -25,6 +25,7 @@ namespace FlightReLive.Core.Settings
         internal static float SATURATION_OFFSET_DEFAULT_VALUE = 0f;
         internal static CloudsPreset CLOUD_PRESET_DEFAULT_VALUE = CloudsPreset.Sparse;
         internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
+        internal static float CLOUD_SHADOW_OPACITY_DEFAULT_STATE = 0.5f;
         internal static WindType WIND_TYPE_DEFAULT_VALUE = WindType.Slow;
 
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
@@ -83,6 +84,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<float> OnSaturationOffsetChanged;
         public static event Action<CloudsPreset> OnCloudsPresetChanged;
         public static event Action<bool> OnCloudShadowsEnabledChanged;
+        public static event Action<float> OnCloudShadowsOpacityChanged;
         public static event Action<WindType> OnWindTypeChanged;
         #endregion
 
@@ -221,6 +223,8 @@ namespace FlightReLive.Core.Settings
             int intBool = CLOUD_SHADOW_ENABLED_DEFAULT_STATE ? 1 : 0;
             CurrentSettings.CloudShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.CloudShadowsEnabled), intBool) == 1;
         }
+        internal static void LoadCloudShadowsOpacity() =>
+            CurrentSettings.CloudShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.CloudShadowsOpacity), CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
 
         internal static void LoadWindType() =>
             CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
@@ -439,6 +443,14 @@ namespace FlightReLive.Core.Settings
             OnCloudShadowsEnabledChanged?.Invoke(value);
         }
 
+        internal static void SaveCloudShadowsOpacity(float value)
+        {
+            CurrentSettings.CloudShadowsOpacity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.CloudShadowsOpacity), value);
+            PlayerPrefs.Save();
+            OnCloudShadowsOpacityChanged?.Invoke(value);
+        }
+
         internal static void SaveWindType(WindType value)
         {
             CurrentSettings.WindType = value;
@@ -481,6 +493,7 @@ namespace FlightReLive.Core.Settings
             LoadSaturationOffset();
             LoadCloudsPreset();
             LoadCloudShadowsEnabled();
+            LoadCloudShadowsOpacity();
             LoadWindType();
         }
 
@@ -515,6 +528,7 @@ namespace FlightReLive.Core.Settings
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
             SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
+            SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
@@ -1202,6 +1216,12 @@ namespace FlightReLive.Core.Settings
         {
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
             LoadCloudShadowsEnabled();
+        }
+
+        internal static void ResetCloudShadowsOpacity()
+        {
+            SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
+            LoadCloudShadowsOpacity();
         }
 
         internal static void ResetWindType()

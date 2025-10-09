@@ -5,6 +5,7 @@ using Fu.Framework;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -80,6 +81,7 @@ namespace FlightReLive.Core.Environment
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
             SettingsManager.OnCloudsPresetChanged += OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged += OnCloudShadowsEnabledChanged;
+            SettingsManager.OnCloudShadowsOpacityChanged += OnCloudShadowsOpacityChanged;
             SettingsManager.OnWindTypeChanged += OnWindTypeChanged;
 
             UninitializeEnvironment();
@@ -94,6 +96,7 @@ namespace FlightReLive.Core.Environment
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
             SettingsManager.OnCloudsPresetChanged -= OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged -= OnCloudShadowsEnabledChanged;
+            SettingsManager.OnCloudShadowsOpacityChanged -= OnCloudShadowsOpacityChanged;
             SettingsManager.OnWindTypeChanged -= OnWindTypeChanged;
         }
         #endregion
@@ -271,26 +274,26 @@ namespace FlightReLive.Core.Environment
             nightFactor = Mathf.Pow(nightFactor, 1.2f);
             float spaceEmission = 8f * nightFactor;
             _physicallyBasedSky.spaceEmissionMultiplier.Override(spaceEmission);
-            _physicallyBasedSky.aerosolDensity.Override(0.05f);
+            _physicallyBasedSky.aerosolDensity.Override(0.025f);
             _physicallyBasedSky.aerosolTint.Override(Color.white);
             _physicallyBasedSky.aerosolAnisotropy.Override(0.85f);
             _physicallyBasedSky.aerosolMaximumAltitude.Override(2000f);
-            _physicallyBasedSky.ozoneDensityDimmer.Override(1f);
-            _physicallyBasedSky.horizonTint.Override(Color.white);
             _physicallyBasedSky.horizonZenithShift.Override(0f);
-            _physicallyBasedSky.zenithTint.Override(Color.white);
-
-            float exposureFix = Mathf.Lerp(4.5f, 0.0f, Mathf.SmoothStep(0.5f, 1.0f, sun.ElevationFactor));
+            Color nightSkyTint = new Color(0.02f, 0.03f, 0.05f);
+            Color daySkyTint = Color.white;
+            Color skyTint = Color.Lerp(nightSkyTint, daySkyTint, Mathf.SmoothStep(-5f, 5f, sun.Elevation));
+            _physicallyBasedSky.horizonTint.Override(skyTint);
+            _physicallyBasedSky.zenithTint.Override(skyTint);
             _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
-            _physicallyBasedSky.exposure.Override(exposureFix);
+            _physicallyBasedSky.exposure.Override(0.5f);
 
             //Fog
-            _fog.meanFreePath.Override(500f);
+            _fog.meanFreePath.Override(1500f);
             _fog.baseHeight.Override(0f);
             _fog.maximumHeight.Override(50f);
             _fog.maxFogDistance.Override(10000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
-
+            _fog.tint.Override(skyTint);
 
             //Visual Environment
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
@@ -300,7 +303,6 @@ namespace FlightReLive.Core.Environment
             //Volumetric Clouds
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
-            _volumetricClouds.shadowOpacity.Override(0.6f);
 
             //Sun color
             Color sunColor = Color.white;
@@ -317,8 +319,18 @@ namespace FlightReLive.Core.Environment
                 _mainLight.intensity = unityIntensity;
                 _mainLight.color = sunColor;
                 RenderSettings.sun = _mainLight;
-                RenderSettings.ambientMode = AmbientMode.Flat;
-                RenderSettings.ambientLight = Color.Lerp(new Color(0.15f, 0.18f, 0.22f), new Color(1f, 1f, 1f), sun.ElevationFactor);
+                RenderSettings.ambientMode = AmbientMode.Skybox;
+                float ambientBoost = Mathf.Clamp01(1f - sun.ElevationFactor);
+                Color nightAmbient = new Color(0.02f, 0.025f, 0.03f);
+                RenderSettings.ambientLight += nightAmbient * ambientBoost;
+
+                if (RenderSettings.defaultReflectionMode != DefaultReflectionMode.Skybox)
+                {
+                    RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+                }
+
+                RenderSettings.defaultReflectionResolution = 128;
+                RenderSettings.reflectionIntensity = 1f;
             }
 
             //Lens flare baseline from elevation
@@ -338,6 +350,7 @@ namespace FlightReLive.Core.Environment
             ApplySaturation();
             ApplyCloudsPreset();
             ApplyCloudShadowsEnabled();
+            ApplyCloudShadowsOpacity();
             ApplyWindType();
         }
 
@@ -556,6 +569,15 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        private void ApplyCloudShadowsOpacity()
+        {
+            if (_volumetricClouds != null)
+            {
+                float shadowOpacity = SettingsManager.CurrentSettings.CloudShadowsOpacity;
+                _volumetricClouds.shadowOpacity.Override(shadowOpacity);
+            }
+        }
+
         private void ApplyWindType()
         {
             if (_volumetricClouds != null)
@@ -609,6 +631,11 @@ namespace FlightReLive.Core.Environment
         private void OnCloudShadowsEnabledChanged(bool obj)
         {
             ApplyCloudShadowsEnabled();
+        }
+
+        private void OnCloudShadowsOpacityChanged(float obj)
+        {
+            ApplyCloudShadowsOpacity();
         }
 
         private void OnWindTypeChanged(WindType obj)
@@ -747,6 +774,7 @@ namespace FlightReLive.Core.Environment
                     () => SettingsManager.ResetCloudsPreset());
 
                 bool shadowsEnabled = SettingsManager.CurrentSettings.CloudShadowsEnabled;
+
                 SettingsManager.DisplaySettingsToggleWithReset(grid,
                     "Clouds shadows",
                     "Display or hide clouds shadows.",
@@ -755,6 +783,24 @@ namespace FlightReLive.Core.Environment
                     SettingsManager.CLOUD_SHADOW_ENABLED_DEFAULT_STATE,
                      (x) => SettingsManager.SaveCloudShadowsEnabled(x),
                      () => SettingsManager.ResetCloudShadowsEnabled());
+
+                if (!shadowsEnabled)
+                {
+                    grid.DisableNextElements();
+                }
+
+                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                    "Shadows opacity",
+                    "Define the opacity of cloud shadows",
+                    $"Reset default cloud shadows opacity to default value ({SettingsManager.CLOUD_SHADOW_OPACITY_DEFAULT_STATE}).",
+                    SettingsManager.CurrentSettings.CloudShadowsOpacity,
+                    0.0f,
+                    1.0f,
+                    0.01f,
+                    SettingsManager.CLOUD_SHADOW_OPACITY_DEFAULT_STATE,
+                    "%.2f",
+                     (x) => SettingsManager.SaveCloudShadowsOpacity(x),
+                     () => SettingsManager.ResetCloudShadowsOpacity());
 
                 WindType savedWindType = SettingsManager.CurrentSettings.WindType;
                 SettingsManager.DisplaySettingsComboboxWithReset<WindType>(grid,
@@ -767,6 +813,8 @@ namespace FlightReLive.Core.Environment
                     Enum.GetValues(typeof(WindType)).Cast<WindType>(),
                     (x) => SettingsManager.SaveWindType(x),
                     () => SettingsManager.ResetWindType());
+
+                grid.EnableNextElements();
 
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "Day time",

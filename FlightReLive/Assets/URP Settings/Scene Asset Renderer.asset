@@ -58,8 +58,8 @@ MonoBehaviour:
   m_Shader: {fileID: 4800000, guid: cba92fa286f80234db50615beb33eab2, type: 3}
   m_LutShader: {fileID: 4800000, guid: b2d9c6e519415af43a8d8e54c3ca5a4d, type: 3}
   m_Precomputation: 0
-  m_FallbackSkyMaterial: {fileID: 2100000, guid: 7c6697a3d51c9324c8e9ad3284a1ac04, type: 2}
-  m_VolumetricCloudsMaterial: {fileID: 2100000, guid: 3748131af20412e478461c6445c73923, type: 2}
+  m_FallbackSkyMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_VolumetricCloudsMaterial: {fileID: 2100000, guid: e5fb780edf9fe654ba73203f79b090a4, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -130,7 +130,7 @@ MonoBehaviour:
   m_Name: VolumetricCloudsURP
   m_EditorClassIdentifier: VolumetricCloudsURP::VolumetricCloudsURP
   m_Active: 1
-  material: {fileID: 2100000, guid: 3748131af20412e478461c6445c73923, type: 2}
+  material: {fileID: 2100000, guid: e5fb780edf9fe654ba73203f79b090a4, type: 2}
   renderingDebugger: 0
   reflectionProbe: 0
   resolutionScale: 0.5

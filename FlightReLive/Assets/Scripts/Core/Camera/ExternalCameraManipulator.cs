@@ -327,8 +327,6 @@ namespace FlightReLive.Core.Cameras
                         _pivotLerpStart = _freePosition;
                         _pivotLerpTarget = newPivot;
                         _pivotLerpProgress = 0f;
-
-                        Debug.Log($"[Camera] Nouveau pivot défini à {newPivot}");
                     }
                 }
             }
@@ -346,14 +344,20 @@ namespace FlightReLive.Core.Cameras
                 Vector3 pivot = (_mode == CameraMode.Tracking) ? _droneAnchorTransform.position : _freePosition;
                 Vector3 proposedPosition = pivot + proposedRot * new Vector3(0, 0, -_distance);
 
-                if (!Physics.Raycast(pivot, (proposedPosition - pivot).normalized, _distance, _collisionMask))
+                Vector3 direction = (proposedPosition - pivot).normalized;
+                Ray forwardRay = new Ray(pivot, direction);
+                if (Physics.Raycast(forwardRay, out RaycastHit hit, _distance, _collisionMask))
                 {
-                    _targetX = proposedX;
-                    _targetY = proposedY;
+                    float safeHeight = hit.point.y + 5f;
+                    proposedPosition.y = Mathf.Max(proposedPosition.y, safeHeight);
                 }
-                else
+
+                _targetX = proposedX;
+                _targetY = proposedY;
+
+                if (_mode == CameraMode.Free)
                 {
-                    Debug.Log("[Camera] Rotation bloquée par obstacle.");
+                    _targetFreePosition = pivot;
                 }
             }
 

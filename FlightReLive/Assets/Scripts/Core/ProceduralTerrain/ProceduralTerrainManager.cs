@@ -188,13 +188,15 @@ namespace FlightReLive.Core.ProceduralTerrain
 
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
                 terrain.materialTemplate = _terrainMaterial;
+                terrain.materialTemplate.enableInstancing = true;
                 terrain.drawHeightmap = true;
                 terrain.allowAutoConnect = true;
                 terrain.drawTreesAndFoliage = false;
                 terrain.drawInstanced = true;
                 terrain.groupingID = 0;
                 terrain.enabled = true;
-
+                terrain.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbesAndSkybox;
+                terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
 
                 float posX = (tile.X - minX) * terrainSize + centerOffsetX;
                 float posZ = (maxY - tile.Y) * terrainSize + centerOffsetZ;

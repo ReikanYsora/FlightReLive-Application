@@ -79,6 +79,9 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<Color> OnBuildingColorChanged;
         public static event Action<float> OnBuildingAOChanged;
+        public static event Action<bool> OnPOIVisibilityChanged;
+        public static event Action<float> OnPOIScaleChanged;
+        public static event Action<float> OnPOIHeightChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnContrastOffsetChanged;
         public static event Action<float> OnSaturationOffsetChanged;
@@ -201,6 +204,15 @@ namespace FlightReLive.Core.Settings
 
         internal static void LoadBuildingAO() =>
             CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
+
+        internal static void LoadPOIVisibility() =>
+            CurrentSettings.POIVisibility = PlayerPrefs.GetInt(nameof(Settings.POIVisibility), 1) == 1;
+
+        internal static void LoadPOIScale() =>
+            CurrentSettings.POIScale = PlayerPrefs.GetFloat(nameof(Settings.POIScale), 0.5f);
+
+        internal static void LoadPOIHeight() =>
+            CurrentSettings.POIHeight = PlayerPrefs.GetFloat(nameof(Settings.POIHeight), 5f);
 
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
@@ -403,7 +415,31 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnBuildingAOChanged?.Invoke(value);
         }
-        
+
+        internal static void SavePOIScale(float value)
+        {
+            CurrentSettings.POIScale = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIScale), value);
+            PlayerPrefs.Save();
+            OnPOIScaleChanged?.Invoke(value);
+        }
+
+        internal static void SavePOIVisibility(bool value)
+        {
+            CurrentSettings.POIVisibility = value;
+            PlayerPrefs.SetInt(nameof(Settings.POIVisibility), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnPOIVisibilityChanged?.Invoke(value);
+        }
+
+        internal static void SavePOIHeight(float value)
+        {
+            CurrentSettings.POIHeight = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIHeight), value);
+            PlayerPrefs.Save();
+            OnPOIHeightChanged?.Invoke(value);
+        }
+
         internal static void SaveContrastOffset(float value)
         {
             CurrentSettings.ContrastOffset = value;
@@ -488,6 +524,9 @@ namespace FlightReLive.Core.Settings
             LoadBuildingVisibility();
             LoadBuildingColor();
             LoadBuildingAO();
+            LoadPOIScale();
+            LoadPOIVisibility();
+            LoadPOIHeight();
             LoadVignettingIntensity();
             LoadContrastOffset();
             LoadSaturationOffset();
@@ -524,6 +563,9 @@ namespace FlightReLive.Core.Settings
             SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
             SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
             SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
+            SavePOIVisibility(true);
+            SavePOIScale(0.5f);
+            SavePOIHeight(5f);
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
             SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);

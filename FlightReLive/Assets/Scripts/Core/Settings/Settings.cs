@@ -27,6 +27,9 @@ namespace FlightReLive.Core.Settings
         public bool BuildingVisibility;
         public Color BuildingColor;
         public float BuildingAO;
+        public float POIScale;
+        public float POIHeight;
+        public bool POIVisibility;
         public float VignettingIntensity;
         public float ContrastOffset;
         public float SaturationOffset;

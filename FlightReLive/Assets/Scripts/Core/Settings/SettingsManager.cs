@@ -8,33 +8,26 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using TND.Upscaling.Framework;
 using UnityEngine;
 
 namespace FlightReLive.Core.Settings
 {
     public static class SettingsManager
     {
-        #region CONSTANTS
-        internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.2f;
-        internal static Color PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE = Color.white;
-        internal static Color PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE = Color.black;
+        #region ATTRIBUTES
+        internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.4f;
+        internal static Color PATH_3D_REMAINING_COLOR_DEFAULT_VALUE = Color.white;
         internal static bool BUILDING_DISPLAY_STATE_DEFAULT_VALUE = true;
         internal static Color BUILDING_COLOR_DEFAULT_VALUE = Color.antiqueWhite;
-        internal static float BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE = 0.3f;
+        internal static float BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE = 0.9f;
         internal static float VIGNETTING_DEFAULT_VALUE = 0.3f;
-        internal static float EXPOSURE_OFFSET_DEFAULT_VALUE = 0f;
         internal static float CONTRAST_OFFSET_DEFAULT_VALUE = 0f;
         internal static float SATURATION_OFFSET_DEFAULT_VALUE = 0f;
-        internal static float INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE = 0f;
-        internal static bool CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE = true;
-        internal static float CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE = 0f;
-        internal static float CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE = 200f;
-        internal static float CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE = 0.7f;
-        internal static CloudStyle CLOUD_STYLE_DEFAULT_VALUE = CloudStyle.Cloudy;
-        #endregion
+        internal static CloudsPreset CLOUD_PRESET_DEFAULT_VALUE = CloudsPreset.Sparse;
+        internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
+        internal static float CLOUD_SHADOW_OPACITY_DEFAULT_STATE = 0.5f;
+        internal static WindType WIND_TYPE_DEFAULT_VALUE = WindType.Slow;
 
-        #region ATTRIBUTES
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
         {
@@ -66,10 +59,6 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region EVENTS
-        public static event Action<UpscalerName> OnUpscalerNameChanged;
-        public static event Action<UpscalerQuality> OnUpscalerQualityChanged;
-        public static event Action<bool> OnUpscalerSharpeningEnabledChanged;
-        public static event Action<float> OnUpscalerSharpenessChanged;
         public static event Action<int> OnApplicationTargetFPSChanged;
         public static event Action<int> OnApplicationIdleFPSChanged;
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
@@ -86,38 +75,22 @@ namespace FlightReLive.Core.Settings
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<float> OnGlobalScaleChanged;
         public static event Action<float> OnPath3DWidthChanged;
-        public static event Action<Color> OnPath3DRemainingColor1Changed;
-        public static event Action<Color> OnPath3DRemainingColor2Changed;
+        public static event Action<Color> OnPath3DRemainingColorChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<Color> OnBuildingColorChanged;
         public static event Action<float> OnBuildingAOChanged;
-        public static event Action<bool> OnContactShadowsEnabledChanged;
-        public static event Action<float> OnContactShadowsMinDistanceChanged;
-        public static event Action<float> OnContactShadowsMaxDistanceChanged;
-        public static event Action<float> OnContactShadowsOpacityChanged;
         public static event Action<float> OnVignettingIntensityChanged;
-        public static event Action<float> OnExposureOffsetChanged;
         public static event Action<float> OnContrastOffsetChanged;
         public static event Action<float> OnSaturationOffsetChanged;
-        public static event Action<float> OnIndirectLightningOffsetChanged;
-        public static event Action<CloudStyle> OnCloudStyleChanged;
+        public static event Action<CloudsPreset> OnCloudsPresetChanged;
+        public static event Action<bool> OnCloudShadowsEnabledChanged;
+        public static event Action<float> OnCloudShadowsOpacityChanged;
+        public static event Action<WindType> OnWindTypeChanged;
         #endregion
 
         #region METHODS
         internal static void LoadDisplayWizard() =>
             CurrentSettings.DisplayWizard = PlayerPrefs.GetInt(nameof(Settings.DisplayWizard), 1) == 1;
-
-        internal static void LoadMainCameraUpscalerName() =>
-            CurrentSettings.UpscalerName = (UpscalerName)PlayerPrefs.GetInt(nameof(Settings.UpscalerName), (int)UpscalerName.None);
-
-        internal static void LoadMainCameraUpscaleQuality() =>
-            CurrentSettings.UpscalerQuality = (UpscalerQuality)PlayerPrefs.GetInt(nameof(Settings.UpscalerQuality), (int)UpscalerQuality.NativeAA);
-
-        internal static void LoadMainCameraUpscalerSharpeningEnabled() =>
-            CurrentSettings.UpscalerSharpeningEnabled = PlayerPrefs.GetInt(nameof(Settings.UpscalerSharpeningEnabled), 0) == 1;
-
-        internal static void LoadMainCameraUpscalerSharpeness() =>
-            CurrentSettings.UpscalerSharpeness = PlayerPrefs.GetFloat(nameof(Settings.UpscalerSharpeness), 0.5f);
 
         internal static void LoadApplicationTargetFPS() =>
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
@@ -178,11 +151,11 @@ namespace FlightReLive.Core.Settings
         internal static void LoadPath3DThickness() =>
             CurrentSettings.Path3DThickness = PlayerPrefs.GetFloat(nameof(Settings.Path3DThickness), PATH_3D_THICKNESS_DEFAULT_VALUE);
 
-        internal static void LoadPath3DRemainingColor1()
+        internal static void LoadPath3DRemainingColor()
         {
-            Color color = PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE;
+            Color color = PATH_3D_REMAINING_COLOR_DEFAULT_VALUE;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor1), colorString);
+            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor), colorString);
             string[] rgba = savedColorString.Split(',');
 
             if (rgba.Length == 4 &&
@@ -191,32 +164,11 @@ namespace FlightReLive.Core.Settings
                 float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
                 float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
             {
-                CurrentSettings.Path3DRemainingColor1 = new Color(r, g, b, a);
+                CurrentSettings.Path3DRemainingColor = new Color(r, g, b, a);
             }
             else
             {
-                CurrentSettings.Path3DRemainingColor1 = color;
-            }
-        }
-
-        internal static void LoadPath3DRemainingColor2()
-        {
-            Color color = PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor2), colorString);
-            string[] rgba = savedColorString.Split(',');
-
-            if (rgba.Length == 4 &&
-                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
-                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
-                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
-                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
-            {
-                CurrentSettings.Path3DRemainingColor2 = new Color(r, g, b, a);
-            }
-            else
-            {
-                CurrentSettings.Path3DRemainingColor2 = color;
+                CurrentSettings.Path3DRemainingColor = color;
             }
         }
 
@@ -250,29 +202,11 @@ namespace FlightReLive.Core.Settings
         internal static void LoadBuildingAO() =>
             CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
 
-        internal static void LoadContactShadowsEnabled()
-        {
-            int intBool = CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE ? 1 : 0;
-            CurrentSettings.ContactShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.ContactShadowsEnabled), intBool) == 1;
-        }
-
-        internal static void LoadContactShadowsMinDistance() =>
-            CurrentSettings.ContactShadowsMinDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMinDistance), CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
-
-        internal static void LoadContactShadowsMaxDistance() =>
-            CurrentSettings.ContactShadowsMaxDistance = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsMaxDistance), CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
-
-        internal static void LoadContactShadowsOpacity() =>
-            CurrentSettings.ContactShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.ContactShadowsOpacity), CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
-
         internal static void LoadCurrentVersion() =>
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
 
         internal static void LoadVignettingIntensity() =>
             CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), VIGNETTING_DEFAULT_VALUE);
-
-        internal static void LoadExposureOffset() =>
-            CurrentSettings.ExposureOffset = PlayerPrefs.GetFloat(nameof(Settings.ExposureOffset), EXPOSURE_OFFSET_DEFAULT_VALUE);
 
         internal static void LoadContrastOffset() =>
             CurrentSettings.ContrastOffset = PlayerPrefs.GetFloat(nameof(Settings.ContrastOffset), CONTRAST_OFFSET_DEFAULT_VALUE);
@@ -280,11 +214,20 @@ namespace FlightReLive.Core.Settings
         internal static void LoadSaturationOffset() =>
             CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.SaturationOffset), SATURATION_OFFSET_DEFAULT_VALUE);
 
-        internal static void LoadIndirectLightningOffset() =>
-            CurrentSettings.IndirectLightningOffset = PlayerPrefs.GetFloat(nameof(Settings.IndirectLightningOffset), INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
+        internal static void LoadCloudsPreset() =>
+            CurrentSettings.CloudsPreset = (CloudsPreset)PlayerPrefs.GetInt(nameof(Settings.CloudsPreset), (int)CLOUD_PRESET_DEFAULT_VALUE);
 
-        internal static void LoadCloudStyle() =>
-            CurrentSettings.CloudStyle = (CloudStyle)PlayerPrefs.GetInt(nameof(Settings.CloudStyle), (int)CLOUD_STYLE_DEFAULT_VALUE);
+
+        internal static void LoadCloudShadowsEnabled()
+        {
+            int intBool = CLOUD_SHADOW_ENABLED_DEFAULT_STATE ? 1 : 0;
+            CurrentSettings.CloudShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.CloudShadowsEnabled), intBool) == 1;
+        }
+        internal static void LoadCloudShadowsOpacity() =>
+            CurrentSettings.CloudShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.CloudShadowsOpacity), CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
+
+        internal static void LoadWindType() =>
+            CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
 
         internal static void SaveDisplayWizard(bool value)
         {
@@ -300,39 +243,6 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnApplicationTargetFPSChanged?.Invoke(value);
         }
-
-        internal static void SaveUpscalerName(UpscalerName value)
-        {
-            CurrentSettings.UpscalerName = value;
-            PlayerPrefs.SetInt(nameof(Settings.UpscalerName), (int)value);
-            PlayerPrefs.Save();
-            OnUpscalerNameChanged?.Invoke(value);
-        }
-
-        internal static void SaveUpscalerQuality(UpscalerQuality value)
-        {
-            CurrentSettings.UpscalerQuality = value;
-            PlayerPrefs.SetInt(nameof(Settings.UpscalerQuality), (int)value);
-            PlayerPrefs.Save();
-            OnUpscalerQualityChanged?.Invoke(value);
-        }
-
-        internal static void SaveUpscalerSharpeningEnabled(bool value)
-        {
-            CurrentSettings.UpscalerSharpeningEnabled = value;
-            PlayerPrefs.SetInt(nameof(Settings.UpscalerSharpeningEnabled), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnUpscalerSharpeningEnabledChanged?.Invoke(value);
-        }
-
-        internal static void SaveUpscalerSharpeness(float value)
-        {
-            CurrentSettings.UpscalerSharpeness = value;
-            PlayerPrefs.SetFloat(nameof(Settings.UpscalerSharpeness), value);
-            PlayerPrefs.Save();
-            OnUpscalerSharpenessChanged?.Invoke(value);
-        }
-
         internal static void SaveDontAskWelcomeVersion(bool value)
         {
             CurrentSettings.DontAskWelcomeVersion = value;
@@ -460,22 +370,13 @@ namespace FlightReLive.Core.Settings
             OnPath3DWidthChanged?.Invoke(value);
         }
 
-        internal static void SavePath3DRemainingColor1(Color color)
+        internal static void SavePath3DRemainingColor(Color color)
         {
-            CurrentSettings.Path3DRemainingColor1 = color;
+            CurrentSettings.Path3DRemainingColor = color;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor1), colorString);
+            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor), colorString);
             PlayerPrefs.Save();
-            OnPath3DRemainingColor1Changed?.Invoke(color);
-        }
-
-        internal static void SavePath3DRemainingColor2(Color color)
-        {
-            CurrentSettings.Path3DRemainingColor2 = color;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor2), colorString);
-            PlayerPrefs.Save();
-            OnPath3DRemainingColor2Changed?.Invoke(color);
+            OnPath3DRemainingColorChanged?.Invoke(color);
         }
 
         internal static void SaveBuildingVisibility(bool value)
@@ -502,55 +403,7 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnBuildingAOChanged?.Invoke(value);
         }
-
-        internal static void SaveContactShadowsEnabled(bool value)
-        {
-            CurrentSettings.ContactShadowsEnabled = value;
-            PlayerPrefs.SetInt(nameof(Settings.ContactShadowsEnabled), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnContactShadowsEnabledChanged?.Invoke(value);
-        }
-
-        internal static void SaveContactShadowsMinDistance(float value)
-        {
-            CurrentSettings.ContactShadowsMinDistance = value;
-            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsMinDistance), value);
-            PlayerPrefs.Save();
-            OnContactShadowsMinDistanceChanged?.Invoke(value);
-        }
-
-        internal static void SaveContactShadowsMaxDistance(float value)
-        {
-            CurrentSettings.ContactShadowsMaxDistance = value;
-            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsMaxDistance), value);
-            PlayerPrefs.Save();
-            OnContactShadowsMaxDistanceChanged?.Invoke(value);
-        }
-
-        internal static void SaveContactShadowsOpacity(float value)
-        {
-            CurrentSettings.ContactShadowsOpacity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.ContactShadowsOpacity), value);
-            PlayerPrefs.Save();
-            OnContactShadowsOpacityChanged?.Invoke(value);
-        }
-
-        internal static void SaveVignettingIntensity(float value)
-        {
-            CurrentSettings.VignettingIntensity = value;
-            PlayerPrefs.SetFloat(nameof(Settings.VignettingIntensity), value);
-            PlayerPrefs.Save();
-            OnVignettingIntensityChanged?.Invoke(value);
-        }
-
-        internal static void SaveExposureOffset(float value)
-        {
-            CurrentSettings.ExposureOffset = value;
-            PlayerPrefs.SetFloat(nameof(Settings.ExposureOffset), value);
-            PlayerPrefs.Save();
-            OnExposureOffsetChanged?.Invoke(value);
-        }
-
+        
         internal static void SaveContrastOffset(float value)
         {
             CurrentSettings.ContrastOffset = value;
@@ -567,20 +420,43 @@ namespace FlightReLive.Core.Settings
             OnSaturationOffsetChanged?.Invoke(value);
         }
 
-        internal static void SaveIndirectLightningOffset(float value)
+        internal static void SaveVignettingIntensity(float value)
         {
-            CurrentSettings.IndirectLightningOffset = value;
-            PlayerPrefs.SetFloat(nameof(Settings.IndirectLightningOffset), value);
+            CurrentSettings.VignettingIntensity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.VignettingIntensity), value);
             PlayerPrefs.Save();
-            OnIndirectLightningOffsetChanged?.Invoke(value);
+            OnVignettingIntensityChanged?.Invoke(value);
         }
 
-        internal static void SaveCloudStyle(CloudStyle value)
+        internal static void SaveCloudsPreset(CloudsPreset value)
         {
-            CurrentSettings.CloudStyle = value;
-            PlayerPrefs.SetInt(nameof(Settings.CloudStyle), (int)value);
+            CurrentSettings.CloudsPreset = value;
+            PlayerPrefs.SetInt(nameof(Settings.CloudsPreset), (int)value);
             PlayerPrefs.Save();
-            OnCloudStyleChanged?.Invoke(value);
+            OnCloudsPresetChanged?.Invoke(value);
+        }
+        internal static void SaveCloudShadowsEnabled(bool value)
+        {
+            CurrentSettings.CloudShadowsEnabled = value;
+            PlayerPrefs.SetInt(nameof(Settings.CloudShadowsEnabled), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnCloudShadowsEnabledChanged?.Invoke(value);
+        }
+
+        internal static void SaveCloudShadowsOpacity(float value)
+        {
+            CurrentSettings.CloudShadowsOpacity = value;
+            PlayerPrefs.SetFloat(nameof(Settings.CloudShadowsOpacity), value);
+            PlayerPrefs.Save();
+            OnCloudShadowsOpacityChanged?.Invoke(value);
+        }
+
+        internal static void SaveWindType(WindType value)
+        {
+            CurrentSettings.WindType = value;
+            PlayerPrefs.SetInt(nameof(Settings.WindType), (int)value);
+            PlayerPrefs.Save();
+            OnWindTypeChanged?.Invoke(value);
         }
 
         internal static void LoadAll()
@@ -591,10 +467,6 @@ namespace FlightReLive.Core.Settings
             }
 
             LoadDisplayWizard();
-            LoadMainCameraUpscalerName();
-            LoadMainCameraUpscaleQuality();
-            LoadMainCameraUpscalerSharpeningEnabled();
-            LoadMainCameraUpscalerSharpeness();
             LoadCurrentVersion();
             LoadApplicationTargetFPS();
             LoadApplicationIdleFPS();
@@ -612,30 +484,22 @@ namespace FlightReLive.Core.Settings
             LoadWorkspaceZoom();
             LoadMapTilerApiKey();
             LoadPath3DThickness();
-            LoadPath3DRemainingColor1();
-            LoadPath3DRemainingColor2();
+            LoadPath3DRemainingColor();
             LoadBuildingVisibility();
             LoadBuildingColor();
             LoadBuildingAO();
-            LoadContactShadowsEnabled();
-            LoadContactShadowsMinDistance();
-            LoadContactShadowsMaxDistance();
-            LoadContactShadowsOpacity();
             LoadVignettingIntensity();
-            LoadExposureOffset();
             LoadContrastOffset();
             LoadSaturationOffset();
-            LoadIndirectLightningOffset();
-            LoadCloudStyle();
+            LoadCloudsPreset();
+            LoadCloudShadowsEnabled();
+            LoadCloudShadowsOpacity();
+            LoadWindType();
         }
 
         internal static void LoadDefaultSettings()
         {
             SaveDisplayWizard(true);
-            SaveUpscalerName(UpscalerName.None);
-            SaveUpscalerQuality(UpscalerQuality.NativeAA);
-            SaveUpscalerSharpeningEnabled(false);
-            SaveUpscalerSharpeness(0.5f);
             SaveCurrentVersion(Application.version);
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
@@ -656,21 +520,16 @@ namespace FlightReLive.Core.Settings
             SaveWorkspaceZoom(1f);
             SaveMapTilerApiKey("");
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
-            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
-            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
+            SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
             SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
             SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
             SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
-            SaveContactShadowsEnabled(CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE);
-            SaveContactShadowsMinDistance(CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
-            SaveContactShadowsMaxDistance(CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
-            SaveContactShadowsOpacity(CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
-            SaveVignettingIntensity(VIGNETTING_DEFAULT_VALUE);
-            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
-            SaveIndirectLightningOffset(INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
-            SaveCloudStyle(CLOUD_STYLE_DEFAULT_VALUE);
+            SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
+            SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
+            SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
+            SaveWindType(WIND_TYPE_DEFAULT_VALUE);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -1046,92 +905,6 @@ namespace FlightReLive.Core.Settings
             {
                 bool isLoading = LoadingManager.Instance.IsLoading;
 
-                layout.Collapsable("Upscaler settings##collapsable", () =>
-                {
-                    using (FuGrid upscalerGrid = new FuGrid("upscalerGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        upscalerGrid.SetNextElementToolTipWithLabel("Choose your upscaling method for rendering performance and quality.");
-
-                        UpscalerName currentUpscaler = CurrentSettings.UpscalerName;
-                        string upscalerLabel = GetUpscalerLabel(currentUpscaler);
-
-                        upscalerGrid.Combobox("Upscaler##UpscalerCombobox", upscalerLabel, () =>
-                        {
-                            List<UpscalerName> allowedUpscalers = new List<UpscalerName>() { UpscalerName.None };
-                            allowedUpscalers.AddRange(TNDUpscaler.GetSupported());
-
-                            foreach (UpscalerName upscaler in allowedUpscalers)
-                            {
-                                bool isSelected = upscaler == currentUpscaler;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerLabel(upscaler)}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveUpscalerName(upscaler);
-                                }
-                            }
-                        });
-
-                        if (upscalerLabel == "None")
-                        {
-                            upscalerGrid.DisableNextElements();
-                        }
-
-                        upscalerGrid.SetNextElementToolTipWithLabel("Select the upscaling quality level (higher = better visuals, lower = better performance) for the ReLive camera scene.");
-
-                        UpscalerQuality currentQuality = CurrentSettings.UpscalerQuality;
-                        string qualityLabel = GetUpscalerQualityLabel(currentQuality);
-
-                        upscalerGrid.Combobox("Upscaler quality##UpscalerQualityCombobox", qualityLabel, () =>
-                        {
-                            UpscalerQuality[] allowedQualities = new[]
-                            {
-                                UpscalerQuality.NativeAA,
-                                UpscalerQuality.UltraQuality,
-                                UpscalerQuality.Quality,
-                                UpscalerQuality.Balanced,
-                                UpscalerQuality.Performance,
-                                UpscalerQuality.UltraPerformance,
-                                UpscalerQuality.Off
-                            };
-
-                            foreach (UpscalerQuality quality in allowedQualities)
-                            {
-                                bool isSelected = quality == currentQuality;
-                                string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {GetUpscalerQualityLabel(quality)}";
-
-                                if (ImGui.Selectable(label))
-                                {
-                                    SaveUpscalerQuality(quality);
-                                }
-                            }
-                        });
-
-                        upscalerGrid.SetNextElementToolTip("Enhances edge clarity and texture detail after upscaling. Recommended to preserve visual sharpness.");
-                        bool sharpeningEnabled = CurrentSettings.UpscalerSharpeningEnabled;
-
-                        if (upscalerGrid.Toggle("Upscaler sharpening", ref sharpeningEnabled))
-                        {
-                            SaveUpscalerSharpeningEnabled(sharpeningEnabled);
-                        }
-
-                        if (!sharpeningEnabled)
-                        {
-                            upscalerGrid.DisableNextElement();
-                        }
-
-                        upscalerGrid.SetNextElementToolTipWithLabel("Adjust how sharp the image appears after upscaling. Higher values increase detail, but may introduce noise.");
-                        float sharpeness = CurrentSettings.UpscalerSharpeness;
-
-                        if (upscalerGrid.Slider("Upscaler sharpeness", ref sharpeness, 0f, 1f, 0.01f, format: "%.2f"))
-                        {
-                            SaveUpscalerSharpeness(sharpeness);
-                        }
-                    }
-
-                    Fugui.PopFont();
-                }, FuButtonStyle.Collapsable, defaultOpen: true);
-
                 layout.Collapsable("FPS settings##collapsable", () =>
                 {
                     using (FuGrid fpsSettings = new FuGrid("fpsSettingsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
@@ -1385,74 +1158,16 @@ namespace FlightReLive.Core.Settings
             }, FuModalSize.Medium, new FuModalButton("Close preferences", () => { _settingsOpened = false; }, FuButtonStyle.Default, FuKeysCode.Enter));
         }
 
-        private static string GetUpscalerLabel(UpscalerName upscaler)
-        {
-            switch (upscaler)
-            {
-                case UpscalerName.None:
-                    return "None";
-                case UpscalerName.FSR3:
-                    return "FidelityFX Super Resolution 3.1";
-                case UpscalerName.FSR4:
-                    return "FidelityFX Super Resolution 4";
-                case UpscalerName.ASR:
-                    return "ARM Accuracy Super Resolution";
-                case UpscalerName.DLSS3:
-                    return "DLSS 3.x";
-                case UpscalerName.DLSS4:
-                    return "DLSS 4.x";
-                case UpscalerName.XeSS2:
-                    return "Intel XeSS 2.x";
-                case UpscalerName.SGSR1:
-                    return "Snapdragon GSR 1";
-                case UpscalerName.SGSR2:
-                    return "Snapdragon GSR 2";
-                case UpscalerName.PSSR:
-                    return "PlayStation SSR";
-                default:
-                    return "Unknown";
-            }
-        }
-
-        private static string GetUpscalerQualityLabel(UpscalerQuality quality)
-        {
-            switch (quality)
-            {
-                case UpscalerQuality.NativeAA:
-                    return "Native AA (1x)";
-                case UpscalerQuality.UltraQuality:
-                    return "Ultra Quality (1.2x)";
-                case UpscalerQuality.Quality:
-                    return "Quality (1.5x)";
-                case UpscalerQuality.Balanced:
-                    return "Balanced (1.7x)";
-                case UpscalerQuality.Performance:
-                    return "Performance (2x)";
-                case UpscalerQuality.UltraPerformance:
-                    return "Ultra Performance (3x)";
-                case UpscalerQuality.Off:
-                    return "Disabled";
-                default:
-                    return "Unknown";
-            }
-        }
-
         internal static void ResetPath3DThickness()
         {
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
             LoadPath3DThickness();
         }
 
-        internal static void ResetPath3DRemainingColor1()
+        internal static void ResetPath3DRemainingColor()
         {
-            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
-            LoadPath3DRemainingColor1();
-        }
-
-        internal static void ResetPath3DRemainingColor2()
-        {
-            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
-            LoadPath3DRemainingColor2();
+            SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
+            LoadPath3DRemainingColor();
         }
 
         internal static void ResetBuildingVisibility()
@@ -1473,36 +1188,6 @@ namespace FlightReLive.Core.Settings
             LoadBuildingAO();
         }
 
-        internal static void ResetContactShadowsEnabled()
-        {
-            SaveContactShadowsEnabled(CONTACT_SHADOWS_ENABLED_DEFAULT_VALUE);
-            LoadContactShadowsEnabled();
-        }
-
-        internal static void ResetContactShadowsMinDistance()
-        {
-            SaveContactShadowsMinDistance(CONTACT_SHADOWS_MIN_DISTANCE_DEFAULT_VALUE);
-            LoadContactShadowsMinDistance();
-        }
-
-        internal static void ResetContactShadowsMaxDistance()
-        {
-            SaveContactShadowsMaxDistance(CONTACT_SHADOWS_MAX_DISTANCE_DEFAULT_VALUE);
-            LoadContactShadowsMaxDistance();
-        }
-
-        internal static void ResetContactShadowsOpacity()
-        {
-            SaveContactShadowsOpacity(CONTACT_SHADOWS_OPACITY_DEFAULT_VALUE);
-            LoadContactShadowsOpacity();
-        }
-
-        internal static void ResetExposureOffset()
-        {
-            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
-            LoadExposureOffset();
-        }
-
         internal static void ResetContrastOffset()
         {
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
@@ -1515,22 +1200,34 @@ namespace FlightReLive.Core.Settings
             LoadSaturationOffset();
         }
 
-        internal static void ResetIndirectLightningOffset()
-        {
-            SaveIndirectLightningOffset(INDIRECT_LIGHTNING_OFFSET_DEFAULT_VALUE);
-            LoadIndirectLightningOffset();
-        }
-
         internal static void ResetVignettingIntensity()
         {
             SaveVignettingIntensity(VIGNETTING_DEFAULT_VALUE);
             LoadVignettingIntensity();
         }
 
-        internal static void ResetCloudStyle()
+        internal static void ResetCloudsPreset()
         {
-            SaveCloudStyle(CLOUD_STYLE_DEFAULT_VALUE);
-            LoadCloudStyle();
+            SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
+            LoadCloudsPreset();
+        }
+
+        internal static void ResetCloudShadowsEnabled()
+        {
+            SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
+            LoadCloudShadowsEnabled();
+        }
+
+        internal static void ResetCloudShadowsOpacity()
+        {
+            SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
+            LoadCloudShadowsOpacity();
+        }
+
+        internal static void ResetWindType()
+        {
+            SaveWindType(WIND_TYPE_DEFAULT_VALUE);
+            LoadWindType();
         }
         #endregion
     }

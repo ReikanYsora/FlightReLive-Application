@@ -24,9 +24,9 @@ Material:
   m_Shader: {fileID: -6465566751694194690, guid: aeb168a9d8d97e748b372db5f2e84c72, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
-  - _DISABLE_SSR_TRANSPARENT
+  m_ValidKeywords: []
   m_InvalidKeywords:
+  - _DISABLE_SSR_TRANSPARENT
   - _HEIGHTMAP
   - _MASKMAP
   - _NORMALMAP
@@ -34,7 +34,7 @@ Material:
   m_LightmapFlags: 1
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2225
+  m_CustomRenderQueue: 2050
   stringTagMap:
     MotionVector: User
   disabledShaderPasses:
@@ -223,6 +223,7 @@ Material:
     - _AlphaSrcBlend: 1
     - _AlphaToMask: 0
     - _Ambiant_Occlusion: 0.932
+    - _AmbientOcclusion: 0.5
     - _Ambient_Occlusion: 0.298
     - _Amplitude: 1
     - _Anisotropy: 0

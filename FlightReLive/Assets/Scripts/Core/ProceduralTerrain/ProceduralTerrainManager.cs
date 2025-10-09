@@ -16,17 +16,21 @@ namespace FlightReLive.Core.ProceduralTerrain
     public class ProceduralTerrainManager : MonoBehaviour
     {
         #region ATTRIBUTES
+        [SerializeField] private Material _terrainMaterial;
         private List<Terrain> _terrains;
-
-        [Header("Material Settings")]
-        [SerializeField] private Material _hdrpTerrainMaterial;
         private Bounds _terrainBounds;
         #endregion
 
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
-
-        internal Bounds TerrainBounds => _terrainBounds;
+        
+        internal Bounds TerrainBounds
+        {
+            get
+            {
+                return _terrainBounds;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -183,13 +187,16 @@ namespace FlightReLive.Core.ProceduralTerrain
                 terrainGO.transform.SetParent(transform, false);
 
                 Terrain terrain = terrainGO.GetComponent<Terrain>();
-                terrain.materialTemplate = _hdrpTerrainMaterial;
+                terrain.materialTemplate = _terrainMaterial;
+                terrain.materialTemplate.enableInstancing = true;
                 terrain.drawHeightmap = true;
                 terrain.allowAutoConnect = true;
                 terrain.drawTreesAndFoliage = false;
                 terrain.drawInstanced = true;
                 terrain.groupingID = 0;
                 terrain.enabled = true;
+                terrain.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbesAndSkybox;
+                terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
 
                 float posX = (tile.X - minX) * terrainSize + centerOffsetX;
                 float posZ = (maxY - tile.Y) * terrainSize + centerOffsetZ;
@@ -259,17 +266,8 @@ namespace FlightReLive.Core.ProceduralTerrain
                 maxZWorld = Mathf.Max(maxZWorld, pos.z + size.z);
             }
 
-            Vector3 center = new Vector3(
-                (minXWorld + maxXWorld) * 0.5f,
-                (minYWorld + maxYWorld) * 0.5f,
-                (minZWorld + maxZWorld) * 0.5f
-            );
-
-            Vector3 sizeBounds = new Vector3(
-                (maxXWorld - minXWorld),
-                (maxYWorld - minYWorld),
-                (maxZWorld - minZWorld)
-            );
+            Vector3 center = new Vector3((minXWorld + maxXWorld) * 0.5f, (minYWorld + maxYWorld) * 0.5f, (minZWorld + maxZWorld) * 0.5f);
+            Vector3 sizeBounds = new Vector3((maxXWorld - minXWorld), (maxYWorld - minYWorld), (maxZWorld - minZWorld));
 
             _terrainBounds = new Bounds(center, sizeBounds);
         }

@@ -6,9 +6,7 @@ using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
-using TND.Upscaling.Framework;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
 
 namespace FlightReLive.Core
 {
@@ -19,8 +17,6 @@ namespace FlightReLive.Core
         [SerializeField] private Texture2D _welcome;
 
         [Header("Cameras & upscalers settings")]
-        [SerializeField] private TNDUpscaler _reliveUpscaler;
-        [SerializeField] private TNDUpscaler _povCameraUpscaler;
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
 
@@ -73,16 +69,9 @@ namespace FlightReLive.Core
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
-            //Apply camera & upscaler settings
-            ApplyUpscalersSettingsValues();
-
             //Register events
             SettingsManager.OnGlobalScaleChanged += OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged += OnApplicationTargetFPSChanged;
-            SettingsManager.OnUpscalerNameChanged += OnUpscalerNameChanged;
-            SettingsManager.OnUpscalerQualityChanged += OnUpscalerQualityChanged;
-            SettingsManager.OnUpscalerSharpeningEnabledChanged += OnUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnUpscalerSharpenessChanged += OnUpscalerSharpenessChanged;
 
             //Check if welcome panel need do be displayed
             bool displayWizard = SettingsManager.CurrentSettings.DisplayWizard;
@@ -129,10 +118,6 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
-            SettingsManager.OnUpscalerNameChanged -= OnUpscalerNameChanged;
-            SettingsManager.OnUpscalerQualityChanged -= OnUpscalerQualityChanged;
-            SettingsManager.OnUpscalerSharpeningEnabledChanged -= OnUpscalerSharpeningEnabledChanged;
-            SettingsManager.OnUpscalerSharpenessChanged -= OnUpscalerSharpenessChanged;
         }
         #endregion
 
@@ -238,98 +223,9 @@ namespace FlightReLive.Core
             float scale = SettingsManager.CurrentSettings.GlobalScale;
             Fugui.SetScale(scale, scale);
         }
-
-        private void ApplyUpscalersSettingsValues()
-        {
-            if (SettingsManager.CurrentSettings.UpscalerName == UpscalerName.None)
-            {
-                ConfigureCameraForFAA(_reliveCamera);
-                ConfigureCameraForFAA(_povCamera);
-
-                _reliveUpscaler.SetQuality(UpscalerQuality.Off);
-                _povCameraUpscaler.SetQuality(UpscalerQuality.Off);
-                _reliveUpscaler.ResetCamera();
-                _povCameraUpscaler.ResetCamera();
-            }
-            else
-            {
-                ConfigureCameraForUpscaler(_reliveCamera);
-                ConfigureCameraForUpscaler(_povCamera);
-#if UNITY_EDITOR
-                _reliveUpscaler.runInEditMode = true;
-                _povCameraUpscaler.runInEditMode = true;
-#endif
-
-                _reliveUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-                _reliveUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-                _reliveUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
-                _reliveUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
-                _reliveUpscaler.SetAutoReactive(true);
-
-                _povCameraUpscaler.SetUpscaler(SettingsManager.CurrentSettings.UpscalerName);
-                _povCameraUpscaler.SetQuality(SettingsManager.CurrentSettings.UpscalerQuality);
-                _povCameraUpscaler.SetSharpening(SettingsManager.CurrentSettings.UpscalerSharpeningEnabled);
-                _povCameraUpscaler.SetSharpness(SettingsManager.CurrentSettings.UpscalerSharpeness);
-                _povCameraUpscaler.SetAutoReactive(true);
-            }
-        }
-
-        /// <summary>
-        /// Configure a camera with settings mandatory for use TND upscaler
-        /// </summary>
-        /// <param name="camera">Camera to set-up</param>
-        private void ConfigureCameraForUpscaler(Camera camera)
-        {
-            if (camera == null)
-            {
-                return;
-            }
-
-            if (!camera.TryGetComponent<HDAdditionalCameraData>(out var data))
-            {
-                return;
-            }
-
-            data.allowDynamicResolution = true;
-            data.allowDeepLearningSuperSampling = true;
-            data.deepLearningSuperSamplingUseCustomQualitySettings = false;
-            data.deepLearningSuperSamplingUseCustomAttributes = false;
-            data.deepLearningSuperSamplingUseOptimalSettings = false;
-            camera.allowMSAA = false;
-        }
-
-        /// <summary>
-        /// Configure a camera tbe used without upscaler and TAA antialiasing
-        /// </summary>
-        /// <param name="cam"></param>
-        private void ConfigureCameraForFAA(Camera cam)
-        {
-            if (cam == null)
-            {
-
-                return;
-            }
-
-            if (!cam.TryGetComponent<HDAdditionalCameraData>(out var data))
-            {
-                return;
-            }
-
-            //Disable all DLSS feature
-            data.allowDynamicResolution = false;
-            data.allowDeepLearningSuperSampling = false;
-            data.deepLearningSuperSamplingUseCustomQualitySettings = false;
-            data.deepLearningSuperSamplingUseCustomAttributes = false;
-            data.deepLearningSuperSamplingUseOptimalSettings = false;
-
-            //Force TAA (and disable MSAA)
-            data.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
-            cam.allowMSAA = false;
-        }
         #endregion
 
         #region UI
-
         private void DisplayUIScaleSettings()
         {
             float paddingX = 10f;
@@ -552,26 +448,6 @@ namespace FlightReLive.Core
         private void OnApplicationTargetFPSChanged(int value)
         {
             Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;
-        }
-
-        private void OnUpscalerNameChanged(UpscalerName upscalerName)
-        {
-            ApplyUpscalersSettingsValues();
-        }
-
-        private void OnUpscalerQualityChanged(UpscalerQuality upscalerQuality)
-        {
-            ApplyUpscalersSettingsValues();
-        }
-
-        private void OnUpscalerSharpenessChanged(float enabled)
-        {
-            ApplyUpscalersSettingsValues();
-        }
-
-        private void OnUpscalerSharpeningEnabledChanged(bool value)
-        {
-            ApplyUpscalersSettingsValues();
         }
         #endregion
     }

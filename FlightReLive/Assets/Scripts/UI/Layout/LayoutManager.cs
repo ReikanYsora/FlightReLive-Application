@@ -166,7 +166,7 @@ namespace FlightReLive.UI.Layout
                     });
             }, flightReLiveTitle);
 
-            Fugui.RegisterMainMenuItem(FlightReLiveIcons.SharedImport + "  Import from SharedHash", () =>
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import from SharedHash", () =>
             {
                 ShareViewManager.DisplaySharedHashModel();
             }, flightReLiveTitle);

@@ -41,7 +41,7 @@ namespace FlightReLive.UI.CameraViews
                 layout.SameLine();
 
                 float totalWidth = ImGui.GetContentRegionAvail().x;
-                float rightGroupWidth = 3 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
+                float rightGroupWidth = 4 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
 
                 //3DView settings menus
                 float minRightRequiredWidth = rightGroupWidth * scale;
@@ -54,6 +54,11 @@ namespace FlightReLive.UI.CameraViews
                 {
                     Fugui.MoveXUnscaled(layout.GetAvailableWidth() - rightGroupWidth);
                     Fugui.PushFont(14, FontType.Regular);
+
+                    Fugui.MoveY(-3f);
+                    layout.SetNextElementToolTip("Sun / clouds settings");
+                    PopupButton(FlightReLiveIcons.SunClouds, () => DrawSunCloudsSettings(SETTINGS_POPUP_BUTTON_WIDTH, layout), new Vector2(popUpWidth, 0f));
+                    layout.SameLine();
 
                     Fugui.MoveY(-3f);
                     layout.SetNextElementToolTip("Post-processing settings");
@@ -91,6 +96,13 @@ namespace FlightReLive.UI.CameraViews
             }
         }
 
+        private void DrawSunCloudsSettings(float popupButtonWidth, FuLayout layout)
+        {
+            ImGui.Dummy(Vector2.zero);
+            EnvironmentManager.Instance.DrawSunCloudsSettings(layout);
+            ImGui.Dummy(Vector2.zero);
+        }
+
         private void DrawPostProcessingSettings(float popupButtonWidth, FuLayout layout)
         {
             ImGui.Dummy(Vector2.zero);
@@ -101,24 +113,14 @@ namespace FlightReLive.UI.CameraViews
         private void DrawPathSettings(float popupButtonWidth, FuLayout layout)
         {
             ImGui.Dummy(Vector2.zero);
-            Fugui.PushDefaultFont();
-            layout.FramedText("Path settings");
-            layout.Separator();
-
             PathManager.Instance.DrawPathSettings(layout);
-
-            Fugui.PopFont();
             ImGui.Dummy(Vector2.zero);
         }
 
         private void DrawSceneSettings(float popupButtonWidth, FuLayout layout)
         {
             ImGui.Dummy(Vector2.zero);
-            Fugui.PushDefaultFont();
-
             EnvironmentManager.Instance.DrawSceneSettings(layout);
-
-            Fugui.PopFont();
             ImGui.Dummy(Vector2.zero);
         }
 

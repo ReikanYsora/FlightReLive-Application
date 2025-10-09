@@ -18,16 +18,16 @@ MonoBehaviour:
     m_Value: 0
   contrast:
     m_OverrideState: 1
-    m_Value: 12.104782
+    m_Value: 29.559174
   colorFilter:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 0.96046144, b: 0.9152745, a: 1}
+    m_Value: {r: 1, g: 0.93, b: 0.85, a: 1}
   hueShift:
     m_OverrideState: 0
     m_Value: 0
   saturation:
     m_OverrideState: 1
-    m_Value: -3.5666616
+    m_Value: 5.52536
 --- !u!114 &-5072858145530427496
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -64,7 +64,7 @@ MonoBehaviour:
     m_Value: 55261.973
   aerosolDensity:
     m_OverrideState: 1
-    m_Value: 0.02
+    m_Value: 0.025
   aerosolTint:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
@@ -103,10 +103,10 @@ MonoBehaviour:
     m_Value: {fileID: 8900000, guid: 997719748a5428d4597d4b1197438e17, type: 3}
   spaceEmissionMultiplier:
     m_OverrideState: 1
-    m_Value: 0.0000010718022
+    m_Value: 7.4449787
   spaceRotation:
     m_OverrideState: 1
-    m_Value: {x: 0, y: 81.924126, z: 0}
+    m_Value: {x: 0, y: 355.68866, z: 0}
   colorSaturation:
     m_OverrideState: 0
     m_Value: 1
@@ -118,10 +118,10 @@ MonoBehaviour:
     m_Value: 1
   horizonTint:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_Value: {r: 0.02, g: 0.03, b: 0.05, a: 1}
   zenithTint:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_Value: {r: 0.02, g: 0.03, b: 0.05, a: 1}
   horizonZenithShift:
     m_OverrideState: 1
     m_Value: 0
@@ -130,7 +130,7 @@ MonoBehaviour:
     m_Value: 0
   exposure:
     m_OverrideState: 1
-    m_Value: 0.5
+    m_Value: 0.776268
   multiplier:
     m_OverrideState: 1
     m_Value: 0.73
@@ -193,7 +193,7 @@ MonoBehaviour:
     m_Value: 0
   m_CloudPreset:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 1
   densityMultiplier:
     m_OverrideState: 1
     m_Value: 0.4
@@ -234,13 +234,13 @@ MonoBehaviour:
       m_RotationOrder: 4
   shapeFactor:
     m_OverrideState: 1
-    m_Value: 0.925
+    m_Value: 0.875
   shapeScale:
     m_OverrideState: 1
     m_Value: 5
   erosionFactor:
     m_OverrideState: 1
-    m_Value: 0.85
+    m_Value: 0.9
   erosionScale:
     m_OverrideState: 1
     m_Value: 75
@@ -325,10 +325,10 @@ MonoBehaviour:
     m_Value: 300
   bottomAltitude:
     m_OverrideState: 1
-    m_Value: 3000
+    m_Value: 1200
   altitudeRange:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 2000
   shapeOffset:
     m_OverrideState: 0
     m_Value: {x: 0, y: 0, z: 0}
@@ -375,17 +375,17 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 0.5
   shadows:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 1
   shadowResolution:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 512
   shadowDistance:
     m_OverrideState: 0
     m_Value: 8000
   shadowOpacity:
-    m_OverrideState: 1
-    m_Value: 0.53999996
+    m_OverrideState: 0
+    m_Value: 0.5
   shadowOpacityFallback:
     m_OverrideState: 0
     m_Value: 0
@@ -468,7 +468,7 @@ MonoBehaviour:
     m_Value: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   tint:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   maxFogDistance:
     m_OverrideState: 1
     m_Value: 10000
@@ -495,7 +495,7 @@ MonoBehaviour:
     m_Value: 50
   meanFreePath:
     m_OverrideState: 1
-    m_Value: 1500
+    m_Value: 1992.8741
 --- !u!114 &7841026138417567647
 MonoBehaviour:
   m_ObjectHideFlags: 3

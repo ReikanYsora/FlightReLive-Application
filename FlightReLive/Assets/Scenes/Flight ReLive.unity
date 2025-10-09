@@ -1413,37 +1413,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8c63331f96e5094688335abf96e1310, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Environment.EnvironmentManager
-  _sunMaxIntensity: 5
+  _sunMaxIntensity: 6
   _sunIntensityByElevation:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0.0041656494
-      value: 0.5032959
+      time: -0.0000017797574
+      value: 0.4999994
+      inSlope: 1.4453499
+      outSlope: 1.4453499
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.07024957
+    - serializedVersion: 3
+      time: 1
+      value: 1
       inSlope: 0
       outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0.51599365
-    - serializedVersion: 3
-      time: 0.36645603
-      value: 0.7724113
-      inSlope: 1.0954043
-      outSlope: 1.0954043
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.6280067
-      outWeight: 0.09618109
-    - serializedVersion: 3
-      time: 0.9999868
-      value: 0.99999386
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4

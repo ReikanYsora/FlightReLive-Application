@@ -23,8 +23,7 @@ namespace FlightReLive.Core.Settings
         public string MapTilerAPIKey;
         public float GlobalScale;
         public float Path3DThickness;
-        public Color Path3DRemainingColor1;
-        public Color Path3DRemainingColor2;
+        public Color Path3DRemainingColor;
         public bool BuildingVisibility;
         public Color BuildingColor;
         public float BuildingAO;

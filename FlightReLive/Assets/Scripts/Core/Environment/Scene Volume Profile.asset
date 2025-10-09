@@ -12,22 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66f335fb1ffd8684294ad653bf1c7564, type: 3}
   m_Name: ColorAdjustments
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.ColorAdjustments
-  active: 0
+  active: 1
   postExposure:
     m_OverrideState: 0
     m_Value: 0
   contrast:
     m_OverrideState: 1
-    m_Value: 38.36794
+    m_Value: 15.134235
   colorFilter:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 0.98948884, b: 0.97747606, a: 1}
+    m_Value: {r: 1, g: 0.9622333, b: 0.9190714, a: 1}
   hueShift:
     m_OverrideState: 0
     m_Value: 0
   saturation:
     m_OverrideState: 1
-    m_Value: 5.1090717
+    m_Value: -3.2274806
 --- !u!114 &-5072858145530427496
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -40,7 +40,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 483e663ff1823804c8ff0da8d87b7e87, type: 3}
   m_Name: PhysicallyBasedSky
   m_EditorClassIdentifier: PBSkyURP::PhysicallyBasedSky
-  active: 0
+  active: 1
   type:
     m_OverrideState: 1
     m_Value: 1
@@ -103,10 +103,10 @@ MonoBehaviour:
     m_Value: {fileID: 8900000, guid: 997719748a5428d4597d4b1197438e17, type: 3}
   spaceEmissionMultiplier:
     m_OverrideState: 1
-    m_Value: 1.2768236e-10
+    m_Value: 0.0000006417873
   spaceRotation:
     m_OverrideState: 1
-    m_Value: {x: 0, y: 101.08508, z: 0}
+    m_Value: {x: 0, y: 185.57506, z: 0}
   colorSaturation:
     m_OverrideState: 0
     m_Value: 1
@@ -126,10 +126,10 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 0
   skyIntensityMode:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   exposure:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   multiplier:
     m_OverrideState: 1
@@ -184,19 +184,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5944d5dca791344186c8265c2b87ac4, type: 3}
   m_Name: VolumetricClouds
   m_EditorClassIdentifier: VolumetricCloudsURP::VolumetricClouds
-  active: 0
+  active: 1
   state:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 1
   localClouds:
     m_OverrideState: 0
     m_Value: 0
   m_CloudPreset:
     m_OverrideState: 1
-    m_Value: 3
+    m_Value: 1
   densityMultiplier:
     m_OverrideState: 1
-    m_Value: 0.35
+    m_Value: 0.4
   densityCurve:
     m_OverrideState: 1
     m_Value:
@@ -234,7 +234,7 @@ MonoBehaviour:
       m_RotationOrder: 4
   shapeFactor:
     m_OverrideState: 1
-    m_Value: 0.825
+    m_Value: 0.875
   shapeScale:
     m_OverrideState: 1
     m_Value: 5
@@ -319,16 +319,16 @@ MonoBehaviour:
     m_Value: 1
   microErosionFactor:
     m_OverrideState: 1
-    m_Value: 0.6
+    m_Value: 0.65
   microErosionScale:
     m_OverrideState: 1
     m_Value: 300
   bottomAltitude:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 1200
   altitudeRange:
     m_OverrideState: 1
-    m_Value: 5000
+    m_Value: 2000
   shapeOffset:
     m_OverrideState: 0
     m_Value: {x: 0, y: 0, z: 0}
@@ -352,10 +352,10 @@ MonoBehaviour:
     m_Value: 0.25
   verticalShapeWindSpeed:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 250
   verticalErosionWindSpeed:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 250
   ambientLightProbeDimmer:
     m_OverrideState: 0
     m_Value: 1
@@ -422,7 +422,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d105cb760a24ff4bb844219d76b8ee7, type: 3}
   m_Name: VisualEnvironment
   m_EditorClassIdentifier: PBSkyURP::VisualEnvironment
-  active: 0
+  active: 1
   skyType:
     m_OverrideState: 1
     m_Value: 4
@@ -456,7 +456,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be582cd2053a69e4da9d74f077d74bb8, type: 3}
   m_Name: Fog
   m_EditorClassIdentifier: PBSkyURP::Fog
-  active: 0
+  active: 1
   enabled:
     m_OverrideState: 1
     m_Value: 1
@@ -508,7 +508,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 899c54efeace73346a0a16faa3afe726, type: 3}
   m_Name: Vignette
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.Vignette
-  active: 0
+  active: 1
   color:
     m_OverrideState: 1
     m_Value: {r: 0, g: 0, b: 0, a: 1}
@@ -536,7 +536,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97c23e3b12dc18c42a140437e53d3951, type: 3}
   m_Name: Tonemapping
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.Tonemapping
-  active: 0
+  active: 1
   mode:
     m_OverrideState: 1
     m_Value: 2

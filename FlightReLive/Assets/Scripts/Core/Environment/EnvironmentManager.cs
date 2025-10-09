@@ -17,15 +17,21 @@ namespace FlightReLive.Core.Environment
     public class EnvironmentManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [Header("Light & Camera")]
+        [Header("Sun")]
         [SerializeField, Range(0f, 50f)] private float _sunMaxIntensity = 18f;
         [SerializeField] private AnimationCurve _sunIntensityByElevation;
         [SerializeField] private Light _mainLight;
+
+        [Header("Camera")]
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
         [SerializeField] private Color _cameraBackground;
+
+        [Header("Post-processing")]
         [SerializeField] private LensFlareComponentSRP _lensFlare;
         [SerializeField] private VolumeProfile _volumeProfile;
+
+        [Header("Sky")]
         [SerializeField] private Cubemap _spaceBackground;
 
         //Post-processing elements
@@ -132,8 +138,6 @@ namespace FlightReLive.Core.Environment
                 _physicallyBasedSky.colorSaturation.overrideState = false;
                 _physicallyBasedSky.alphaSaturation.overrideState = false;
                 _physicallyBasedSky.alphaMultiplier.overrideState = false;
-                _physicallyBasedSky.skyIntensityMode.overrideState = false;
-                _physicallyBasedSky.exposure.overrideState = false;
             }
 
             if (_volumeProfile.TryGet(out Fog fog))
@@ -276,12 +280,17 @@ namespace FlightReLive.Core.Environment
             _physicallyBasedSky.horizonZenithShift.Override(0f);
             _physicallyBasedSky.zenithTint.Override(Color.white);
 
+            float exposureFix = Mathf.Lerp(4.5f, 0.0f, Mathf.SmoothStep(0.5f, 1.0f, sun.ElevationFactor));
+            _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
+            _physicallyBasedSky.exposure.Override(exposureFix);
+
             //Fog
             _fog.meanFreePath.Override(500f);
             _fog.baseHeight.Override(0f);
             _fog.maximumHeight.Override(50f);
             _fog.maxFogDistance.Override(10000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
+
 
             //Visual Environment
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
@@ -291,7 +300,7 @@ namespace FlightReLive.Core.Environment
             //Volumetric Clouds
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
-            _volumetricClouds.shadowOpacity.Override(0.3f);
+            _volumetricClouds.shadowOpacity.Override(0.6f);
 
             //Sun color
             Color sunColor = Color.white;
@@ -308,6 +317,8 @@ namespace FlightReLive.Core.Environment
                 _mainLight.intensity = unityIntensity;
                 _mainLight.color = sunColor;
                 RenderSettings.sun = _mainLight;
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientLight = Color.Lerp(new Color(0.15f, 0.18f, 0.22f), new Color(1f, 1f, 1f), sun.ElevationFactor);
             }
 
             //Lens flare baseline from elevation

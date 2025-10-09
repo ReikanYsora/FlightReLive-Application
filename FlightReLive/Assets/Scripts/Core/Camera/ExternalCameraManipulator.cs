@@ -6,8 +6,6 @@ using FlightReLive.Core.UI.Overlays;
 using Fu;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace FlightReLive.Core.Cameras
 {
@@ -21,6 +19,8 @@ namespace FlightReLive.Core.Cameras
         private const float INPUT_SENSITIVITY_FACTOR = 0.1f;
         private const float ZOOM_PLATFORM_MULTIPLIER = 1.5f;
 #endif
+        private const float PIVOT_LERP_DURATION = 0.5f;
+        private const float DOUBLE_CLICK_MAX_DELAY = 0.3f;
         #endregion
 
         #region ATTRIBUTES
@@ -42,6 +42,7 @@ namespace FlightReLive.Core.Cameras
 
         [Header("Free Camera Settings")]
         [SerializeField] private float _panSensitivity = 1f;
+        [SerializeField] private LayerMask _collisionMask = ~0;
 
         private float _initialDistance;
         private float _initialX;
@@ -57,11 +58,14 @@ namespace FlightReLive.Core.Cameras
         private float _velocityX;
         private float _velocityY;
         private float _zoomVelocity;
-
-        // Free mode position
         private Vector3 _freePosition = Vector3.zero;
         private Vector3 _targetFreePosition = Vector3.zero;
         private Vector3 _freeVelocity;
+        private Vector3 _pivotLerpStart;
+        private Vector3 _pivotLerpTarget;
+        private float _pivotLerpProgress = 1f;
+        private int _clickCount = 0;
+        private float _lastClickTime = 0f;
         #endregion
 
         #region PROPERTIES
@@ -140,20 +144,48 @@ namespace FlightReLive.Core.Cameras
                 return;
             }
 
-            if (_mode == CameraMode.Tracking && _droneAnchorTransform != null)
+            HandleZoom();
+            HandleRotationInput();
+
+            if (_mode == CameraMode.Free)
             {
-                HandleZoom();
-                HandleRotationInput();
+                HandlePanInput();
+                HandleDoubleClickPivot();
+            }
+
+            // Calculer la rotation actuelle
+            Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
+
+            //Define pivot point
+            Vector3 pivot = (_mode == CameraMode.Tracking && _droneAnchorTransform != null) ? _droneAnchorTransform.position : _freePosition;
+
+            //Distance dynamic correction to avoid obstacles
+            float correctedDistance = ClampCameraDistanceToObstacle(pivot, rot, _targetDistance);
+            _distance = correctedDistance;
+
+            //Correct pivot point in free mode
+            if (_mode == CameraMode.Free)
+            {
+                float visualDistance = Vector3.Distance(_targetCamera.transform.position, _freePosition);
+
+                if (_distance <= _minDistance + 0.1f && visualDistance > _distance * 2f)
+                {
+                    Vector3 direction = (_targetCamera.transform.position - _freePosition).normalized;
+                    _freePosition = _targetCamera.transform.position - direction * _distance;
+                    _targetFreePosition = _freePosition;
+                }
+            }
+
+            if (_mode == CameraMode.Tracking)
+            {
                 UpdateCameraTransformTracking();
             }
             else if (_mode == CameraMode.Free)
             {
-                HandleZoom();
-                HandleRotationInput();
-                HandlePanInput();
                 UpdateCameraTransformFree();
             }
         }
+
 
         private void OnDestroy()
         {
@@ -208,6 +240,29 @@ namespace FlightReLive.Core.Cameras
             _currentY = _targetY = 45f;
         }
 
+        private float ClampCameraDistanceToObstacle(Vector3 pivot, Quaternion rotation, float desiredDistance)
+        {
+            Vector3 direction = rotation * Vector3.back;
+            Ray ray = new Ray(pivot, direction);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, desiredDistance, _collisionMask))
+            {
+                float effectiveMin = GetEffectiveMinDistance();
+                float safeDistance = Mathf.Max(hit.distance - 0.5f, effectiveMin);
+
+                float minAltitude = pivot.y + 1f;
+                if (hit.point.y < minAltitude)
+                {
+                    safeDistance = Mathf.Min(safeDistance, desiredDistance);
+                }
+
+                return safeDistance;
+            }
+
+            return desiredDistance;
+        }
+
 
         private void HandleZoom()
         {
@@ -217,13 +272,66 @@ namespace FlightReLive.Core.Cameras
 
                 if (Mathf.Abs(scrollValue) > 0.01f)
                 {
-                    float zoomDelta = scrollValue * _zoomSensitivity * ZOOM_PLATFORM_MULTIPLIER;
-                    _targetDistance = Mathf.Clamp(_targetDistance - zoomDelta, _minDistance, _maxDistance);
+                    float baseZoom = scrollValue * _zoomSensitivity * ZOOM_PLATFORM_MULTIPLIER;
+                    float dynamicFactor = Mathf.Max(_distance * 0.1f, 0.05f);
+                    float zoomDelta = baseZoom * dynamicFactor;
+                    float effectiveMin = GetEffectiveMinDistance();
+                    _targetDistance = Mathf.Clamp(_targetDistance - zoomDelta, effectiveMin, _maxDistance);
                 }
             }
 
             float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            _distance = Mathf.SmoothDamp(_distance, _targetDistance, ref _zoomVelocity, damping);
+            float desiredDistance = Mathf.SmoothDamp(_distance, _targetDistance, ref _zoomVelocity, damping);
+
+            // Correction de collision : ajuste la distance si un obstacle est détecté
+            Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
+            Vector3 pivot = (_mode == CameraMode.Tracking && _droneAnchorTransform != null) ? _droneAnchorTransform.position : _freePosition;
+            _distance = ClampCameraDistanceToObstacle(pivot, rot, desiredDistance);
+        }
+
+        private void HandleDoubleClickPivot()
+        {
+            if (_mode != CameraMode.Free || !CameraWindow.IsHoveredContent)
+            {
+                return;
+            }
+
+            if (CameraWindow.Mouse.IsClicked(FuMouseButton.Left))
+            {
+                float currentTime = Time.time;
+
+                if (currentTime - _lastClickTime > DOUBLE_CLICK_MAX_DELAY)
+                {
+                    _clickCount = 0;
+                }
+
+                _clickCount++;
+                _lastClickTime = currentTime;
+
+                if (_clickCount == 2)
+                {
+                    _clickCount = 0;
+
+                    Ray ray = CameraWindow.GetCameraRay();
+
+                    if (Physics.Raycast(ray, out RaycastHit hit, 10000f))
+                    {
+                        int hitLayerMask = 1 << hit.collider.gameObject.layer;
+                        if ((_collisionMask.value & hitLayerMask) == 0)
+                        {
+                            return;
+                        }
+
+                        Vector3 newPivot = hit.point;
+
+                        _pivotLerpStart = _freePosition;
+                        _pivotLerpTarget = newPivot;
+                        _pivotLerpProgress = 0f;
+
+                        Debug.Log($"[Camera] Nouveau pivot défini à {newPivot}");
+                    }
+                }
+            }
         }
 
         private void HandleRotationInput()
@@ -231,9 +339,22 @@ namespace FlightReLive.Core.Cameras
             if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();
-                _targetX += delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
-                _targetY -= delta.y * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
-                _targetY = Mathf.Clamp(_targetY, _minYAngle, _maxYAngle);
+                float proposedX = _targetX + delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
+                float proposedY = Mathf.Clamp(_targetY - delta.y * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR, _minYAngle, _maxYAngle);
+
+                Quaternion proposedRot = Quaternion.Euler(proposedY, proposedX, 0);
+                Vector3 pivot = (_mode == CameraMode.Tracking) ? _droneAnchorTransform.position : _freePosition;
+                Vector3 proposedPosition = pivot + proposedRot * new Vector3(0, 0, -_distance);
+
+                if (!Physics.Raycast(pivot, (proposedPosition - pivot).normalized, _distance, _collisionMask))
+                {
+                    _targetX = proposedX;
+                    _targetY = proposedY;
+                }
+                else
+                {
+                    Debug.Log("[Camera] Rotation bloquée par obstacle.");
+                }
             }
 
             float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
@@ -251,7 +372,17 @@ namespace FlightReLive.Core.Cameras
                 Vector3 up = _targetCamera.transform.up;
 
                 Vector3 panDelta = (-right * delta.x + -up * delta.y) * _panSensitivity * INPUT_SENSITIVITY_FACTOR;
-                _targetFreePosition += panDelta;
+                Vector3 proposedTarget = _targetFreePosition + panDelta;
+
+                // Raycast vers le bas pour épouser le relief
+                Ray downRay = new Ray(proposedTarget + Vector3.up * 100f, Vector3.down);
+                if (Physics.Raycast(downRay, out RaycastHit hit, 200f, _collisionMask))
+                {
+                    float minAltitude = hit.point.y + 5f;
+                    proposedTarget.y = Mathf.Max(proposedTarget.y, minAltitude);
+                }
+
+                _targetFreePosition = proposedTarget;
             }
 
             float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
@@ -268,8 +399,19 @@ namespace FlightReLive.Core.Cameras
             _targetCamera.transform.rotation = rot;
         }
 
+
         private void UpdateCameraTransformFree()
         {
+            // Lerp du pivot si actif
+            if (_pivotLerpProgress < 1f)
+            {
+                _pivotLerpProgress += Time.deltaTime / PIVOT_LERP_DURATION;
+                _pivotLerpProgress = Mathf.Clamp01(_pivotLerpProgress);
+                float easedProgress = Mathf.SmoothStep(0f, 1f, _pivotLerpProgress);
+                _freePosition = Vector3.Lerp(_pivotLerpStart, _pivotLerpTarget, easedProgress);
+                _targetFreePosition = _freePosition;
+            }
+
             Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
             Vector3 offset = rot * new Vector3(0, 0, -_distance);
             Vector3 desiredPosition = _freePosition + offset;
@@ -279,22 +421,25 @@ namespace FlightReLive.Core.Cameras
                 Bounds terrainBounds = ProceduralTerrainManager.Instance.TerrainBounds;
                 float margin = 10f;
                 float maxAltitudeExtra = 500f;
-
-                desiredPosition.x = Mathf.Clamp(desiredPosition.x,
-                    terrainBounds.min.x + margin,
-                    terrainBounds.max.x - margin);
-
-                desiredPosition.y = Mathf.Clamp(desiredPosition.y,
-                    terrainBounds.min.y + 5f,
-                    terrainBounds.max.y + maxAltitudeExtra);
-
-                desiredPosition.z = Mathf.Clamp(desiredPosition.z,
-                    terrainBounds.min.z + margin,
-                    terrainBounds.max.z - margin);
+                desiredPosition.x = Mathf.Clamp(desiredPosition.x, terrainBounds.min.x + margin, terrainBounds.max.x - margin);
+                desiredPosition.y = Mathf.Clamp(desiredPosition.y, terrainBounds.min.y + 5f, terrainBounds.max.y + maxAltitudeExtra);
+                desiredPosition.z = Mathf.Clamp(desiredPosition.z, terrainBounds.min.z + margin, terrainBounds.max.z - margin);
             }
 
             _targetCamera.transform.position = desiredPosition;
             _targetCamera.transform.rotation = rot;
+        }
+
+
+        private float GetEffectiveMinDistance()
+        {
+            if (_mode == CameraMode.Free)
+            {
+                float visualDistance = Vector3.Distance(_targetCamera.transform.position, _freePosition);
+                return Mathf.Min(_minDistance, visualDistance * 0.5f);
+            }
+
+            return _minDistance;
         }
 
         private void LookAtSceneCenter()
@@ -318,13 +463,19 @@ namespace FlightReLive.Core.Cameras
 
         #region CALLBACKS
         private void OnCameraZoomSpeedChanged(float zoomSpeed)
-            => _zoomSensitivity = zoomSpeed;
+        {
+           _zoomSensitivity = zoomSpeed;
+        }
 
         private void OnCameraRotationSpeedChanged(float rotationSpeed)
-            => _rotationSensitivity = rotationSpeed;
+        {
+            _rotationSensitivity = rotationSpeed;
+        }
 
         private void OnCameraInertiaChanged(float inertia)
-            => _inertia = inertia;
+        {
+            _inertia = inertia;
+        }
 
         private void OnFlightEndLoading()
         {

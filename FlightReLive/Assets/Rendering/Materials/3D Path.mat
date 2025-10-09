@@ -136,6 +136,7 @@ Material:
     - _EnableFogOnTransparent: 1
     - _EnvironmentReflections: 1
     - _ExcludeFromTUAndAA: 0
+    - _Float: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -191,6 +192,9 @@ Material:
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _GlowColor: {r: 1, g: 1, b: 1, a: 1}
+    - _HoverColor: {r: 1, g: 0.46568128, b: 0, a: 1}
+    - _PlayedColor: {r: 0.11569952, g: 0.5280528, b: 0.9811321, a: 1}
+    - _RemainingColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

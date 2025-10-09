@@ -23,8 +23,14 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
-
-        internal Bounds TerrainBounds => _terrainBounds;
+        
+        internal Bounds TerrainBounds
+        {
+            get
+            {
+                return _terrainBounds;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -258,17 +264,8 @@ namespace FlightReLive.Core.ProceduralTerrain
                 maxZWorld = Mathf.Max(maxZWorld, pos.z + size.z);
             }
 
-            Vector3 center = new Vector3(
-                (minXWorld + maxXWorld) * 0.5f,
-                (minYWorld + maxYWorld) * 0.5f,
-                (minZWorld + maxZWorld) * 0.5f
-            );
-
-            Vector3 sizeBounds = new Vector3(
-                (maxXWorld - minXWorld),
-                (maxYWorld - minYWorld),
-                (maxZWorld - minZWorld)
-            );
+            Vector3 center = new Vector3((minXWorld + maxXWorld) * 0.5f, (minYWorld + maxYWorld) * 0.5f, (minZWorld + maxZWorld) * 0.5f);
+            Vector3 sizeBounds = new Vector3((maxXWorld - minXWorld), (maxYWorld - minYWorld), (maxZWorld - minZWorld));
 
             _terrainBounds = new Bounds(center, sizeBounds);
         }

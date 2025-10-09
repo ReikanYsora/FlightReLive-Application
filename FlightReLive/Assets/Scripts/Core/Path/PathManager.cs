@@ -38,7 +38,6 @@ namespace FlightReLive.Core.Paths
         private MeshRenderer _progressionPathRenderer;
         private Material _progressionPathMaterialInstance;
         private PathColliderUpdater _progressionPathColliderUpdater;
-        private float _pathBaseThickness;
         private float _glowTimer = 0f;
         private float _currentProgress;
         #endregion
@@ -88,10 +87,8 @@ namespace FlightReLive.Core.Paths
         {
             TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
             SettingsManager.OnPath3DWidthChanged += OnPathWidthChanged;
-            SettingsManager.OnPath3DRemainingColor1Changed += OnPathRemainingColor1Changed;
-            SettingsManager.OnPath3DRemainingColor2Changed += OnPathRemainingColor2Changed;
-            _progressionPathMaterialInstance.SetColor("_ColorC", SettingsManager.CurrentSettings.Path3DRemainingColor1);
-            _progressionPathMaterialInstance.SetColor("_ColorD", SettingsManager.CurrentSettings.Path3DRemainingColor2);
+            SettingsManager.OnPath3DRemainingColorChanged += OnPathRemainingColorChanged;
+            _progressionPathMaterialInstance.SetColor("_RemainingColor", SettingsManager.CurrentSettings.Path3DRemainingColor);
         }
 
         private void Update()
@@ -206,8 +203,7 @@ namespace FlightReLive.Core.Paths
         {
             TimeBarManager.Instance.OnProgressChanged -= OnProgressChanged;
             SettingsManager.OnPath3DWidthChanged -= OnPathWidthChanged;
-            SettingsManager.OnPath3DRemainingColor1Changed -= OnPathRemainingColor1Changed;
-            SettingsManager.OnPath3DRemainingColor2Changed -= OnPathRemainingColor2Changed;
+            SettingsManager.OnPath3DRemainingColorChanged -= OnPathRemainingColorChanged;
             Destroy(_progressionPath);
         }
         #endregion
@@ -633,23 +629,22 @@ namespace FlightReLive.Core.Paths
                 t * t * t * p1;
         }
 
-        internal void UpdatePathColliderMesh()
+        private void UpdatePathThickness()
         {
-            if (_progressionPathColliderUpdater != null)
+            float thickness = SettingsManager.CurrentSettings.Path3DThickness * 0.05f;
+
+            if (_fullPath != null && _fullPath.Count > 1)
             {
-                _progressionPathColliderUpdater.UpdateColliderMesh();
+                Mesh updated = GeneratePathMesh(_fullPath.Select(p => p.Position).ToList(), _fullPath.Select(p => p.UvY).ToList(), thickness, MESH_PATH_RADIAL_SEGMENT);
+                _progressionPathFilter.sharedMesh = updated;
+
+                if (_progressionPathColliderUpdater != null)
+                {
+                    _progressionPathColliderUpdater.UpdateColliderMesh();
+                }
             }
         }
 
-        private void UpdatePathThickness()
-        {
-            UnityMainThreadDispatcher.AddActionInMainThread(() =>
-            {
-                _pathBaseThickness = SettingsManager.CurrentSettings.Path3DThickness / 10f;
-                _progressionPathMaterialInstance.SetFloat("_BaseThickness", _pathBaseThickness);
-                UpdatePathColliderMesh();
-            });
-        }
         #endregion
 
         #region CALLBACKS
@@ -658,14 +653,9 @@ namespace FlightReLive.Core.Paths
             UpdatePathThickness();
         }
 
-        private void OnPathRemainingColor1Changed(Color color)
+        private void OnPathRemainingColorChanged(Color color)
         {
-            _progressionPathMaterialInstance.SetColor("_ColorC", SettingsManager.CurrentSettings.Path3DRemainingColor1);
-        }
-
-        private void OnPathRemainingColor2Changed(Color color)
-        {
-            _progressionPathMaterialInstance.SetColor("_ColorD", SettingsManager.CurrentSettings.Path3DRemainingColor2);
+            _progressionPathMaterialInstance.SetColor("_RemainingColor", SettingsManager.CurrentSettings.Path3DRemainingColor);
         }
         #endregion
 
@@ -708,27 +698,16 @@ namespace FlightReLive.Core.Paths
                     grid.DisableNextElements();
                 }
 
-                //Path 3D remaining color 1
+                //Path 3D remaining color
                 SettingsManager.DisplaySettingsColorPickerWithReset(
                     grid,
-                    "Remaining color 1",
-                    "Change remaining color step 1.",
-                    "Reset remaining color step 1 to default value.",
-                    SettingsManager.CurrentSettings.Path3DRemainingColor1,
-                    SettingsManager.PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE,
-                    (x) => SettingsManager.SavePath3DRemainingColor1(x),
-                    () => SettingsManager.ResetPath3DRemainingColor1());
-
-                //Path 3D remaining color 2
-                SettingsManager.DisplaySettingsColorPickerWithReset(
-                    grid,
-                    "Remaining color 2",
-                    "Change remaining color step 2.",
-                    "Reset remaining color step 2 to default value.",
-                    SettingsManager.CurrentSettings.Path3DRemainingColor2,
-                    SettingsManager.PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE,
-                    (x) => SettingsManager.SavePath3DRemainingColor2(x),
-                    () => SettingsManager.ResetPath3DRemainingColor2());
+                    "Remaining color",
+                    "Change remaining color.",
+                    "Reset remaining color to default value.",
+                    SettingsManager.CurrentSettings.Path3DRemainingColor,
+                    SettingsManager.PATH_3D_REMAINING_COLOR_DEFAULT_VALUE,
+                    (x) => SettingsManager.SavePath3DRemainingColor(x),
+                    () => SettingsManager.ResetPath3DRemainingColor());
             }
         }
         #endregion

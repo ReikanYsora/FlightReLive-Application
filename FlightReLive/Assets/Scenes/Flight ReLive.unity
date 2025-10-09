@@ -535,12 +535,15 @@ MonoBehaviour:
   _targetCamera: {fileID: 796242730}
   _distance: 20
   _droneAnchorTransform: {fileID: 283911657}
-  _mode: 0
-  _minYAngle: -10
-  _maxYAngle: 70
+  _mode: 1
+  _minYAngle: 15
+  _maxYAngle: 85
   _minDistance: 3
-  _maxDistance: 50
+  _maxDistance: 70
   _panSensitivity: 1
+  _collisionMask:
+    serializedVersion: 2
+    m_Bits: 23
 --- !u!114 &289568085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -760,6 +763,50 @@ MonoBehaviour:
   _camera: {fileID: 796242730}
   _msaa: 1
   _superSampling: 1
+--- !u!1 &672504738
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 672504741}
+  - component: {fileID: 672504740}
+  m_Layer: 0
+  m_Name: UI World Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!222 &672504740
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 672504738}
+  m_CullTransparentMesh: 1
+--- !u!224 &672504741
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 672504738}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 200, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &686105526
 GameObject:
   m_ObjectHideFlags: 0
@@ -1142,7 +1189,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 100000
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -1267,7 +1314,6 @@ GameObject:
   - component: {fileID: 1086972807}
   - component: {fileID: 1086972808}
   - component: {fileID: 1086972809}
-  - component: {fileID: 1086972810}
   m_Layer: 0
   m_Name: InspectorView
   m_TagString: Untagged
@@ -1311,7 +1357,6 @@ MonoBehaviour:
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
-  _videoPlayer: {fileID: 1086972810}
 --- !u!114 &1086972809
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1324,42 +1369,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c5e4f44c6c75a34aae0b335342750a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Metadata.MetadataManager
---- !u!328 &1086972810
-VideoPlayer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1086972806}
-  m_Enabled: 1
-  m_VideoClip: {fileID: 0}
-  m_TargetCameraAlpha: 1
-  m_TargetCamera3DLayout: 0
-  m_TargetCamera: {fileID: 0}
-  m_TargetTexture: {fileID: 0}
-  m_TimeReference: 0
-  m_TargetMaterialRenderer: {fileID: 0}
-  m_TargetMaterialProperty: <noninit>
-  m_RenderMode: 2
-  m_AspectRatio: 0
-  m_DataSource: 0
-  m_TimeUpdateMode: 2
-  m_PlaybackSpeed: 1
-  m_AudioOutputMode: 0
-  m_TargetAudioSources:
-  - {fileID: 0}
-  m_DirectAudioVolumes:
-  - 1
-  m_Url: 
-  m_EnabledAudioTracks: 01
-  m_DirectAudioMutes: 00
-  m_ControlledAudioTrackCount: 1
-  m_PlayOnAwake: 0
-  m_SkipOnDrop: 1
-  m_Looping: 0
-  m_WaitForFirstFrame: 0
-  m_FrameReadyEventEnabled: 0
-  m_VideoShaders: []
 --- !u!1 &1092402791
 GameObject:
   m_ObjectHideFlags: 0
@@ -1411,21 +1420,39 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0.0041656494
       value: 0.5032959
-      inSlope: 0.7710989
-      outSlope: 0.7710989
+      inSlope: 0
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0.122225724
+      outWeight: 0.51599365
+    - serializedVersion: 3
+      time: 0.09808415
+      value: 0.9009578
+      inSlope: 1.1726748
+      outSlope: 1.1726748
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.2917751
+      value: 0.9852759
+      inSlope: 0.054271657
+      outSlope: 0.054271657
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.447686
+      outWeight: 0.29694682
     - serializedVersion: 3
       time: 0.9999868
       value: 0.99999386
-      inSlope: 0.0042063603
-      outSlope: 0.0042063603
-      tangentMode: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
       weightedMode: 0
-      inWeight: 0.60554725
-      outWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -1740,6 +1767,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e60f389c19147b444961f1a2f5f21dbe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.TimeBar.TimeBarManager
+--- !u!1 &1706202508
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1706202509}
+  - component: {fileID: 1706202510}
+  m_Layer: 0
+  m_Name: VideoSyncManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1706202509
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706202508}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1896134859}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1706202510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706202508}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83c0598478d61244d9799ac2f558f248, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Video.VideoSyncManager
+  _vlcExecutablePath: C:\Program Files\VideoLAN\VLC\vlc.exe
 --- !u!1 &1721477096
 GameObject:
   m_ObjectHideFlags: 0
@@ -1765,18 +1837,18 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1721477096}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 686105527}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
 --- !u!114 &1721477098
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1803,16 +1875,16 @@ Canvas:
   m_GameObject: {fileID: 1721477096}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 2
+  m_RenderMode: 0
   m_Camera: {fileID: 796242730}
   m_PlaneDistance: 100
-  m_PixelPerfect: 0
+  m_PixelPerfect: 1
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 1
-  m_AdditionalShaderChannelsFlag: 25
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -1910,6 +1982,7 @@ Transform:
   - {fileID: 1289900097}
   - {fileID: 739676617}
   - {fileID: 1698214560}
+  - {fileID: 1706202509}
   - {fileID: 1389988519}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2048,3 +2121,4 @@ SceneRoots:
   - {fileID: 686105527}
   - {fileID: 251700243}
   - {fileID: 1082284730}
+  - {fileID: 672504741}

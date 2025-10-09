@@ -15,9 +15,8 @@ namespace FlightReLive.Core.Settings
     public static class SettingsManager
     {
         #region ATTRIBUTES
-        internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.2f;
-        internal static Color PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE = Color.white;
-        internal static Color PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE = Color.black;
+        internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.4f;
+        internal static Color PATH_3D_REMAINING_COLOR_DEFAULT_VALUE = Color.white;
         internal static bool BUILDING_DISPLAY_STATE_DEFAULT_VALUE = true;
         internal static Color BUILDING_COLOR_DEFAULT_VALUE = Color.antiqueWhite;
         internal static float BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE = 0.9f;
@@ -75,8 +74,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<float> OnGlobalScaleChanged;
         public static event Action<float> OnPath3DWidthChanged;
-        public static event Action<Color> OnPath3DRemainingColor1Changed;
-        public static event Action<Color> OnPath3DRemainingColor2Changed;
+        public static event Action<Color> OnPath3DRemainingColorChanged;
         public static event Action<bool> OnBuildingVisibilityChanged;
         public static event Action<Color> OnBuildingColorChanged;
         public static event Action<float> OnBuildingAOChanged;
@@ -151,11 +149,11 @@ namespace FlightReLive.Core.Settings
         internal static void LoadPath3DThickness() =>
             CurrentSettings.Path3DThickness = PlayerPrefs.GetFloat(nameof(Settings.Path3DThickness), PATH_3D_THICKNESS_DEFAULT_VALUE);
 
-        internal static void LoadPath3DRemainingColor1()
+        internal static void LoadPath3DRemainingColor()
         {
-            Color color = PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE;
+            Color color = PATH_3D_REMAINING_COLOR_DEFAULT_VALUE;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor1), colorString);
+            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor), colorString);
             string[] rgba = savedColorString.Split(',');
 
             if (rgba.Length == 4 &&
@@ -164,32 +162,11 @@ namespace FlightReLive.Core.Settings
                 float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
                 float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
             {
-                CurrentSettings.Path3DRemainingColor1 = new Color(r, g, b, a);
+                CurrentSettings.Path3DRemainingColor = new Color(r, g, b, a);
             }
             else
             {
-                CurrentSettings.Path3DRemainingColor1 = color;
-            }
-        }
-
-        internal static void LoadPath3DRemainingColor2()
-        {
-            Color color = PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            string savedColorString = PlayerPrefs.GetString(nameof(Settings.Path3DRemainingColor2), colorString);
-            string[] rgba = savedColorString.Split(',');
-
-            if (rgba.Length == 4 &&
-                float.TryParse(rgba[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r) &&
-                float.TryParse(rgba[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g) &&
-                float.TryParse(rgba[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b) &&
-                float.TryParse(rgba[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float a))
-            {
-                CurrentSettings.Path3DRemainingColor2 = new Color(r, g, b, a);
-            }
-            else
-            {
-                CurrentSettings.Path3DRemainingColor2 = color;
+                CurrentSettings.Path3DRemainingColor = color;
             }
         }
 
@@ -389,22 +366,13 @@ namespace FlightReLive.Core.Settings
             OnPath3DWidthChanged?.Invoke(value);
         }
 
-        internal static void SavePath3DRemainingColor1(Color color)
+        internal static void SavePath3DRemainingColor(Color color)
         {
-            CurrentSettings.Path3DRemainingColor1 = color;
+            CurrentSettings.Path3DRemainingColor = color;
             string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor1), colorString);
+            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor), colorString);
             PlayerPrefs.Save();
-            OnPath3DRemainingColor1Changed?.Invoke(color);
-        }
-
-        internal static void SavePath3DRemainingColor2(Color color)
-        {
-            CurrentSettings.Path3DRemainingColor2 = color;
-            string colorString = $"{color.r.ToString(CultureInfo.InvariantCulture)},{color.g.ToString(CultureInfo.InvariantCulture)},{color.b.ToString(CultureInfo.InvariantCulture)},{color.a.ToString(CultureInfo.InvariantCulture)}";
-            PlayerPrefs.SetString(nameof(Settings.Path3DRemainingColor2), colorString);
-            PlayerPrefs.Save();
-            OnPath3DRemainingColor2Changed?.Invoke(color);
+            OnPath3DRemainingColorChanged?.Invoke(color);
         }
 
         internal static void SaveBuildingVisibility(bool value)
@@ -504,8 +472,7 @@ namespace FlightReLive.Core.Settings
             LoadWorkspaceZoom();
             LoadMapTilerApiKey();
             LoadPath3DThickness();
-            LoadPath3DRemainingColor1();
-            LoadPath3DRemainingColor2();
+            LoadPath3DRemainingColor();
             LoadBuildingVisibility();
             LoadBuildingColor();
             LoadBuildingAO();
@@ -540,8 +507,7 @@ namespace FlightReLive.Core.Settings
             SaveWorkspaceZoom(1f);
             SaveMapTilerApiKey("");
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
-            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
-            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
+            SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
             SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
             SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
             SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
@@ -1184,16 +1150,10 @@ namespace FlightReLive.Core.Settings
             LoadPath3DThickness();
         }
 
-        internal static void ResetPath3DRemainingColor1()
+        internal static void ResetPath3DRemainingColor()
         {
-            SavePath3DRemainingColor1(PATH_3D_REMAINING_COLOR_1_DEFAULT_VALUE);
-            LoadPath3DRemainingColor1();
-        }
-
-        internal static void ResetPath3DRemainingColor2()
-        {
-            SavePath3DRemainingColor2(PATH_3D_REMAINING_COLOR_2_DEFAULT_VALUE);
-            LoadPath3DRemainingColor2();
+            SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
+            LoadPath3DRemainingColor();
         }
 
         internal static void ResetBuildingVisibility()

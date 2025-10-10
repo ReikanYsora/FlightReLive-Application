@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Compass;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.POI;

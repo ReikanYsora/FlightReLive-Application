@@ -12,6 +12,7 @@ namespace FlightReLive.UI.CameraViews
         #region ATTRIBUTES
         private TimeBarOverlay _timeBarOverlay;
         private CameraModeOverlay _cameraModeOverlay;
+        private CompassOverlay _compassOverlay;
         #endregion
 
         #region PROPERTIES
@@ -56,6 +57,9 @@ namespace FlightReLive.UI.CameraViews
 
             _cameraModeOverlay = new CameraModeOverlay();
             _cameraModeOverlay.DisplayCameraModeOverlay(windowDefinition, CameraWindow);
+
+            _compassOverlay = new CompassOverlay();
+            _compassOverlay.DisplayCompassOverlay(windowDefinition, CameraWindow, Camera);
         }
         #endregion
     }

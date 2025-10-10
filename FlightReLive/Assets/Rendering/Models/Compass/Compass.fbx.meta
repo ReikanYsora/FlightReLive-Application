@@ -25,7 +25,7 @@ ModelImporter:
       name: Silver
     second: {fileID: 2100000, guid: e15710d7fa573404e9142e98328f9ce0, type: 2}
   materials:
-    materialImportMode: 1
+    materialImportMode: 2
     materialName: 0
     materialSearch: 1
     materialLocation: 1

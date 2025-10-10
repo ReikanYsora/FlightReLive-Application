@@ -572,7 +572,10 @@ namespace FlightReLive.Core.Pipeline.API
             collection.features = collection.features
                 .Where(f =>
                 {
-                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2) { return false; }
+                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2)
+                    {
+                        return false;
+                    }
 
                     double lon = f.geometry.coordinates[0];
                     double lat = f.geometry.coordinates[1];

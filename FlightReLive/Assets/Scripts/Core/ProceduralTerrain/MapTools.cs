@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.Pipeline;
+﻿using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Pipeline;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -124,6 +125,14 @@ namespace FlightReLive.Core.ProceduralTerrain
             double metersPerTile = metersPerTileEquator * Math.Cos(latitudeRad);
 
             return metersPerTile;
+        }
+
+        internal static FlightGPSData GetCenterOfBoundingBox(GPSBoundingBox bbox)
+        {
+            double centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2.0;
+            double centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2.0;
+
+            return new FlightGPSData(centerLatitude, centerLongitude);
         }
         #endregion
     }

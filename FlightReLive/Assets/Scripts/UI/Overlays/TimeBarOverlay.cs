@@ -333,8 +333,8 @@ namespace FlightReLive.UI.Overlays
                     {
                         timeBar.Pause();
                     }
-                    else 
-                    { 
+                    else
+                    {
                         timeBar.Play();
                     }
                 }

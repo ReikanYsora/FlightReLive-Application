@@ -31,7 +31,7 @@ namespace FlightReLive.Core.UI.Overlays
         #endregion
 
         #region UI
-        internal void DisplayCameraModeOverlay(FuWindowDefinition windowsDefinition, FuCameraWindow cameraWindow)
+        internal void DisplayCameraModeOverlay(FuWindowDefinition windowsDefinition)
         {
             _cameraModeOverlay = new FuOverlay("cameraModeOverlay",
                 new Vector2Int(CAMERA_MODE_OVERLAY_WIDTH, CAMERA_MODE_OVERLAY_HEIGHT),

@@ -66,6 +66,9 @@ namespace FlightReLive.Core
             //Initialize cache
             CacheManager.Initialize();
 
+            //Initialize workspace cache
+            CacheManager.InitializeWorkspaceCache();
+
             //Apply Fugui global scale
             ApplySavedGlobalScale();
 
@@ -381,7 +384,7 @@ namespace FlightReLive.Core
                 layout.EndGroup();
 
             }, FuModalSize.Medium, new FuModalButton("OK", () => { SettingsManager.SaveDisplayWizard(false); }, FuButtonStyle.Highlight));
-           
+
         }
 
         private void DisplayWelcomePanel()

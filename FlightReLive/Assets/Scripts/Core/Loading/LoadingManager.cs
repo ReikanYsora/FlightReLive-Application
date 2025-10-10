@@ -24,6 +24,10 @@ namespace FlightReLive.Core.Loading
 {
     public class LoadingManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const int TILE_PADDING = 5;
+        #endregion
+
         #region ATTRIBUTES
         private CancellationTokenSource _cancellationTokenSource;
         private string _currentTile;
@@ -41,6 +45,8 @@ namespace FlightReLive.Core.Loading
         internal static LoadingManager Instance { get; private set; }
 
         internal bool IsLoading { get; private set; }
+
+        internal bool IsLoaded { get; private set; }
 
         internal FlightFile CurrentFlightFile { get; private set; }
 
@@ -67,6 +73,9 @@ namespace FlightReLive.Core.Loading
             _tileProgress = 0f;
             _tilesProcessed = 0;
             _tilesTotal = 0;
+
+            IsLoaded = false;
+            IsLoading = false;
         }
 
         private void Start()
@@ -183,12 +192,12 @@ namespace FlightReLive.Core.Loading
                     //We need to call this method only when BuildTileLookup and InitializeAltitude has been executed
                     foreach (TileDefinition tileDefinition in loadedTiles)
                     {
-                        OpenVectorTileManager.Instance.LoadTile(tileDefinition, flightData);
+                        BuildingManager.Instance.LoadTile(tileDefinition, flightData);
                     }
                 }
-                
+
                 ProceduralTerrainManager.Instance.Load(flightData);
-                OpenVectorTileManager.Instance.Load(flightData);
+                BuildingManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
@@ -196,6 +205,7 @@ namespace FlightReLive.Core.Loading
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info, 3f);
                 OnFlightEndLoading?.Invoke();
+                IsLoaded = true;
             }
             catch (OperationCanceledException)
             {
@@ -215,8 +225,6 @@ namespace FlightReLive.Core.Loading
 
         internal static FlightData ConvertFileToFlight(FlightFile file)
         {
-            int tilePadding = SettingsManager.CurrentSettings.TilePadding;
-
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
@@ -271,10 +279,10 @@ namespace FlightReLive.Core.Loading
             int originalMinTileY = baseMinTileY;
             int originalMaxTileY = baseMaxTileY;
 
-            int minTileX = originalMinTileX - tilePadding;
-            int maxTileX = originalMaxTileX + tilePadding;
-            int minTileY = originalMinTileY - tilePadding;
-            int maxTileY = originalMaxTileY + tilePadding;
+            int minTileX = originalMinTileX - TILE_PADDING;
+            int maxTileX = originalMaxTileX + TILE_PADDING;
+            int minTileY = originalMinTileY - TILE_PADDING;
+            int maxTileY = originalMaxTileY + TILE_PADDING;
 
             for (int x = minTileX; x <= maxTileX; x++)
             {
@@ -341,7 +349,7 @@ namespace FlightReLive.Core.Loading
                 ProceduralTerrainManager.Instance.Unload(),
                 PathManager.Instance.Unload(),
                 EnvironmentManager.Instance.Unload(),
-                OpenVectorTileManager.Instance.Unload(),
+                BuildingManager.Instance.Unload(),
                 POIManager.Instance.Unload()
             };
 
@@ -356,6 +364,7 @@ namespace FlightReLive.Core.Loading
 
             CurrentFlightData?.Dispose();
             CurrentFlightData = null;
+            IsLoaded = false;
             OnFlightUnloaded?.Invoke();
         }
 
@@ -452,7 +461,7 @@ namespace FlightReLive.Core.Loading
                         loadingDetailsGrid.FramedText($"{_filesDownloaded}");
                     }
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
-                
+
             },
             FuModalSize.Medium,
             new FuModalButton("Cancel loading", async () => await CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));

@@ -46,7 +46,12 @@ namespace FlightReLive.UI.Layout
         {
             Fugui.DisableMainMenu();
 
-            MacOsMainMenuManager.AddMenuEntry("Flight ReLive", "Import local file", () =>
+            MacOsMainMenuManager.AddQuitMenuEntry("Flight ReLive", () =>
+            {
+                ApplicationManager.Instance.QuitApplication();
+            });
+
+            MacOsMainMenuManager.AddMenuEntry("Import", "Import local file", () =>
             {
                 string safePath = Path.Combine(Application.persistentDataPath);
                 FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
@@ -57,26 +62,19 @@ namespace FlightReLive.UI.Layout
                         await FlightShareManager.ImportAsync(x[0]);
                     }
                 });
-            });
+            }, "I");
 
-            MacOsMainMenuManager.AddMenuEntry("Flight ReLive", "Import from SharedHash", () =>
+            MacOsMainMenuManager.AddMenuEntry("Import", "Import from SharedHash", () =>
             {
                 ShareViewManager.DisplaySharedHashModel();
-            });
-
-            MacOsMainMenuManager.AddSeparator("Flight ReLive");
-
-            MacOsMainMenuManager.AddQuitMenuEntry("Flight ReLive", () =>
-            {
-                ApplicationManager.Instance.QuitApplication();
-            });
+            }, "S");
 
 #if UNITY_EDITOR
             //Fugui Settings menu (only in editor)
             MacOsMainMenuManager.AddMenuEntry("Settings", "Fugui Settings", () =>
             {
                 Fugui.CreateWindowAsync(FuSystemWindowsNames.FuguiSettings, null);
-            });
+            }, "F");
 #endif
             //Settings menu
             MacOsMainMenuManager.AddMenuEntry("Settings", "Preferences", () =>
@@ -126,16 +124,13 @@ namespace FlightReLive.UI.Layout
                     }
                 }
 
-                MacOsMainMenuManager.AddMenuEntry(
-                    "Windows",
+                MacOsMainMenuManager.AddMenuEntry("Windows",
                     displayName,
                     () =>
                     {
                         // Use full FuWindowName (with icon) for window creation
                         Fugui.CreateWindowAsync(windowName, null);
-                    },
-                    shortcut?.ToString() ?? "" // pass shortcut, or empty string if none
-                );
+                    });
             }
 
             //Help menu
@@ -148,11 +143,14 @@ namespace FlightReLive.UI.Layout
         private void RegisterMainMenuItemsWindows()
         {
             string flightReLiveTitle = "Flight ReLive";
+            string flightReLiveImport = "Import";
             string flightReLiveSettings = "Settings";
 
             //"Flight ReLive" menu
             Fugui.RegisterMainMenuItem(flightReLiveTitle, null);
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Quit + "  Exit", () => { ApplicationManager.Instance.QuitApplication(); }, flightReLiveTitle);
 
+            Fugui.RegisterMainMenuItem(flightReLiveImport, null);
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import local file", () =>
             {
                 string safePath = Path.Combine(Application.persistentDataPath);
@@ -164,16 +162,12 @@ namespace FlightReLive.UI.Layout
                             await FlightShareManager.ImportAsync(x[0]);
                         }
                     });
-            }, flightReLiveTitle);
+            }, flightReLiveImport);
 
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import from SharedHash", () =>
             {
                 ShareViewManager.DisplaySharedHashModel();
-            }, flightReLiveTitle);
-
-            Fugui.RegisterMainMenuSeparator(flightReLiveTitle);
-
-            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Quit + "  Exit", () => { ApplicationManager.Instance.QuitApplication(); }, flightReLiveTitle);
+            }, flightReLiveImport);
 
             //Settings menu
             Fugui.RegisterMainMenuItem(flightReLiveSettings, null);

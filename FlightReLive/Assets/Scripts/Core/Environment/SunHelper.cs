@@ -1,7 +1,5 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
-
 
 namespace FlightReLive.Core.Environment
 {
@@ -80,12 +78,73 @@ namespace FlightReLive.Core.Environment
             };
         }
 
+        /// <summary>
+        /// Returns a perceptual sun intensity factor (0 to 1) based on elevation angle.
+        /// </summary>
+        /// <param name="elevation"></param>
+        /// <returns></returns>
         internal static float GetPerceptualSunFactor(float elevation)
         {
             float factor = Mathf.InverseLerp(-6f, 60f, elevation);
             factor = Mathf.Pow(factor, 0.9f);
 
             return Mathf.Clamp01(factor);
+        }
+
+        /// <summary>
+        /// Estimates sunrise and sunset times (UTC) for a given date and position.
+        /// Uses elevation crossing 0° criterion, derived from existing SunHelper calculations.
+        /// </summary>
+        internal static SunTimes GetSunriseSunset(DateTime dateUtc, double latitude, double longitude, float stepMinutes = 2f)
+        {
+            SunTimes result = new SunTimes
+            {
+                HasSunrise = false,
+                HasSunset = false
+            };
+
+            if (dateUtc.Kind != DateTimeKind.Utc)
+                dateUtc = dateUtc.ToUniversalTime();
+
+            DateTime dayStart = dateUtc.Date;
+            DateTime dayEnd = dayStart.AddDays(1);
+
+            float previousElevation = CalculateSunPosition(dayStart, latitude, longitude).Elevation;
+            DateTime previousTime = dayStart;
+
+            for (DateTime t = dayStart.AddMinutes(stepMinutes); t <= dayEnd; t = t.AddMinutes(stepMinutes))
+            {
+                float currentElevation = CalculateSunPosition(t, latitude, longitude).Elevation;
+
+                // Detect sunrise (crossing from negative to positive)
+                if (!result.HasSunrise && previousElevation < 0f && currentElevation >= 0f)
+                {
+                    result.HasSunrise = true;
+                    result.SunriseUTC = InterpolateTime(previousTime, t, previousElevation, currentElevation, 0f);
+                }
+
+                // Detect sunset (crossing from positive to negative)
+                if (!result.HasSunset && previousElevation > 0f && currentElevation <= 0f)
+                {
+                    result.HasSunset = true;
+                    result.SunsetUTC = InterpolateTime(previousTime, t, previousElevation, currentElevation, 0f);
+                }
+
+                previousElevation = currentElevation;
+                previousTime = t;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Simple linear interpolation of the moment when elevation crosses the target (usually 0°).
+        /// </summary>
+        private static DateTime InterpolateTime(DateTime t1, DateTime t2, float elev1, float elev2, float target)
+        {
+            float ratio = Mathf.InverseLerp(elev1, elev2, target);
+            double seconds = (t2 - t1).TotalSeconds * ratio;
+            return t1.AddSeconds(seconds);
         }
     }
 }

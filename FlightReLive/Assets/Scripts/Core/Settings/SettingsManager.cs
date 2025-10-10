@@ -15,6 +15,9 @@ namespace FlightReLive.Core.Settings
     public static class SettingsManager
     {
         #region ATTRIBUTES
+        internal static float CAMERA_ROTATION_SPEED_DEFAULT_VALUE = 1f;
+        internal static float CAMERA_ZOOM_SPEED_DEFAULT_VALUE = 1f;
+        internal static float PAN_SPEED_DEFAULT_VALUE = 1f;
         internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.4f;
         internal static Color PATH_3D_REMAINING_COLOR_DEFAULT_VALUE = Color.white;
         internal static bool BUILDING_DISPLAY_STATE_DEFAULT_VALUE = true;
@@ -67,8 +70,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnDontAskWelcomeVersionChanged;
         public static event Action<float> OnCameraRotationSpeedChanged;
         public static event Action<float> OnCameraZoomSpeedChanged;
-        public static event Action<float> OnCameraInertiaChanged;
-        public static event Action<int> OnTilePaddingChanged;
+        public static event Action<float> OnPanSpeedChanged;
         public static event Action<TimeZoneInfo> OnTimeZoneChanged;
         public static event Action<DateFormatStyle> OnDateFormatStyleChanged;
         public static event Action<TimeFormatStyle> OnTimeFormatStyleChanged;
@@ -95,68 +97,138 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region METHODS
-        internal static void LoadDisplayWizard() =>
+        /// <summary>
+        /// Load the application display wizard setting from PlayerPrefs, defaulting to true if not set.
+        /// </summary>
+        internal static void LoadDisplayWizard()
+        {
             CurrentSettings.DisplayWizard = PlayerPrefs.GetInt(nameof(Settings.DisplayWizard), 1) == 1;
+        }
 
-        internal static void LoadApplicationTargetFPS() =>
+        /// <summary>
+        /// Load the application target FPS setting from PlayerPrefs, defaulting to 120 if not set.
+        /// </summary>
+        internal static void LoadApplicationTargetFPS()
+        {
             CurrentSettings.ApplicationTargetFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationTargetFPS), 120);
+        }
 
-        internal static void LoadApplicationIdleFPS() =>
+        /// <summary>
+        /// Load the application idle FPS setting from PlayerPrefs, defaulting to 30 if not set.
+        /// </summary>
+        internal static void LoadApplicationIdleFPS()
+        {
             CurrentSettings.ApplicationIdleFPS = PlayerPrefs.GetInt(nameof(Settings.ApplicationIdleFPS), 30);
+        }
 
-        internal static void LoadDontAskWelcomeVersion() =>
+        /// <summary>
+        /// Load the "Don't Ask Welcome Version" setting from PlayerPrefs, defaulting to false if not set.
+        /// </summary>
+        internal static void LoadDontAskWelcomeVersion()
+        {
             CurrentSettings.DontAskWelcomeVersion = PlayerPrefs.GetInt(nameof(Settings.DontAskWelcomeVersion), 0) == 1;
+        }
 
+        /// <summary>
+        /// Load the camera rotation speed setting from PlayerPrefs, defaulting to CAMERA_ROTATION_SPEED_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadCameraRotationSpeed()
         {
-            CurrentSettings.CameraRotationSpeed = PlayerPrefs.GetFloat(nameof(Settings.CameraRotationSpeed), 1f);
+            CurrentSettings.CameraRotationSpeed = PlayerPrefs.GetFloat(nameof(Settings.CameraRotationSpeed), CAMERA_ROTATION_SPEED_DEFAULT_VALUE);
         }
 
+        /// <summary>
+        /// Load the camera zoom speed setting from PlayerPrefs, defaulting to CAMERA_ZOOM_SPEED_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadCameraZoomSpeed()
         {
-            CurrentSettings.CameraZoomSpeed = PlayerPrefs.GetFloat(nameof(Settings.CameraZoomSpeed), 1f);
+            CurrentSettings.CameraZoomSpeed = PlayerPrefs.GetFloat(nameof(Settings.CameraZoomSpeed), CAMERA_ZOOM_SPEED_DEFAULT_VALUE);
         }
 
-        internal static void LoadCameraInertia()
+        /// <summary>
+        /// Load the pan speed setting from PlayerPrefs, defaulting to PAN_SPEED_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPanSpeed()
         {
-            CurrentSettings.CameraInertia = PlayerPrefs.GetFloat(nameof(Settings.CameraInertia), 0.1f);
+            CurrentSettings.PanSpeed = PlayerPrefs.GetFloat(nameof(Settings.PanSpeed), PAN_SPEED_DEFAULT_VALUE);
         }
 
-        internal static void LoadTilePadding()
-        {
-            CurrentSettings.TilePadding = PlayerPrefs.GetInt(nameof(Settings.TilePadding), 3);
-        }
-
+        /// <summary>
+        /// Load the time zone setting from PlayerPrefs, defaulting to "UTC" if not set.
+        /// </summary>
         internal static void LoadTimeZone()
         {
             string tzId = PlayerPrefs.GetString(nameof(Settings.UserTimeZone), "UTC");
             CurrentSettings.UserTimeZone = ResolveTimeZone(tzId);
         }
 
-        internal static void LoadDateFormatStyle() =>
+        /// <summary>
+        /// Resolve the TimeZoneInfo from the given ID, handling platform differences.
+        /// </summary>
+        internal static void LoadDateFormatStyle()
+        {
             CurrentSettings.DateFormatStyle = (DateFormatStyle)PlayerPrefs.GetInt(nameof(Settings.DateFormatStyle), (int)DateFormatStyle.European);
+        }
 
-        internal static void LoadTimeFormatStyle() =>
+        /// <summary>
+        /// Load the time format style setting from PlayerPrefs, defaulting to TwentyFourHour if not set.
+        /// </summary>
+        internal static void LoadTimeFormatStyle()
+        {
             CurrentSettings.TimeFormatStyle = (TimeFormatStyle)PlayerPrefs.GetInt(nameof(Settings.TimeFormatStyle), (int)TimeFormatStyle.TwentyFourHour);
+        }
 
-        internal static void LoadUnitSystemType() =>
+        /// <summary>
+        /// Load the unit system type setting from PlayerPrefs, defaulting to Metric if not set.
+        /// </summary>
+        internal static void LoadUnitSystemType()
+        {
             CurrentSettings.UnitSystemType = (UnitSystemType)PlayerPrefs.GetInt(nameof(Settings.UnitSystemType), (int)UnitSystemType.Metric);
+        }
 
-        internal static void LoadWorkspacePath() =>
+        /// <summary>
+        /// Load the workspace path setting from PlayerPrefs, defaulting to Application.persistentDataPath if not set.
+        /// </summary>
+        internal static void LoadWorkspacePath()
+        {
             CurrentSettings.WorkspacePath = PlayerPrefs.GetString(nameof(Settings.WorkspacePath), Application.persistentDataPath);
+        }
 
-        internal static void LoadWorkspaceZoom() =>
+        /// <summary>
+        /// Load the workspace zoom setting from PlayerPrefs, defaulting to 1.0f if not set.    
+        /// </summary>
+        internal static void LoadWorkspaceZoom()
+        {
             CurrentSettings.WorkspaceZoom = PlayerPrefs.GetFloat(nameof(Settings.WorkspaceZoom), 1.0f);
+        }
 
-        internal static void LoadMapTilerApiKey() =>
+        /// <summary>
+        /// Load the MapTiler API key setting from PlayerPrefs, defaulting to an empty string if not set.
+        /// </summary>
+        internal static void LoadMapTilerApiKey()
+        {
             CurrentSettings.MapTilerAPIKey = PlayerPrefs.GetString(nameof(Settings.MapTilerAPIKey), "");
+        }
 
-        internal static void LoadGlobalScale() =>
+        /// <summary>
+        /// Load the global scale setting from PlayerPrefs, defaulting to 1f if not set.
+        /// </summary>
+        internal static void LoadGlobalScale()
+        {
             CurrentSettings.GlobalScale = PlayerPrefs.GetFloat(nameof(Settings.GlobalScale), 1f);
+        }
 
-        internal static void LoadPath3DThickness() =>
+        /// <summary>
+        /// Load the path 3D thickness setting from PlayerPrefs, defaulting to PATH_3D_THICKNESS_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPath3DThickness()
+        {
             CurrentSettings.Path3DThickness = PlayerPrefs.GetFloat(nameof(Settings.Path3DThickness), PATH_3D_THICKNESS_DEFAULT_VALUE);
+        }
 
+        /// <summary>
+        /// Load the path 3D remaining color setting from PlayerPrefs, defaulting to PATH_3D_REMAINING_COLOR_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadPath3DRemainingColor()
         {
             Color color = PATH_3D_REMAINING_COLOR_DEFAULT_VALUE;
@@ -178,12 +250,18 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Load the building visibility setting from PlayerPrefs, defaulting to BUILDING_DISPLAY_STATE_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadBuildingVisibility()
         {
             int intBool = BUILDING_DISPLAY_STATE_DEFAULT_VALUE ? 1 : 0;
             CurrentSettings.BuildingVisibility = PlayerPrefs.GetInt(nameof(Settings.BuildingVisibility), intBool) == 1;
         }
 
+        /// <summary>
+        /// Load the building color setting from PlayerPrefs, defaulting to BUILDING_COLOR_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadBuildingColor()
         {
             Color color = BUILDING_COLOR_DEFAULT_VALUE;
@@ -205,48 +283,108 @@ namespace FlightReLive.Core.Settings
             }
         }
 
-        internal static void LoadBuildingAO() =>
+        /// <summary>
+        /// Load the building ambient occlusion setting from PlayerPrefs, defaulting to BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadBuildingAO()
+        {
             CurrentSettings.BuildingAO = PlayerPrefs.GetFloat(nameof(Settings.BuildingAO), BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
+        }
 
+        /// <summary>
+        /// Load the POI visibility setting from PlayerPrefs, defaulting to POI_DISPLAY_STATE_DEFAULT_VALUE if not set.
+        /// </summary>
         internal static void LoadPOIVisibility()
         {
             int intBool = POI_DISPLAY_STATE_DEFAULT_VALUE ? 1 : 0;
             CurrentSettings.POIVisibility = PlayerPrefs.GetInt(nameof(Settings.POIVisibility), intBool) == 1;
         }
 
-        internal static void LoadPOIScale() =>
+        /// <summary>
+        /// Load the POI scale setting from PlayerPrefs, defaulting to POI_SCALE_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPOIScale()
+        {
             CurrentSettings.POIScale = PlayerPrefs.GetFloat(nameof(Settings.POIScale), POI_SCALE_DEFAULT_VALUE);
+        }
 
-        internal static void LoadPOIHeight() =>
+        /// <summary>
+        /// Load the POI height setting from PlayerPrefs, defaulting to POI_HEIGHT_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPOIHeight()
+        {
             CurrentSettings.POIHeight = PlayerPrefs.GetFloat(nameof(Settings.POIHeight), POI_HEIGHT_DEFAULT_VALUE);
+        }
 
-        internal static void LoadCurrentVersion() =>
+        /// <summary>
+        /// Load the current version setting from PlayerPrefs, defaulting to the application version if not set.
+        /// </summary>
+        internal static void LoadCurrentVersion()
+        {
             CurrentSettings.CurrentVersion = PlayerPrefs.GetString(nameof(Settings.CurrentVersion), Application.version);
+        }
 
-        internal static void LoadVignettingIntensity() =>
+        /// <summary>
+        /// Load the vignetting intensity setting from PlayerPrefs, defaulting to VIGNETTING_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadVignettingIntensity()
+        {
             CurrentSettings.VignettingIntensity = PlayerPrefs.GetFloat(nameof(Settings.VignettingIntensity), VIGNETTING_DEFAULT_VALUE);
+        }
 
-        internal static void LoadContrastOffset() =>
+        /// <summary>
+        /// Load the contrast offset setting from PlayerPrefs, defaulting to CONTRAST_OFFSET_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadContrastOffset()
+        {
             CurrentSettings.ContrastOffset = PlayerPrefs.GetFloat(nameof(Settings.ContrastOffset), CONTRAST_OFFSET_DEFAULT_VALUE);
+        }
 
-        internal static void LoadSaturationOffset() =>
+        /// <summary>
+        /// Load the saturation offset setting from PlayerPrefs, defaulting to SATURATION_OFFSET_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadSaturationOffset()
+        {
             CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.SaturationOffset), SATURATION_OFFSET_DEFAULT_VALUE);
+        }
 
-        internal static void LoadCloudsPreset() =>
+        /// <summary>
+        /// Load the clouds preset setting from PlayerPrefs, defaulting to CLOUD_PRESET_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCloudsPreset()
+        {
             CurrentSettings.CloudsPreset = (CloudsPreset)PlayerPrefs.GetInt(nameof(Settings.CloudsPreset), (int)CLOUD_PRESET_DEFAULT_VALUE);
+        }
 
-
+        /// <summary>
+        /// Load the cloud shadows enabled setting from PlayerPrefs, defaulting to CLOUD_SHADOW_ENABLED_DEFAULT_STATE if not set.
+        /// </summary>
         internal static void LoadCloudShadowsEnabled()
         {
             int intBool = CLOUD_SHADOW_ENABLED_DEFAULT_STATE ? 1 : 0;
             CurrentSettings.CloudShadowsEnabled = PlayerPrefs.GetInt(nameof(Settings.CloudShadowsEnabled), intBool) == 1;
         }
-        internal static void LoadCloudShadowsOpacity() =>
+
+        /// <summary>
+        /// Load the cloud shadows opacity setting from PlayerPrefs, defaulting to CLOUD_SHADOW_OPACITY_DEFAULT_STATE if not set.
+        /// </summary>
+        internal static void LoadCloudShadowsOpacity()
+        {
             CurrentSettings.CloudShadowsOpacity = PlayerPrefs.GetFloat(nameof(Settings.CloudShadowsOpacity), CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
+        }
 
-        internal static void LoadWindType() =>
+        /// <summary>
+        /// Load the wind type setting from PlayerPrefs, defaulting to WIND_TYPE_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadWindType()
+        {
             CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
+        }
 
+        /// <summary>
+        /// Save the display wizard setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveDisplayWizard(bool value)
         {
             CurrentSettings.DisplayWizard = value;
@@ -254,6 +392,10 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
         }
 
+        /// <summary>
+        /// Save the application target FPS setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveApplicationTargetFPS(int value)
         {
             CurrentSettings.ApplicationTargetFPS = value;
@@ -261,6 +403,11 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnApplicationTargetFPSChanged?.Invoke(value);
         }
+
+        /// <summary>
+        /// Save the "Don't Ask Welcome Version" setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveDontAskWelcomeVersion(bool value)
         {
             CurrentSettings.DontAskWelcomeVersion = value;
@@ -269,6 +416,10 @@ namespace FlightReLive.Core.Settings
             OnDontAskWelcomeVersionChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the application idle FPS setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveApplicationIdleFPS(int value)
         {
             CurrentSettings.ApplicationIdleFPS = value;
@@ -277,6 +428,10 @@ namespace FlightReLive.Core.Settings
             OnApplicationIdleFPSChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the camera rotation speed setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveCameraRotationSpeed(float value)
         {
             CurrentSettings.CameraRotationSpeed = value;
@@ -285,6 +440,10 @@ namespace FlightReLive.Core.Settings
             OnCameraRotationSpeedChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the camera zoom speed setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveCameraZoomSpeed(float value)
         {
             CurrentSettings.CameraZoomSpeed = value;
@@ -293,22 +452,22 @@ namespace FlightReLive.Core.Settings
             OnCameraZoomSpeedChanged?.Invoke(value);
         }
 
-        internal static void SaveCameraInertia(float value)
+        /// <summary>
+        /// Save the pan speed setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SavePanSpeed(float value)
         {
-            CurrentSettings.CameraInertia = value;
-            PlayerPrefs.SetFloat(nameof(Settings.CameraInertia), value);
+            CurrentSettings.PanSpeed = value;
+            PlayerPrefs.SetFloat(nameof(Settings.PanSpeed), value);
             PlayerPrefs.Save();
-            OnCameraInertiaChanged?.Invoke(value);
+            OnPanSpeedChanged?.Invoke(value);
         }
 
-        internal static void SaveTilePadding(int value)
-        {
-            CurrentSettings.TilePadding = value;
-            PlayerPrefs.SetFloat(nameof(Settings.TilePadding), value);
-            PlayerPrefs.Save();
-            OnTilePaddingChanged?.Invoke(value);
-        }
-
+        /// <summary>
+        /// Save the time zone setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="timeZone"></param>
         internal static void SaveTimeZone(TimeZoneInfo timeZone)
         {
             CurrentSettings.UserTimeZone = timeZone;
@@ -317,6 +476,10 @@ namespace FlightReLive.Core.Settings
             OnTimeZoneChanged?.Invoke(timeZone);
         }
 
+        /// <summary>
+        /// Save the date format style setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveDateFormatStyle(DateFormatStyle value)
         {
             CurrentSettings.DateFormatStyle = value;
@@ -325,6 +488,10 @@ namespace FlightReLive.Core.Settings
             OnDateFormatStyleChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the time format style setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveTimeFormatStyle(TimeFormatStyle value)
         {
             CurrentSettings.TimeFormatStyle = value;
@@ -333,6 +500,10 @@ namespace FlightReLive.Core.Settings
             OnTimeFormatStyleChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the unit system type setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveUnitSystemType(UnitSystemType value)
         {
             CurrentSettings.UnitSystemType = value;
@@ -341,6 +512,10 @@ namespace FlightReLive.Core.Settings
             OnUnitSystemTypeChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the workspace path setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveWorkspacePath(string value)
         {
             CurrentSettings.WorkspacePath = value;
@@ -349,6 +524,10 @@ namespace FlightReLive.Core.Settings
             OnWorkspacePathChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the workspace zoom setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveWorkspaceZoom(float value)
         {
             CurrentSettings.WorkspaceZoom = value;
@@ -357,6 +536,10 @@ namespace FlightReLive.Core.Settings
             OnWorkspaceZoomChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the MapTiler API key setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveMapTilerApiKey(string value)
         {
             CurrentSettings.MapTilerAPIKey = value;
@@ -365,6 +548,10 @@ namespace FlightReLive.Core.Settings
             OnMapTilerApiKeyChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the global scale setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveGlobalScale(float value)
         {
             CurrentSettings.GlobalScale = value;
@@ -373,6 +560,10 @@ namespace FlightReLive.Core.Settings
             OnGlobalScaleChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the current version setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="currentVersion"></param>
         internal static void SaveCurrentVersion(string currentVersion)
         {
             CurrentSettings.CurrentVersion = currentVersion;
@@ -380,6 +571,10 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
         }
 
+        /// <summary>
+        /// Save the path 3D thickness setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SavePath3DThickness(float value)
         {
             CurrentSettings.Path3DThickness = value;
@@ -388,6 +583,10 @@ namespace FlightReLive.Core.Settings
             OnPath3DWidthChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the path 3D remaining color setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="color"></param>
         internal static void SavePath3DRemainingColor(Color color)
         {
             CurrentSettings.Path3DRemainingColor = color;
@@ -397,6 +596,10 @@ namespace FlightReLive.Core.Settings
             OnPath3DRemainingColorChanged?.Invoke(color);
         }
 
+        /// <summary>
+        /// Save the building visibility setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveBuildingVisibility(bool value)
         {
             CurrentSettings.BuildingVisibility = value;
@@ -405,6 +608,10 @@ namespace FlightReLive.Core.Settings
             OnBuildingVisibilityChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the building color setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="color"></param>
         internal static void SaveBuildingColor(Color color)
         {
             CurrentSettings.BuildingColor = color;
@@ -414,6 +621,10 @@ namespace FlightReLive.Core.Settings
             OnBuildingColorChanged?.Invoke(color);
         }
 
+        /// <summary>
+        /// Save the building ambient occlusion setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveBuildingAO(float value)
         {
             CurrentSettings.BuildingAO = value;
@@ -422,6 +633,10 @@ namespace FlightReLive.Core.Settings
             OnBuildingAOChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the POI scale setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SavePOIScale(float value)
         {
             CurrentSettings.POIScale = value;
@@ -430,6 +645,10 @@ namespace FlightReLive.Core.Settings
             OnPOIScaleChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the POI visibility setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SavePOIVisibility(bool value)
         {
             CurrentSettings.POIVisibility = value;
@@ -438,6 +657,10 @@ namespace FlightReLive.Core.Settings
             OnPOIVisibilityChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the POI height setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SavePOIHeight(float value)
         {
             CurrentSettings.POIHeight = value;
@@ -446,6 +669,10 @@ namespace FlightReLive.Core.Settings
             OnPOIHeightChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the contrast offset setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveContrastOffset(float value)
         {
             CurrentSettings.ContrastOffset = value;
@@ -454,6 +681,10 @@ namespace FlightReLive.Core.Settings
             OnContrastOffsetChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the saturation offset setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveSaturationOffset(float value)
         {
             CurrentSettings.SaturationOffset = value;
@@ -462,6 +693,10 @@ namespace FlightReLive.Core.Settings
             OnSaturationOffsetChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the vignetting intensity setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveVignettingIntensity(float value)
         {
             CurrentSettings.VignettingIntensity = value;
@@ -470,6 +705,10 @@ namespace FlightReLive.Core.Settings
             OnVignettingIntensityChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the clouds preset setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveCloudsPreset(CloudsPreset value)
         {
             CurrentSettings.CloudsPreset = value;
@@ -477,6 +716,11 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
             OnCloudsPresetChanged?.Invoke(value);
         }
+
+        /// <summary>
+        /// Save the cloud shadows enabled setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveCloudShadowsEnabled(bool value)
         {
             CurrentSettings.CloudShadowsEnabled = value;
@@ -485,6 +729,10 @@ namespace FlightReLive.Core.Settings
             OnCloudShadowsEnabledChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the cloud shadows opacity setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveCloudShadowsOpacity(float value)
         {
             CurrentSettings.CloudShadowsOpacity = value;
@@ -493,6 +741,10 @@ namespace FlightReLive.Core.Settings
             OnCloudShadowsOpacityChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Save the wind type setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
         internal static void SaveWindType(WindType value)
         {
             CurrentSettings.WindType = value;
@@ -501,6 +753,9 @@ namespace FlightReLive.Core.Settings
             OnWindTypeChanged?.Invoke(value);
         }
 
+        /// <summary>
+        /// Load all settings from PlayerPrefs, initializing defaults if not already set.
+        /// </summary>
         internal static void LoadAll()
         {
             if (!PlayerPrefs.HasKey("SettingsInitialized"))
@@ -515,8 +770,7 @@ namespace FlightReLive.Core.Settings
             LoadDontAskWelcomeVersion();
             LoadCameraRotationSpeed();
             LoadCameraZoomSpeed();
-            LoadCameraInertia();
-            LoadTilePadding();
+            LoadPanSpeed();
             LoadTimeZone();
             LoadDateFormatStyle();
             LoadTimeFormatStyle();
@@ -542,6 +796,9 @@ namespace FlightReLive.Core.Settings
             LoadWindType();
         }
 
+        /// <summary>
+        /// Initialize all settings to their default values and save them to PlayerPrefs.
+        /// </summary>
         internal static void LoadDefaultSettings()
         {
             SaveDisplayWizard(true);
@@ -549,10 +806,9 @@ namespace FlightReLive.Core.Settings
             SaveApplicationTargetFPS(120);
             SaveApplicationIdleFPS(30);
             SaveDontAskWelcomeVersion(false);
-            SaveCameraRotationSpeed(1f);
-            SaveCameraZoomSpeed(1f);
-            SaveCameraInertia(0.1f);
-            SaveTilePadding(3);
+            SaveCameraRotationSpeed(CAMERA_ROTATION_SPEED_DEFAULT_VALUE);
+            SaveCameraZoomSpeed(CAMERA_ZOOM_SPEED_DEFAULT_VALUE);
+            SavePanSpeed(PAN_SPEED_DEFAULT_VALUE);
             string timeZoneId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? "Romance Standard Time"
                 : "Europe/Paris";
@@ -583,6 +839,11 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.Save();
         }
 
+        /// <summary>
+        /// Resolve the TimeZoneInfo from the given universal ID, handling platform differences.
+        /// </summary>
+        /// <param name="universalId"></param>
+        /// <returns></returns>
         private static TimeZoneInfo ResolveTimeZone(string universalId)
         {
             try
@@ -607,6 +868,11 @@ namespace FlightReLive.Core.Settings
             return TimeZoneInfo.Utc;
         }
 
+        /// <summary>
+        /// Format a TimeSpan offset as a UTC offset string (e.g., "+02:00" or "-05:30").
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <returns></returns>
         internal static string FormatUtcOffset(TimeSpan offset)
         {
             string sign = offset.TotalMinutes >= 0 ? "+" : "-";
@@ -615,6 +881,11 @@ namespace FlightReLive.Core.Settings
             return $"{sign}{hours:D2}:{minutes:D2}";
         }
 
+        /// <summary>
+        /// Get a date format label string based on the given DateFormatStyle enum value.
+        /// </summary>
+        /// <param name="style"></param>
+        /// <returns></returns>
         internal static string GetDateFormatLabel(DateFormatStyle style)
         {
             switch (style)
@@ -629,6 +900,11 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Get a time format label string based on the given TimeFormatStyle enum value.
+        /// </summary>
+        /// <param name="style"></param>
+        /// <returns></returns>
         internal static string GetTimeFormatLabel(TimeFormatStyle style)
         {
             switch (style)
@@ -641,6 +917,11 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Format a DateTime according to the current settings for date and time format styles.
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
         internal static string FormatDateTime(DateTime date)
         {
             var dateFormat = CurrentSettings.DateFormatStyle;
@@ -682,6 +963,11 @@ namespace FlightReLive.Core.Settings
             return date.ToString(fullPattern, CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// Get a unit system label string based on the given UnitSystemType enum value.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         internal static string GetUnitSystemLabel(UnitSystemType type)
         {
             switch (type)
@@ -698,6 +984,12 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Get a human-readable label for an enum value by replacing underscores with spaces and converting to title case.
+        /// </summary>
+        /// <typeparam name="TEnum"></typeparam>
+        /// <param name="value"></param>
+        /// <returns></returns>
         internal static string GetEnumLabel<TEnum>(TEnum value) where TEnum : struct, Enum
         {
             string raw = value.ToString();
@@ -707,6 +999,11 @@ namespace FlightReLive.Core.Settings
             return titleCase;
         }
 
+        /// <summary>
+        /// Format an altitude value in meters to a string with the appropriate unit based on current settings.
+        /// </summary>
+        /// <param name="meters"></param>
+        /// <returns></returns>
         internal static string FormatAltitude(double meters)
         {
             switch (CurrentSettings.UnitSystemType)
@@ -723,6 +1020,11 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Format a speed value in meters per second to a string with the appropriate unit based on current settings.
+        /// </summary>
+        /// <param name="metersPerSecond"></param>
+        /// <returns></returns>
         internal static string FormatSpeed(double metersPerSecond)
         {
             switch (CurrentSettings.UnitSystemType)
@@ -739,6 +1041,11 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Convert an altitude value in meters to the appropriate unit based on current settings.
+        /// </summary>
+        /// <param name="meters"></param>
+        /// <returns></returns>
         internal static float ConvertAltitude(float meters)
         {
             switch (CurrentSettings.UnitSystemType)
@@ -752,6 +1059,11 @@ namespace FlightReLive.Core.Settings
             }
         }
 
+        /// <summary>
+        /// Convert a speed value in meters per second to the appropriate unit based on current settings.
+        /// </summary>
+        /// <param name="metersPerSecond"></param>
+        /// <returns></returns>
         internal static float ConvertSpeed(float metersPerSecond)
         {
             switch (CurrentSettings.UnitSystemType)
@@ -779,7 +1091,7 @@ namespace FlightReLive.Core.Settings
 
             if (grid.ColorPicker(text, ref tempValue))
             {
-                onChange?.Invoke((Color) tempValue);
+                onChange?.Invoke((Color)tempValue);
             }
 
             if (value == defaultValue)
@@ -895,7 +1207,7 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
-        internal static void DisplaySettingsComboboxWithReset<TEnum>(FuGrid grid,string text, string tooltipText, string tooltipReset, TEnum value, TEnum defaultValue, Func<TEnum, string> getLabel, IEnumerable<TEnum> allowedValues, Action<TEnum> onChange, Action onReset) where TEnum : struct, Enum
+        internal static void DisplaySettingsComboboxWithReset<TEnum>(FuGrid grid, string text, string tooltipText, string tooltipReset, TEnum value, TEnum defaultValue, Func<TEnum, string> getLabel, IEnumerable<TEnum> allowedValues, Action<TEnum> onChange, Action onReset) where TEnum : struct, Enum
         {
             if (!string.IsNullOrEmpty(tooltipText))
             {
@@ -986,7 +1298,7 @@ namespace FlightReLive.Core.Settings
 
                         float rotationSpeed = CurrentSettings.CameraRotationSpeed;
 
-                        if (rotationSpeedGrid.Slider("Camera rotation speed", ref rotationSpeed, 1, 5f, 0.1f, format: "%.1f"))
+                        if (rotationSpeedGrid.Slider("Camera rotation speed", ref rotationSpeed, 0.1f, 5f, 0.1f, format: "%.1f"))
                         {
                             SaveCameraRotationSpeed(rotationSpeed);
                         }
@@ -998,21 +1310,21 @@ namespace FlightReLive.Core.Settings
 
                         float zoomSpeed = CurrentSettings.CameraZoomSpeed;
 
-                        if (zoomSpeedGrid.Slider("Camera zoom speed", ref zoomSpeed, 1f, 5f, 0.1f, format: "%.1f"))
+                        if (zoomSpeedGrid.Slider("Camera zoom speed", ref zoomSpeed, 0.1f, 5f, 0.1f, format: "%.1f"))
                         {
                             SaveCameraZoomSpeed(zoomSpeed);
                         }
                     }
 
-                    using (FuGrid inertiaGrid = new FuGrid("inertiaSpeedGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    using (FuGrid panSpeedGrid = new FuGrid("panSpeedGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
-                        inertiaGrid.SetNextElementToolTipWithLabel("This setting allows you to define the inertia of the camera during rotation & zoom.");
+                        panSpeedGrid.SetNextElementToolTipWithLabel("This setting defines the camera pan speed when moving the view.");
 
-                        float inertiaSpeed = CurrentSettings.CameraInertia;
+                        float panSpeed = CurrentSettings.PanSpeed;
 
-                        if (inertiaGrid.Slider("Camera inertia", ref inertiaSpeed, 0f, 1f, 0.01f, format: "%.2f"))
+                        if (panSpeedGrid.Slider("Pan speed", ref panSpeed, 0.1f, 5f, 0.1f, format: "%.1f"))
                         {
-                            SaveCameraInertia(inertiaSpeed);
+                            SavePanSpeed(panSpeed);
                         }
                     }
 
@@ -1122,21 +1434,13 @@ namespace FlightReLive.Core.Settings
 
                         string mapTilerAPIKey = CurrentSettings.MapTilerAPIKey;
                         apiGrid.SetNextElementToolTipWithLabel("MapTiler API key required for downloading satellite, topographic, buildings, hillshade images.\nA MapTiler account is required (free for less than 100,000 tile downloads per month).");
-                        
+
                         if (apiGrid.TextInput("MapTiler API key", ref mapTilerAPIKey, flags: FuInputTextFlags.Password))
                         {
                             SaveMapTilerApiKey(mapTilerAPIKey);
                         }
                         apiGrid.NextColumn();
                         apiGrid.TextURL("Follow this link to create a free MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
-
-                        int tilePadding = CurrentSettings.TilePadding;
-                        apiGrid.SetNextElementToolTipWithLabel("Defines the number of additional tile rows around the flight area. Increases the realism of the scene but affects performance and the amount of resources downloaded.");
-                        
-                        if (apiGrid.Slider("TilePadding", ref tilePadding, 1, 5))
-                        {
-                            SaveTilePadding(tilePadding);
-                        }
                     }
 
                     Fugui.PopFont();
@@ -1190,7 +1494,7 @@ namespace FlightReLive.Core.Settings
                         }
 
                         uiGrid.SetNextElementToolTipWithLabel("Restore the entire application configuration (including settings made from the application's global UI).\nVideo files will not be deleted.");
-                        
+
                         if (uiGrid.Button("Restore preferences", FuButtonStyle.Danger))
                         {
                             LoadDefaultSettings();

@@ -288,7 +288,7 @@ namespace FlightReLive.Core.FlightDefinition
                 {
                     tileDefinition.SatelliteTexture = null;
                     tileDefinition.HeightMap = null;
-                    tileDefinition.Features = null;
+                    tileDefinition.Buildings = null;
                 }
             }
 

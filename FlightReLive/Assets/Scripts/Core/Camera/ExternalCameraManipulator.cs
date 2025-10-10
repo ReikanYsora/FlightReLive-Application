@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using System;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.POI;
@@ -13,21 +14,13 @@ namespace FlightReLive.Core.Cameras
 {
     public class ExternalCameraManipulator : MonoBehaviour
     {
-        #region PLATFORM FACTORS
-#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
-        private const float INPUT_SENSITIVITY_FACTOR = 0.25f;
-        private const float ZOOM_PLATFORM_MULTIPLIER = 0.01f;
-#else
-        private const float INPUT_SENSITIVITY_FACTOR = 0.1f;
-        private const float ZOOM_PLATFORM_MULTIPLIER = 1.5f;
-#endif
+        #region CONSTANTS
         private const float PIVOT_LERP_DURATION = 0.5f;
         private const float DOUBLE_CLICK_MAX_DELAY = 0.3f;
+        private const float INERTIA_DAMPING = 0.01f;
         #endregion
 
         #region ATTRIBUTES
-        [Header("Camera")]
-        [SerializeField] private Camera _targetCamera;
 
         [Header("Camera Settings")]
         [SerializeField] private float _distance = 5f;
@@ -43,15 +36,14 @@ namespace FlightReLive.Core.Cameras
         [SerializeField] private float _maxDistance = 200f;
 
         [Header("Free Camera Settings")]
-        [SerializeField] private float _panSensitivity = 1f;
         [SerializeField] private LayerMask _collisionMask = ~0;
 
+        private Camera _targetCamera;
         private float _initialDistance;
         private float _initialX;
         private float _initialY;
         private float _zoomSensitivity = 10f;
         private float _rotationSensitivity = 3f;
-        private float _inertia = 10f;
         private float _targetDistance;
         private float _currentX = 0f;
         private float _currentY = 30f;
@@ -60,6 +52,7 @@ namespace FlightReLive.Core.Cameras
         private float _velocityX;
         private float _velocityY;
         private float _zoomVelocity;
+        private float _panSpeed;
         private Vector3 _freePosition = Vector3.zero;
         private Vector3 _targetFreePosition = Vector3.zero;
         private Vector3 _freeVelocity;
@@ -70,7 +63,7 @@ namespace FlightReLive.Core.Cameras
         private float _lastClickTime = 0f;
         private POIEntity _pivotPointPOI;
         #endregion
-        
+
         #region PROPERTIES
         public CameraMode Mode
         {
@@ -125,13 +118,14 @@ namespace FlightReLive.Core.Cameras
         {
             SettingsManager.OnCameraRotationSpeedChanged += OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged += OnCameraZoomSpeedChanged;
-            SettingsManager.OnCameraInertiaChanged += OnCameraInertiaChanged;
+            SettingsManager.OnPanSpeedChanged += OnPanSpeedChanged;
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
 
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
-            _inertia = SettingsManager.CurrentSettings.CameraInertia;  
+            _targetCamera = CameraManager.Instance.ReLiveCamera;
+            _panSpeed = SettingsManager.CurrentSettings.PanSpeed;
         }
 
         private void LateUpdate()
@@ -198,7 +192,7 @@ namespace FlightReLive.Core.Cameras
         {
             SettingsManager.OnCameraRotationSpeedChanged -= OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged -= OnCameraZoomSpeedChanged;
-            SettingsManager.OnCameraInertiaChanged -= OnCameraInertiaChanged;
+            SettingsManager.OnPanSpeedChanged -= OnPanSpeedChanged;
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
@@ -278,7 +272,7 @@ namespace FlightReLive.Core.Cameras
 
                 if (Mathf.Abs(scrollValue) > 0.01f)
                 {
-                    float baseZoom = scrollValue * _zoomSensitivity * ZOOM_PLATFORM_MULTIPLIER;
+                    float baseZoom = scrollValue * _zoomSensitivity;
                     float dynamicFactor = Mathf.Max(_distance * 0.1f, 0.05f);
                     float zoomDelta = baseZoom * dynamicFactor;
                     float effectiveMin = GetEffectiveMinDistance();
@@ -286,10 +280,8 @@ namespace FlightReLive.Core.Cameras
                 }
             }
 
-            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            float desiredDistance = Mathf.SmoothDamp(_distance, _targetDistance, ref _zoomVelocity, damping);
+            float desiredDistance = Mathf.SmoothDamp(_distance, _targetDistance, ref _zoomVelocity, INERTIA_DAMPING);
 
-            // Correction de collision : ajuste la distance si un obstacle est détecté
             Quaternion rot = Quaternion.Euler(_currentY, _currentX, 0);
             Vector3 pivot = (_mode == CameraMode.Tracking && _droneAnchorTransform != null) ? _droneAnchorTransform.position : _freePosition;
             _distance = ClampCameraDistanceToObstacle(pivot, rot, desiredDistance);
@@ -338,7 +330,7 @@ namespace FlightReLive.Core.Cameras
                         {
                             POIManager.Instance.DeleteFixedPOI(_pivotPointPOI);
                         }
-                        
+
                         if (LoadingManager.Instance.CurrentFlightData != null)
                         {
                             string poiText = string.Empty;
@@ -355,8 +347,8 @@ namespace FlightReLive.Core.Cameras
             if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();
-                float proposedX = _targetX + delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
-                float proposedY = Mathf.Clamp(_targetY - delta.y * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR, _minYAngle, _maxYAngle);
+                float proposedX = _targetX + delta.x * _rotationSensitivity;
+                float proposedY = Mathf.Clamp(_targetY - delta.y * _rotationSensitivity, _minYAngle, _maxYAngle);
 
                 Quaternion proposedRot = Quaternion.Euler(proposedY, proposedX, 0);
                 Vector3 pivot = (_mode == CameraMode.Tracking) ? _droneAnchorTransform.position : _freePosition;
@@ -379,9 +371,8 @@ namespace FlightReLive.Core.Cameras
                 }
             }
 
-            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            _currentX = Mathf.SmoothDamp(_currentX, _targetX, ref _velocityX, damping);
-            _currentY = Mathf.SmoothDamp(_currentY, _targetY, ref _velocityY, damping);
+            _currentX = Mathf.SmoothDamp(_currentX, _targetX, ref _velocityX, INERTIA_DAMPING);
+            _currentY = Mathf.SmoothDamp(_currentY, _targetY, ref _velocityY, INERTIA_DAMPING);
         }
 
         private void HandlePanInput()
@@ -393,7 +384,7 @@ namespace FlightReLive.Core.Cameras
                 Vector3 right = _targetCamera.transform.right;
                 Vector3 up = _targetCamera.transform.up;
 
-                Vector3 panDelta = (-right * delta.x + -up * delta.y) * _panSensitivity * INPUT_SENSITIVITY_FACTOR;
+                Vector3 panDelta = (-right * delta.x + -up * delta.y) * _panSpeed;
                 Vector3 proposedTarget = _targetFreePosition + panDelta;
 
                 // Raycast vers le bas pour épouser le relief
@@ -407,8 +398,7 @@ namespace FlightReLive.Core.Cameras
                 _targetFreePosition = proposedTarget;
             }
 
-            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            _freePosition = Vector3.SmoothDamp(_freePosition, _targetFreePosition, ref _freeVelocity, damping);
+            _freePosition = Vector3.SmoothDamp(_freePosition, _targetFreePosition, ref _freeVelocity, INERTIA_DAMPING);
         }
 
         private void UpdateCameraTransformTracking()
@@ -486,17 +476,17 @@ namespace FlightReLive.Core.Cameras
         #region CALLBACKS
         private void OnCameraZoomSpeedChanged(float zoomSpeed)
         {
-           _zoomSensitivity = zoomSpeed;
+            _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
         }
 
         private void OnCameraRotationSpeedChanged(float rotationSpeed)
         {
-            _rotationSensitivity = rotationSpeed;
+            _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
         }
 
-        private void OnCameraInertiaChanged(float inertia)
+        private void OnPanSpeedChanged(float obj)
         {
-            _inertia = inertia;
+            _panSpeed = SettingsManager.CurrentSettings.PanSpeed;
         }
 
         private void OnFlightEndLoading()

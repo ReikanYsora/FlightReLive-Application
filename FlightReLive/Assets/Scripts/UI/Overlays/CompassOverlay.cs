@@ -27,7 +27,7 @@ namespace FlightReLive.Core.UI.Overlays
         #endregion
 
         #region UI
-        internal void DisplayCompassOverlay(FuWindowDefinition windowsDefinition, FuCameraWindow cameraWindow, Camera camera)
+        internal void DisplayCompassOverlay(FuWindowDefinition windowsDefinition, Camera camera)
         {
             _compassOverlay = new FuOverlay("compassOverlay",
                 new Vector2Int(COMPASS_OVERLAY_WIDTH + COMPASS_OVERLAY_RIGHT_PADDING, COMPASS_OVERLAY_HEIGHT),

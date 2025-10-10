@@ -20,7 +20,7 @@ namespace FlightReLive.Core.Pipeline
 
         internal float[,] HeightMap { set; get; }
 
-        internal List<OpenMapTileFeature> Features { get; set; }
+        internal List<BuildingFeature> Buildings { get; set; }
         #endregion
     }
 }

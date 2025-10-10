@@ -1,5 +1,4 @@
 ﻿using FlightReLive.Core.Cameras;
-using FlightReLive.Core.OpenVectorTile;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System.Collections.Generic;
@@ -17,7 +16,7 @@ namespace FlightReLive.Core.POI
     public class POIManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const float UPDATE_INTERVAL = 0.5f;         // seconds between visibility updates
+        private const float UPDATE_INTERVAL = 0.5f;
         #endregion
 
         #region ATTRIBUTES
@@ -25,8 +24,8 @@ namespace FlightReLive.Core.POI
         [SerializeField] private float _poiMaxViewAngle;
         private POIPool _poiPool;
         private Camera _camera;
-
-        private readonly Dictionary<POIData, POIEntity> _activePOIs = new Dictionary<POIData, POIEntity>();
+        private List<POIEntity> _smartPOIs = new List<POIEntity>();
+        private readonly List<POIEntity> _activePOIs = new List<POIEntity>();
         private readonly List<POIEntity> _fixedPOIs = new List<POIEntity>();
         private float _lastUpdate;
         #endregion
@@ -86,7 +85,7 @@ namespace FlightReLive.Core.POI
         }
         #endregion
 
-        #region FIXED POI
+        #region METHODS
         internal POIEntity AddFixedPOI(string name, Transform linkedTransform, Color color, float height = 1f)
         {
             GameObject go = _poiPool.Get();
@@ -113,6 +112,19 @@ namespace FlightReLive.Core.POI
             return poi;
         }
 
+        internal POIEntity AddSmartPOI(string name, Vector3 position, Color color, float height = 1f)
+        {
+            GameObject go = _poiPool.Get();
+            go.transform.position = position;
+
+            POIEntity poi = go.GetComponent<POIEntity>();
+            poi.Initialize(_camera, position, color, name, height);
+            poi.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+
+            _smartPOIs.Add(poi);
+            return poi;
+        }
+
         internal void DeleteFixedPOI(POIEntity entity)
         {
             if (entity != null)
@@ -121,14 +133,19 @@ namespace FlightReLive.Core.POI
                 _fixedPOIs.Remove(entity);
             }
         }
-        #endregion
 
-        #region DYNAMIC LOGIC
+        internal void DeleteSmartPOI(POIEntity entity)
+        {
+            if (entity != null)
+            {
+                _poiPool.Return(entity.gameObject);
+                _smartPOIs.Remove(entity);
+            }
+        }
+
         private void UpdateDynamicPOIs()
         {
-            IReadOnlyList<POIData> baked = OpenVectorTileManager.Instance?.BakedPOIs;
-
-            if (baked == null || baked.Count == 0)
+            if (_smartPOIs == null || _smartPOIs.Count == 0)
             {
                 HideAllDynamicPOIs();
                 return;
@@ -136,17 +153,11 @@ namespace FlightReLive.Core.POI
 
             Vector3 camPos = _camera.transform.position;
             Vector3 camForward = _camera.transform.forward;
-            float currentZoom = ComputeCameraZoom();
 
-            HashSet<POIData> visibleNow = new HashSet<POIData>();
+            HashSet<POIEntity> visibleNow = new HashSet<POIEntity>();
 
-            foreach (var poi in baked)
+            foreach (POIEntity poi in _smartPOIs)
             {
-                if (string.IsNullOrEmpty(poi.Name))
-                {
-                    continue;
-                }
-
                 Vector3 dir = poi.WorldPosition - camPos;
                 float dist = dir.magnitude;
 
@@ -165,71 +176,49 @@ namespace FlightReLive.Core.POI
                     continue;
                 }
 
-                //Zoom / rank filtering
-                if (!IsPOIVisibleAtZoom(poi.Rank, currentZoom))
-                {
-                    DeactivatePOI(poi);
-                    continue;
-                }
-
                 //Activate if needed
-                if (!_activePOIs.ContainsKey(poi))
+                if (!_activePOIs.Contains(poi))
                 {
                     GameObject go = _poiPool.Get();
                     go.transform.position = poi.WorldPosition;
-
-                    POIEntity entity = go.GetComponent<POIEntity>();
-                    entity.Initialize(_camera, poi.WorldPosition, Color.red, poi.Name, 50f);
-                    entity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
-
-                    _activePOIs.Add(poi, entity);
+                    POIEntity poiEntity = go.GetComponent<POIEntity>();
+                    poiEntity.Initialize(_camera, poi.WorldPosition, Color.red, poi.Text, 50f);
+                    poiEntity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+                    _activePOIs.Add(poiEntity);
                 }
 
                 visibleNow.Add(poi);
             }
 
             //Remove POIs that are no longer visible
+            List<POIEntity> toRemove = _activePOIs.Except(visibleNow).ToList();
 
-            List<POIData> toRemove = _activePOIs.Keys.Except(visibleNow).ToList();
-            foreach (POIData removed in toRemove)
+            foreach (POIEntity removed in toRemove)
             {
                 DeactivatePOI(removed);
             }
         }
 
-        private void DeactivatePOI(POIData poi)
+        private void DeactivatePOI(POIEntity poi)
         {
-            if (_activePOIs.TryGetValue(poi, out var entity))
+            if (poi != null && _activePOIs.Contains(poi))
             {
-                _poiPool.Return(entity.gameObject);
+                _poiPool.Return(poi.gameObject);
                 _activePOIs.Remove(poi);
             }
         }
 
         private void HideAllDynamicPOIs()
         {
-            foreach (var kv in _activePOIs)
+            foreach (POIEntity poi in _activePOIs)
             {
-                if (kv.Value != null)
-                    _poiPool.Return(kv.Value.gameObject);
+                if (poi != null)
+                {
+                    _poiPool.Return(poi.gameObject);
+                }
             }
 
             _activePOIs.Clear();
-        }
-
-        private float ComputeCameraZoom()
-        {
-            // Adapté à ta logique de zoom (ex: altitude relative)
-            float height = _camera.transform.position.y;
-            return Mathf.Lerp(4f, 14f, Mathf.InverseLerp(50f, 1000f, height)); // simplifié
-        }
-
-        private bool IsPOIVisibleAtZoom(int rank, float zoom)
-        {
-            if (zoom <= 6) return rank <= 3;
-            if (zoom <= 8) return rank <= 5;
-            if (zoom <= 10) return rank <= 8;
-            return true;
         }
         #endregion
 
@@ -238,12 +227,17 @@ namespace FlightReLive.Core.POI
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                foreach (var poi in _activePOIs.Values)
+                foreach (POIEntity poi in _activePOIs)
+                {
                     _poiPool.Return(poi.gameObject);
-                _activePOIs.Clear();
+                }
 
-                foreach (var poi in _fixedPOIs)
+                foreach (POIEntity poi in _fixedPOIs)
+                {
                     _poiPool.Return(poi.gameObject);
+                }
+
+                _activePOIs.Clear();
                 _fixedPOIs.Clear();
             });
         }
@@ -254,18 +248,28 @@ namespace FlightReLive.Core.POI
         {
             float scale = value / 100f;
 
-            foreach (var poi in _fixedPOIs)
+            foreach (POIEntity poi in _fixedPOIs)
+            {
                 poi.ScaleFactor = scale;
-            foreach (var kv in _activePOIs)
-                kv.Value.ScaleFactor = scale;
+            }
+
+            foreach (POIEntity poi in _activePOIs)
+            {
+                poi.ScaleFactor = scale;
+            }
         }
 
         private void OnPOIHeightChanged(float factor)
         {
-            foreach (var poi in _fixedPOIs)
+            foreach (POIEntity poi in _fixedPOIs)
+            {
                 poi.ElevationFactor = factor;
-            foreach (var kv in _activePOIs)
-                kv.Value.ElevationFactor = factor;
+            }
+
+            foreach (POIEntity poi in _activePOIs)
+            {
+                poi.ElevationFactor = factor;
+            }
         }
 
         private void OnPOIVisibilityChanged(bool visible)
@@ -273,13 +277,18 @@ namespace FlightReLive.Core.POI
             if (!visible)
             {
                 HideAllDynamicPOIs();
+
                 foreach (var poi in _fixedPOIs)
+                {
                     poi.gameObject.SetActive(false);
+                }
             }
             else
             {
                 foreach (var poi in _fixedPOIs)
+                {
                     poi.gameObject.SetActive(true);
+                }
             }
         }
         #endregion

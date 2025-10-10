@@ -13,14 +13,8 @@ namespace FlightReLive.Core.Cameras
     /// </summary>
     public class POVCameraManipulator : MonoBehaviour
     {
-        #region PLATFORM FACTORS
-#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
-        private const float INPUT_SENSITIVITY_FACTOR = 0.25f;
-        private const float ZOOM_PLATFORM_MULTIPLIER = 0.01f;
-#else
-        private const float INPUT_SENSITIVITY_FACTOR = 0.1f;
-        private const float ZOOM_PLATFORM_MULTIPLIER = 1.5f;
-#endif
+        #region CONSTANTS
+        private const float INERTIA_DAMPING = 0.01f;
         #endregion
 
         #region ATTRIBUTES
@@ -34,7 +28,6 @@ namespace FlightReLive.Core.Cameras
 
         private float _zoomSensitivity = 10f;
         private float _rotationSensitivity = 3f;
-        private float _inertia = 10f;
         private float _targetX = 0f;
         private float _targetY = 30f;
         private float _currentX = 0f;
@@ -80,7 +73,6 @@ namespace FlightReLive.Core.Cameras
         {
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
-            _inertia = SettingsManager.CurrentSettings.CameraInertia;
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
 
@@ -106,7 +98,6 @@ namespace FlightReLive.Core.Cameras
         {
             SettingsManager.OnCameraRotationSpeedChanged -= OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged -= OnCameraZoomSpeedChanged;
-            SettingsManager.OnCameraInertiaChanged -= OnCameraInertiaChanged;
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
@@ -121,13 +112,12 @@ namespace FlightReLive.Core.Cameras
 
                 if (Mathf.Abs(scrollValue) > 0.01f)
                 {
-                    float zoomDelta = scrollValue * _zoomSensitivity * ZOOM_PLATFORM_MULTIPLIER;
+                    float zoomDelta = scrollValue * _zoomSensitivity;
                     _targetFOV = Mathf.Clamp(_targetFOV - zoomDelta, MinFOV, MaxFOV);
                 }
             }
 
-            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            CurrentFOV = Mathf.SmoothDamp(CurrentFOV, _targetFOV, ref _zoomVelocity, damping);
+            CurrentFOV = Mathf.SmoothDamp(CurrentFOV, _targetFOV, ref _zoomVelocity, INERTIA_DAMPING);
             _targetCamera.fieldOfView = CurrentFOV;
         }
 
@@ -136,13 +126,12 @@ namespace FlightReLive.Core.Cameras
             if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();
-                _targetX += delta.x * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
-                _targetY -= delta.y * _rotationSensitivity * INPUT_SENSITIVITY_FACTOR;
+                _targetX += delta.x * _rotationSensitivity;
+                _targetY -= delta.y * _rotationSensitivity;
             }
 
-            float damping = Mathf.Clamp(_inertia, 0.01f, 30f);
-            _currentX = Mathf.SmoothDamp(_currentX, _targetX, ref _velocityX, damping);
-            _currentY = Mathf.SmoothDamp(_currentY, _targetY, ref _velocityY, damping);
+            _currentX = Mathf.SmoothDamp(_currentX, _targetX, ref _velocityX, INERTIA_DAMPING);
+            _currentY = Mathf.SmoothDamp(_currentY, _targetY, ref _velocityY, INERTIA_DAMPING);
         }
 
         private void UpdateCameraTransform()
@@ -157,7 +146,6 @@ namespace FlightReLive.Core.Cameras
         {
             SettingsManager.OnCameraRotationSpeedChanged += OnCameraRotationSpeedChanged;
             SettingsManager.OnCameraZoomSpeedChanged += OnCameraZoomSpeedChanged;
-            SettingsManager.OnCameraInertiaChanged += OnCameraInertiaChanged;
         }
 
         private void OnCameraZoomSpeedChanged(float zoomSpeed)
@@ -168,11 +156,6 @@ namespace FlightReLive.Core.Cameras
         private void OnCameraRotationSpeedChanged(float rotationSpeed)
         {
             _rotationSensitivity = rotationSpeed;
-        }
-
-        private void OnCameraInertiaChanged(float inertia)
-        {
-            _inertia = inertia;
         }
 
         private void OnFlightEndLoading()

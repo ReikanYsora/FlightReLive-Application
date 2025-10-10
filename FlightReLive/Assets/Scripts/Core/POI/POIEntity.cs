@@ -54,6 +54,22 @@ namespace FlightReLive.Core.POI
         }
 
         internal float ElevationFactor { set; get; }
+
+        internal Vector3 WorldPosition
+        {
+            get
+            {
+                return _hasLinkedTransform ? _linkedTransform.position : (_fixedWorldPosition ?? transform.position);
+            }
+        }
+
+        internal string Text
+        {
+            get
+            {
+                return _text != null ? _text.text : string.Empty;
+            }
+        }
         #endregion
 
         #region UNITY METHODS

@@ -12,8 +12,7 @@ namespace FlightReLive.Core.Settings
         public bool DontAskWelcomeVersion;
         public float CameraRotationSpeed;
         public float CameraZoomSpeed;
-        public float CameraInertia;
-        public int TilePadding;
+        public float PanSpeed;
         public TimeZoneInfo UserTimeZone;
         public DateFormatStyle DateFormatStyle;
         public TimeFormatStyle TimeFormatStyle;

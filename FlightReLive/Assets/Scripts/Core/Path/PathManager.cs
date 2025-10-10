@@ -43,6 +43,7 @@ namespace FlightReLive.Core.Paths
         private PathColliderUpdater _progressionPathColliderUpdater;
         private float _currentProgress;
         private POIEntity _dronePoiEntity;
+        private float _displayedProgress;
         #endregion
 
         #region PROPERTIES
@@ -101,21 +102,17 @@ namespace FlightReLive.Core.Paths
                 return;
             }
 
-            //3D path ray interaction
+            //3D path ray interaction (inchangé)
             if (Camera.IsHoveredContent)
             {
                 Ray ray = Camera.GetCameraRay();
 
                 if (Physics.Raycast(ray, out RaycastHit hit, 100f, _raycastMask))
                 {
-                    //Hover on 3D path
                     float hoverProgress = GetProgressFromHit(hit.point);
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
-
-                    //Propagate hover to TimeBar as Path3D owner
                     TimeBarManager.Instance.SetHover("PathManager", hoverProgress);
 
-                    //Click on path
                     if (Camera.Mouse.IsPressed(FuMouseButton.Left))
                     {
                         long totalFrames = TimeBarManager.Instance.TotalFrameCount;
@@ -125,68 +122,51 @@ namespace FlightReLive.Core.Paths
                 }
                 else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID == "PathManager")
                 {
-                    //If the hover is still marked as Path3D but no ray hit, clear hover
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
                     TimeBarManager.Instance.ClearHover("PathManager");
                 }
             }
             else
-            {                
+            {
                 if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID != "PathManager")
                 {
-                    //Just mirror the SeekBar hover
                     float hoverProgress = TimeBarManager.Instance.HoverRatio;
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", hoverProgress);
                 }
                 else
                 {
-                    //No hover at all
                     _progressionPathMaterialInstance.SetFloat("_HoverProgress", -1f);
                 }
             }
 
+            //Update current progress based on time bar
             _currentProgress = GetProgressAtTime(_interpolatedToFlightPoint[0].Time + TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
 
-            //Refresh drone position
-            Vector3 position = GetWorldPositionAtUVProgress(_currentProgress);
-            Vector3 nextPosition = GetWorldPositionAtUVProgress(_currentProgress + 0.001f);
+            //Smooth the displayed progress to avoid jitter
+            _displayedProgress = Mathf.Lerp(_displayedProgress, _currentProgress, Time.deltaTime * 5f);
+
+            //Update drone position and orientation along the path
+            Vector3 position = GetWorldPositionAtUVProgress(_displayedProgress);
+            Vector3 nextPosition = GetWorldPositionAtUVProgress(_displayedProgress + 0.001f);
             Vector3 direction = (nextPosition - position).normalized;
             Vector3 flatDirection = new Vector3(direction.x, 0f, direction.z).normalized;
-            Quaternion targetRotation;
 
-            if (direction != Vector3.zero)
-            {
-                targetRotation = Quaternion.LookRotation(direction, Vector3.up);
-                Quaternion.LookRotation(direction, Vector3.up);
-            }
-            else
-            {
-                targetRotation = transform.rotation;
-            }
-
-            if (flatDirection != Vector3.zero)
-            {
-                targetRotation = Quaternion.LookRotation(flatDirection, Vector3.up);
-            }
-            else
-            {
-                targetRotation = _droneAnchorTransform.rotation;
-            }
+            Quaternion targetRotation = flatDirection != Vector3.zero
+                ? Quaternion.LookRotation(flatDirection, Vector3.up)
+                : _droneAnchorTransform.rotation;
 
             _droneAnchorTransform.position = position;
             _droneAnchorTransform.rotation = Quaternion.Slerp(_droneAnchorTransform.rotation, targetRotation, Time.deltaTime * 5f);
 
-            //Update POI time text
+            //Update POI progress text
             if (_dronePoiEntity != null)
             {
-                //Current flight time
                 TimeSpan span = TimeSpan.FromSeconds(TimeBarManager.Instance.Time);
-
-                //Format MM:SS.mmm
                 string formattedTime = $"{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
                 _dronePoiEntity.SetText(formattedTime);
             }
         }
+
 
         private void LateUpdate()
         {

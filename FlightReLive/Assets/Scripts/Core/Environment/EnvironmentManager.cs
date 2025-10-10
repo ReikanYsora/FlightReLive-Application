@@ -31,6 +31,7 @@ namespace FlightReLive.Core.Environment
 
         [Header("Sky")]
         [SerializeField] private Cubemap _spaceBackground;
+        private SunTimes _sunTimes;
 
         //Post-processing elements
         private bool _environmentLoaded;
@@ -54,6 +55,30 @@ namespace FlightReLive.Core.Environment
 
         #region PROPERTIES
         internal static EnvironmentManager Instance { get; private set; }
+
+        internal DateTime OriginalTimeUTC
+        {
+            get
+            {
+                return _originalTimeUTC;
+            }
+        }
+
+        internal float DayTime
+        {
+            get
+            {
+                return _dayTime;
+            }
+        }
+
+        internal SunTimes SunTimes
+        {
+            get
+            {
+                return _sunTimes;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -203,6 +228,9 @@ namespace FlightReLive.Core.Environment
                 //Initialize volume profile
                 InitializeEnvironment();
 
+                //Calculate sun times
+                _sunTimes = SunHelper.GetSunriseSunset(_dateTimeUTC, _latitude, _longitude);
+
                 //Apply environment base on current flightdata and datetime
                 ApplyEnvironment(_dateTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
@@ -219,6 +247,8 @@ namespace FlightReLive.Core.Environment
                 _originalTimeUTC = DateTime.MinValue;
                 _latitude = 0;
                 _longitude = 0;
+                _dayTime = 0f;
+                _sunTimes = new SunTimes();
 
                 UninitializeEnvironment();
             });
@@ -522,6 +552,15 @@ namespace FlightReLive.Core.Environment
         }
 
         /// <summary>
+        /// Convert a DateTime into a normalized time-of-day value (0 - 1).
+        /// </summary>
+        /// <param name="ratio"></param>
+        internal void ApplyTimeOfDay(float ratio)
+        {
+            ApplyTimeOfDay(_dateTimeUTC, _latitude, _longitude, ratio);
+        }
+
+        /// <summary>
         /// Apply vignetting intensity from user settings (URP)
         /// </summary>
         private void ApplyVignettingIntensity()
@@ -690,6 +729,13 @@ namespace FlightReLive.Core.Environment
             ApplyEnvironment(newUtc, latitude, longitude);
         }
 
+        internal void ResetTimeOfDay()
+        {
+            _dateTimeUTC = _originalTimeUTC;
+            _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
+            ApplyEnvironment(_dateTimeUTC, _latitude, _longitude);
+        }
+
         /// <summary>
         /// Convert a normalized time-of-day value (0 - 1) into a DateTime for a given base date.
         /// </summary>
@@ -850,25 +896,6 @@ namespace FlightReLive.Core.Environment
                     Enum.GetValues(typeof(WindType)).Cast<WindType>(),
                     (x) => SettingsManager.SaveWindType(x),
                     () => SettingsManager.ResetWindType());
-
-                grid.EnableNextElements();
-
-                SettingsManager.DisplaySettingsSliderWithReset(grid,
-                    "Day time",
-                    "Define a custom day time",
-                    $"Reset time to default time value.",
-                    _dayTime,
-                    0.0f,
-                    1.0f,
-                    0.001f,
-                    GetNormalizedTimeOfDay(_originalTimeUTC),
-                    "%.3f",
-                     (x) => ApplyTimeOfDay(_dateTimeUTC, _latitude, _longitude, x),
-                     () =>
-                     {
-                         _dateTimeUTC = _originalTimeUTC;
-                         ApplyEnvironment(_originalTimeUTC, _latitude, _longitude);
-                     });
             }
         }
 
@@ -877,7 +904,7 @@ namespace FlightReLive.Core.Environment
             layout.FramedText("Buildings");
             layout.Separator();
 
-            OpenVectorTileManager.Instance.DisplayBuildingsSettings();
+            BuildingManager.Instance.DisplayBuildingsSettings();
 
             layout.Separator();
             layout.FramedText("POI");

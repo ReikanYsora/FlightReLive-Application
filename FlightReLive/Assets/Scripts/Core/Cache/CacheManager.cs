@@ -17,13 +17,13 @@ namespace FlightReLive.Core.Cache
     {
         #region CONSTANTS
         private const string CACHE_FOLDER_NAME = "Cache";
-        private const string FLIGHTS_CACHE_FOLDER_NAME = ".Flights";
+        private const string WORKSPACE_CACHE_FOLDER_NAME = "Workspace";
         #endregion
 
         #region ATTRIBUTES
         private static string _cacheFolder;
         private static string _flightsCacheFolder;
-        private static readonly MessagePackSerializerOptions _messagePackOptions = MessagePackSerializerOptions.Standard.WithResolver(CompositeResolver.Create( new IMessagePackFormatter[] { new OpenMapTileFeatureFormatter() }, new IFormatterResolver[] { CustomResolver.Instance, StandardResolverAllowPrivate.Instance }));
+        private static readonly MessagePackSerializerOptions _messagePackOptions = MessagePackSerializerOptions.Standard.WithResolver(StandardResolverAllowPrivate.Instance).WithCompression(MessagePackCompression.Lz4BlockArray);
         #endregion
 
         #region METHODS
@@ -38,17 +38,14 @@ namespace FlightReLive.Core.Cache
             {
                 Directory.CreateDirectory(_cacheFolder);
             }
-
-            //Initialize workspace cache
-            InitializeWorkspaceCache();
         }
-        
+
         /// <summary>
         /// Initialize workspace cache for FlightFiles
         /// </summary>
-        private static void InitializeWorkspaceCache()
+        internal static void InitializeWorkspaceCache()
         {
-            _flightsCacheFolder = Path.Combine(_cacheFolder, FLIGHTS_CACHE_FOLDER_NAME);
+            _flightsCacheFolder = Path.Combine(_cacheFolder, WORKSPACE_CACHE_FOLDER_NAME);
 
             if (!Directory.Exists(_flightsCacheFolder))
             {
@@ -71,8 +68,9 @@ namespace FlightReLive.Core.Cache
                 if (Directory.Exists(_cacheFolder))
                 {
                     Directory.Delete(_cacheFolder, true);
-                    Directory.CreateDirectory(_cacheFolder);
                 }
+
+                Initialize();
 
                 Fugui.Notify("Successful operation", "The local cache has been cleared successfully.", StateType.Info, 3f);
             }
@@ -94,7 +92,7 @@ namespace FlightReLive.Core.Cache
                     Directory.Delete(_flightsCacheFolder, true);
                 }
 
-                Directory.CreateDirectory(_flightsCacheFolder);
+                InitializeWorkspaceCache();
 
                 Fugui.Notify("Successful operation", "The flight workspace cache has been cleared successfully.", StateType.Info, 3f);
             }
@@ -451,27 +449,27 @@ namespace FlightReLive.Core.Cache
         }
         #endregion
 
-        #region OPEN MAP TILE FEATURES (ASYNC)
-        internal static Task<bool> OpenMapTileDataExistsAsync(int zoom, int tileX, int tileY)
+        #region BUILDINGS (ASYNC)
+        internal static Task<bool> BuildingExistsAsync(int zoom, int tileX, int tileY)
         {
-            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
+            string path = GetBuildingPath(zoom, tileX, tileY);
             return Task.FromResult(File.Exists(path));
         }
 
-        internal static string GetOpenMapTileDataPath(int zoom, int tileX, int tileY)
+        internal static string GetBuildingPath(int zoom, int tileX, int tileY)
         {
-            string tileName = $"omt_{zoom}_{tileX}_{tileY}.mpack";
+            string tileName = $"bld_{zoom}_{tileX}_{tileY}.mpack";
             return Path.Combine(_cacheFolder, tileName);
         }
 
-        internal static async Task SaveOpenMapTileDataAsync(List<OpenMapTileFeature> features, int zoom, int tileX, int tileY)
+        internal static async Task SaveBuildingAsync(List<BuildingFeature> features, int zoom, int tileX, int tileY)
         {
             if (features == null || features.Count == 0)
             {
                 return;
             }
 
-            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
+            string path = GetBuildingPath(zoom, tileX, tileY);
 
             try
             {
@@ -480,27 +478,27 @@ namespace FlightReLive.Core.Cache
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to save OpenMapTile features tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
+                Debug.LogWarning($"Failed to save building data {zoom}_{tileX}_{tileY} : {ex.Message}");
             }
         }
 
-        internal static async Task<List<OpenMapTileFeature>> LoadOpenMapTileDataAsync(int zoom, int tileX, int tileY)
+        internal static async Task<List<BuildingFeature>> LoadBuildingAsync(int zoom, int tileX, int tileY)
         {
-            if (!await OpenMapTileDataExistsAsync(zoom, tileX, tileY))
+            if (!await BuildingExistsAsync(zoom, tileX, tileY))
             {
                 return null;
             }
 
-            string path = GetOpenMapTileDataPath(zoom, tileX, tileY);
+            string path = GetBuildingPath(zoom, tileX, tileY);
 
             try
             {
                 byte[] bytes = await File.ReadAllBytesAsync(path);
-                return MessagePackSerializer.Deserialize<List<OpenMapTileFeature>>(bytes, _messagePackOptions);
+                return MessagePackSerializer.Deserialize<List<BuildingFeature>>(bytes, _messagePackOptions);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to load OpenMapTile features tile data {zoom}_{tileX}_{tileY} : {ex.Message}");
+                Debug.LogWarning($"Failed to load building data {zoom}_{tileX}_{tileY} : {ex.Message}");
                 return null;
             }
         }

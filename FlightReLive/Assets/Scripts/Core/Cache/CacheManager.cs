@@ -1,9 +1,11 @@
+using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Workspace;
 using Fu;
 using Fu.Framework;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -519,6 +521,62 @@ namespace FlightReLive.Core.Cache
             catch (Exception ex)
             {
                 Debug.LogWarning($"Failed to load building data {zoom}_{tileX}_{tileY} : {ex.Message}");
+                return null;
+            }
+        }
+        #endregion
+
+        #region GEODATA (ASYNC)
+        internal static Task<bool> GeoTileDataExistsAsync(int tileX, int tileY, string lang)
+        {
+            string path = GetGeoTileDataPath(tileX, tileY, lang);
+            return Task.FromResult(File.Exists(path));
+        }
+
+        internal static string GetGeoTileDataPath(int tileX, int tileY, string lang)
+        {
+            string safeLang = string.IsNullOrEmpty(lang) ? "en" : lang;
+            string tileName = $"geo_tile_{tileX}_{tileY}_{safeLang}.frlg";
+            return Path.Combine(_cacheFolder, tileName);
+        }
+
+        internal static async Task SaveGeoTileDataAsync(FeatureCollection geoData, int tileX, int tileY, string lang)
+        {
+            if (geoData == null || geoData.features == null || geoData.features.Count == 0)
+            {
+                return;
+            }
+
+            string path = GetGeoTileDataPath(tileX, tileY, lang);
+
+            try
+            {
+                string json = JsonConvert.SerializeObject(geoData);
+                await File.WriteAllTextAsync(path, json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to save geo tile data {tileX}_{tileY}_{lang} : {ex.Message}");
+            }
+        }
+
+        internal static async Task<FeatureCollection> LoadGeoTileDataAsync(int tileX, int tileY, string lang)
+        {
+            if (!await GeoTileDataExistsAsync(tileX, tileY, lang))
+            {
+                return null;
+            }
+
+            string path = GetGeoTileDataPath(tileX, tileY, lang);
+
+            try
+            {
+                string json = await File.ReadAllTextAsync(path);
+                return JsonConvert.DeserializeObject<FeatureCollection>(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to load geo tile data {tileX}_{tileY}_{lang} : {ex.Message}");
                 return null;
             }
         }

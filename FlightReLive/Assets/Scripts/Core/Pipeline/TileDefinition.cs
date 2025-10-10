@@ -21,6 +21,8 @@ namespace FlightReLive.Core.Pipeline
         internal float[,] HeightMap { set; get; }
 
         internal List<BuildingFeature> Buildings { get; set; }
+
+        internal FeatureCollection GeoData { get; set; }
         #endregion
     }
 }

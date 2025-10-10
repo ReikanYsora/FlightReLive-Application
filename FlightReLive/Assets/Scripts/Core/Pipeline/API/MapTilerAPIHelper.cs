@@ -1,4 +1,5 @@
 ﻿using FlightReLive.Core.Cache;
+using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.ProceduralTerrain;

@@ -89,14 +89,6 @@ namespace FlightReLive.Core.OpenVectorTile
                             GenerateBuilding(building, tile, flight);
                         });
                     }
-                    else
-                    {
-                        //POI
-                        UnityMainThreadDispatcher.AddActionInMainThread(() =>
-                        {
-                            TryBakePOIFromFeature(feature, tile, flight);
-                        });
-                    }
                 }
             }
         }

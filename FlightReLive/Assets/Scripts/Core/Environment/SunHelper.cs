@@ -68,7 +68,7 @@ namespace FlightReLive.Core.Environment
             double azimuth = (Math.Atan2(Math.Sin(haRad), Math.Cos(haRad) * Math.Sin(latRad) - Math.Tan(declRad) * Math.Cos(latRad)) * Mathf.Rad2Deg + 180.0) % 360.0;
             float unityAzimuth = (float)((360.0 - azimuth) % 360.0);
 
-            float factor = Mathf.Clamp01((float)((elevation + 6.0) / 96.0)); // -6°=twilight start, 90°=zenith
+            float factor = Mathf.Clamp01((float)((elevation + 6.0) / 96.0)); // -6ï¿½=twilight start, 90ï¿½=zenith
 
             return new SunPosition
             {
@@ -76,8 +76,16 @@ namespace FlightReLive.Core.Environment
                 Azimuth = unityAzimuth,
                 AzimuthPhysical = (float)azimuth,
                 DistanceFactor = factor,
-                ElevationFactor = Mathf.Clamp01((float) elevation / 90f)
+                ElevationFactor = Mathf.Clamp01((float)elevation / 90f)
             };
+        }
+
+        internal static float GetPerceptualSunFactor(float elevation)
+        {
+            float factor = Mathf.InverseLerp(-6f, 60f, elevation);
+            factor = Mathf.Pow(factor, 0.9f);
+
+            return Mathf.Clamp01(factor);
         }
     }
 }

@@ -18,9 +18,6 @@ namespace FlightReLive.Core.Environment
     public class EnvironmentManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        [Header("Sun")]
-        [SerializeField, Range(0f, 50f)] private float _sunMaxIntensity = 18f;
-        [SerializeField] private AnimationCurve _sunIntensityByElevation;
         [SerializeField] private Light _mainLight;
 
         [Header("Camera")]
@@ -228,10 +225,9 @@ namespace FlightReLive.Core.Environment
         }
 
         /// <summary>
-        /// Apply dynamic environment based on current datetime and GPS position
+        /// Apply dynamic environment based on current datetime and GPS position.
+        /// Soft daylight calibration — reduced brightness and exposure for realistic midday.
         /// </summary>
-        /// <param name="flightData"></param>
-        /// <param name="dateTime"></param>
         private void ApplyEnvironment(DateTime dateTime, double latitude, double longitude)
         {
             if (_volumeProfile == null)
@@ -241,110 +237,151 @@ namespace FlightReLive.Core.Environment
 
             SunPosition sun = SunHelper.CalculateSunPosition(dateTime, latitude, longitude);
 
-            //Sun orientation and intensity processing
+            //Sun orientation
             float azimuthRad = Mathf.Deg2Rad * sun.AzimuthPhysical;
             float elevationRad = Mathf.Deg2Rad * sun.Elevation;
             Vector3 direction = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
-            float factor01 = Mathf.Clamp01(sun.ElevationFactor);
-            float sunFactor = Mathf.Clamp01(_sunIntensityByElevation.Evaluate(factor01));
-            float unityIntensity = Mathf.Clamp(_sunMaxIntensity * sunFactor, 0f, _sunMaxIntensity);
 
-            //Vignetting
+            //Perceptual daylight factor
+            //-6° = dawn/dusk, 0° = sunrise/sunset, 60° = full daylight
+            float daylight = Mathf.InverseLerp(-6f, 60f, sun.Elevation);
+            daylight = Mathf.Clamp01(Mathf.Pow(daylight, 0.9f));
+
+            //Main light intensity
+            float softDay = Mathf.SmoothStep(0f, 1f, daylight);
+            float unityIntensity = Mathf.Lerp(0.02f, 6f, softDay);
+            float middayFlatten = Mathf.SmoothStep(0.55f, 0.85f, daylight) * 0.5f;
+            unityIntensity *= (1f - middayFlatten);
+            unityIntensity = Mathf.Max(unityIntensity, 0.05f);
+
+            //Vignette
             _vignette.color.Override(Color.black);
             _vignette.intensity.Override(SettingsManager.CurrentSettings.VignettingIntensity);
             _vignette.smoothness.Override(0.3f);
 
-            //Color Adjustments (Contrast: low at twilight, high at zenith. Saturation: warmer tones at low sun, neutral at zenith)
-            _baseContrast = sunFactor * 40f;
-            Color lowSunTint = new Color(1f, 0.93f, 0.85f);
-            Color highSunTint = Color.white;
-            _colorAdjustments.colorFilter.Override(Color.Lerp(lowSunTint, highSunTint, Mathf.SmoothStep(0f, 1f, sun.ElevationFactor)));
-            _baseSaturation = Mathf.Lerp(-10f, 10f, sun.ElevationFactor);
+            //Color adjustments
+            _baseContrast = Mathf.Lerp(3f, 25f, softDay);
+            _baseSaturation = Mathf.Lerp(-10f, 10f, softDay);
+
+            Color warmTint = new Color(1f, 0.92f, 0.83f);
+            Color neutralTint = Color.white;
+            _colorAdjustments.colorFilter.Override(Color.Lerp(warmTint, neutralTint, softDay));
 
             //Tonemapping
             _toneMapping.mode.Override(TonemappingMode.ACES);
 
-            //Physically Based Sky
+            //Physically based sky
             _physicallyBasedSky.type.Override(PhysicallyBasedSky.PhysicallyBasedSkyModel.EarthAdvanced);
             _physicallyBasedSky.atmosphericScattering.Override(true);
+
             float lstDeg = GetLocalSiderealDegrees(dateTime, longitude);
             _physicallyBasedSky.spaceRotation.Override(new Vector3(0f, lstDeg, 0f));
             _physicallyBasedSky.spaceEmissionTexture.Override(_spaceBackground);
-            float nightFactor = 1.0f / (1.0f + Mathf.Exp(0.28f * (sun.Elevation - -6.0f)));
-            nightFactor = Mathf.Pow(nightFactor, 1.2f);
-            float spaceEmission = 8f * nightFactor;
+
+            //Star visibility - stars visible below -1° and fade out completely by +4°
+            float starFade = Mathf.InverseLerp(4f, -1f, sun.Elevation);
+            float spaceEmission = Mathf.Lerp(0f, 5f, starFade); // étoiles un peu plus visibles
             _physicallyBasedSky.spaceEmissionMultiplier.Override(spaceEmission);
-            _physicallyBasedSky.aerosolDensity.Override(0.025f);
+
+            //Exposure
+            //Global exposure much flatter, capped around 0.9 to prevent overexposure
+            float exposure;
+
+            if (daylight < 0.15f)
+            {
+                exposure = Mathf.Lerp(0.8f, 0.95f, daylight / 0.15f);
+            }
+            else if (daylight > 0.8f)
+            {
+                float mid = Mathf.InverseLerp(0.8f, 1f, daylight);
+                exposure = Mathf.Lerp(0.95f, 0.8f, mid);
+            }
+            else
+            {
+                exposure = 0.95f;
+            }
+            _physicallyBasedSky.exposure.Override(exposure);
+
+            //Athmospheric scattering
+            _physicallyBasedSky.aerosolDensity.Override(0.03f);
             _physicallyBasedSky.aerosolTint.Override(Color.white);
             _physicallyBasedSky.aerosolAnisotropy.Override(0.85f);
             _physicallyBasedSky.aerosolMaximumAltitude.Override(2000f);
             _physicallyBasedSky.horizonZenithShift.Override(0f);
-            Color nightSkyTint = new Color(0.02f, 0.03f, 0.05f);
-            Color daySkyTint = Color.white;
-            Color skyTint = Color.Lerp(nightSkyTint, daySkyTint, Mathf.SmoothStep(-5f, 5f, sun.Elevation));
+
+            //Sky tint
+            Color nightSkyTint = new Color(0.03f, 0.04f, 0.07f);
+            Color daySkyTint = new Color(0.9f, 0.95f, 1f);
+            Color sunsetTint = new Color(1f, 0.78f, 0.55f);
+            Color skyTint;
+
+            if (sun.Elevation < 5f)
+            {
+                float warmFactor = Mathf.InverseLerp(-5f, 5f, sun.Elevation);
+                skyTint = Color.Lerp(nightSkyTint, sunsetTint, warmFactor);
+            }
+            else
+            {
+                skyTint = Color.Lerp(sunsetTint, daySkyTint, Mathf.InverseLerp(5f, 45f, sun.Elevation));
+            }
+
             _physicallyBasedSky.horizonTint.Override(skyTint);
             _physicallyBasedSky.zenithTint.Override(skyTint);
             _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
-            _physicallyBasedSky.exposure.Override(0.5f);
 
             //Fog
-            _fog.meanFreePath.Override(1500f);
+            _fog.meanFreePath.Override(Mathf.Lerp(700f, 2200f, daylight));
             _fog.baseHeight.Override(0f);
-            _fog.maximumHeight.Override(50f);
+            _fog.maximumHeight.Override(60f);
             _fog.maxFogDistance.Override(10000f);
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
             _fog.tint.Override(skyTint);
 
-            //Visual Environment
+            //Visual environment
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
             _visualEnvironment.skyAmbientMode.Override(VisualEnvironment.SkyAmbientMode.Dynamic);
             _visualEnvironment.renderingSpace.Override(VisualEnvironment.RenderingSpace.Camera);
 
-            //Volumetric Clouds
+            //Clouds
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
 
             //Sun color
-            Color sunColor = Color.white;
-            if (sun.Elevation < 15f)
+            Color sunColor;
+            if (sun.Elevation < 8f)
             {
-                float warmFactor = Mathf.InverseLerp(-5f, 15f, sun.Elevation);
-                sunColor = Color.Lerp(new Color(1f, 0.55f, 0.28f), Color.white, warmFactor);
+                float warmFactor = Mathf.InverseLerp(-3f, 8f, sun.Elevation);
+                sunColor = Color.Lerp(new Color(1f, 0.68f, 0.38f), Color.white, warmFactor);
+            }
+            else
+            {
+                sunColor = Color.white;
             }
 
-            //Main lights settings
+            //Main light
             if (_mainLight != null)
             {
                 _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
                 _mainLight.intensity = unityIntensity;
                 _mainLight.color = sunColor;
+
                 RenderSettings.sun = _mainLight;
                 RenderSettings.ambientMode = AmbientMode.Skybox;
-                float ambientBoost = Mathf.Clamp01(1f - sun.ElevationFactor);
-                Color nightAmbient = new Color(0.02f, 0.025f, 0.03f);
-                RenderSettings.ambientLight += nightAmbient * ambientBoost;
-
-                if (RenderSettings.defaultReflectionMode != DefaultReflectionMode.Skybox)
-                {
-                    RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-                }
-
-                RenderSettings.defaultReflectionResolution = 128;
-                RenderSettings.reflectionIntensity = 1f;
+                RenderSettings.ambientIntensity = Mathf.Lerp(0.25f, 0.8f, daylight);   // moins d’ambient global
+                RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+                RenderSettings.reflectionIntensity = Mathf.Lerp(0.5f, 0.9f, daylight); // moins de réflection aussi
             }
 
-            //Lens flare baseline from elevation
+            //Lens flare
             if (_lensFlare != null)
             {
-                _lensFlare.intensity = Mathf.Lerp(0.5f, 3f, sunFactor * sunFactor);
-                _lensFlare.scale = Mathf.Lerp(0.6f, 1.5f, Mathf.Sqrt(sunFactor));
-                _lensFlare.occlusionRadius = Mathf.Lerp(0.3f, 1f, sunFactor);
-                _lensFlare.attenuationByLightShape = true;
-                _lensFlare.environmentOcclusion = true;
+                _lensFlare.intensity = Mathf.Lerp(0.3f, 1.6f, daylight * daylight); // divisé par 2
+                _lensFlare.scale = Mathf.Lerp(0.8f, 1.2f, Mathf.Sqrt(daylight));
+                _lensFlare.occlusionRadius = Mathf.Lerp(0.3f, 0.9f, daylight);
                 _lensFlare.enabled = true;
             }
 
-            //Apply user customs settings
+            //pply user custom settings
             ApplyVignettingIntensity();
             ApplyContrast();
             ApplySaturation();

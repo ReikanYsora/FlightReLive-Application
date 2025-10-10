@@ -1,5 +1,7 @@
-﻿using FlightReLive.Core.Loading;
+﻿using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.UI.Overlays;
@@ -66,8 +68,9 @@ namespace FlightReLive.Core.Cameras
         private float _pivotLerpProgress = 1f;
         private int _clickCount = 0;
         private float _lastClickTime = 0f;
+        private POIEntity _pivotPointPOI;
         #endregion
-
+        
         #region PROPERTIES
         public CameraMode Mode
         {
@@ -178,6 +181,11 @@ namespace FlightReLive.Core.Cameras
 
             if (_mode == CameraMode.Tracking)
             {
+                if (_pivotPointPOI != null)
+                {
+                    POIManager.Instance.Delete(_pivotPointPOI);
+                }
+
                 UpdateCameraTransformTracking();
             }
             else if (_mode == CameraMode.Free)
@@ -185,7 +193,6 @@ namespace FlightReLive.Core.Cameras
                 UpdateCameraTransformFree();
             }
         }
-
 
         private void OnDestroy()
         {
@@ -263,7 +270,6 @@ namespace FlightReLive.Core.Cameras
             return desiredDistance;
         }
 
-
         private void HandleZoom()
         {
             if (CameraWindow.IsHoveredContent)
@@ -327,6 +333,18 @@ namespace FlightReLive.Core.Cameras
                         _pivotLerpStart = _freePosition;
                         _pivotLerpTarget = newPivot;
                         _pivotLerpProgress = 0f;
+
+                        if (_pivotPointPOI != null)
+                        {
+                            POIManager.Instance.Delete(_pivotPointPOI);
+                        }
+                        
+                        if (LoadingManager.Instance.CurrentFlightData != null)
+                        {
+                            string poiText = string.Empty;
+                            FlightGPSData data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
+                            _pivotPointPOI = POIManager.Instance.CreatePOIText($"{data.Latitude}, {data.Longitude}", newPivot, Color.blueViolet, 50f);
+                        }
                     }
                 }
             }

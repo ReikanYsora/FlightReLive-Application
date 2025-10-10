@@ -1,7 +1,8 @@
-﻿using FlightReLive.Core.FlightDefinition;
-using FlightReLive.Core.Settings;
+﻿using FlightReLive.Core.Settings;
 using Fu.Framework;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core.POI
@@ -59,17 +60,26 @@ namespace FlightReLive.Core.POI
         #endregion
 
         #region METHODS
-        internal void CreatePOIText(FlightData flightData, string text, FlightGPSData gpsData)
+        internal POIEntity CreatePOIText(string text, Transform linkedTransform, Color color, float height = 1f)
         {
-            float altitude = flightData.GetAltitudeAtPosition(gpsData);
-            Vector3 gpsVector3 = new Vector3((float)gpsData.Latitude, altitude, (float)gpsData.Longitude);
-            Vector3 worldPos = flightData.ConvertGPSPositionToWorld(gpsVector3);
-
             GameObject poiGO = _poiPool.Get();
-            poiGO.transform.position = worldPos;
+            poiGO.transform.position = linkedTransform.position;
             POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
-            poiEntity.Initialize(_mainCamera, worldPos, name, SettingsManager.CurrentSettings.POIHeight);
+            poiEntity.Initialize(_mainCamera, linkedTransform, color, text, height);
+            poiEntity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
             _allPOIs.Add(poiEntity);
+            return poiEntity;
+        }
+
+        internal POIEntity CreatePOIText(string text, Vector3 position, Color color, float height = 1f)
+        {
+            GameObject poiGO = _poiPool.Get();
+            poiGO.transform.position = position;
+            POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
+            poiEntity.Initialize(_mainCamera, position, color, text, height);
+            poiEntity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+            _allPOIs.Add(poiEntity);
+            return poiEntity;
         }
 
         /// <summary>
@@ -91,15 +101,42 @@ namespace FlightReLive.Core.POI
         /// <summary>
         /// Unloads all POIs from the scene.
         /// </summary>
-        internal void Unload()
+        internal async Task Unload()
         {
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
+            {
+                foreach (POIEntity poi in _allPOIs)
+                {
+                    _poiPool.Return(poi.gameObject);
+                }
+
+                _allPOIs.Clear();
+                _tileToPOIs.Clear();
+            });
+        }
+
+        /// <summary>
+        /// Delete a specific POI point
+        /// </summary>
+        /// <param name="pivotPointPOI"></param>
+        internal void Delete(POIEntity pivotPointPOI)
+        {
+            bool poiFounded = false;
+
             foreach (POIEntity poi in _allPOIs)
             {
-                _poiPool.Return(poi.gameObject);
+                if (poi == pivotPointPOI)
+                {
+                    _poiPool.Return(poi.gameObject);
+                    poiFounded = true;
+                    break;
+                }
             }
 
-            _allPOIs.Clear();
-            _tileToPOIs.Clear();
+            if (poiFounded)
+            {
+                _allPOIs.Remove(pivotPointPOI);
+            }
         }
         #endregion
 
@@ -112,11 +149,11 @@ namespace FlightReLive.Core.POI
             }
         }
 
-        private void OnPOIHeightChanged(float height)
+        private void OnPOIHeightChanged(float factor)
         {
             foreach (POIEntity poi in _allPOIs)
             {
-                poi.ManualElevation = height;
+                poi.ElevationFactor = factor;
             }
         }
 
@@ -130,30 +167,59 @@ namespace FlightReLive.Core.POI
         #endregion
 
         #region UI
-        internal void DisplayWorldUISettings(FuGrid grid)
+        internal void DisplayPOISettings()
         {
-            bool poiVisibility = SettingsManager.CurrentSettings.POIVisibility;
-
-            if (grid.Toggle("Show POI", ref poiVisibility))
+            using (FuGrid grid = new FuGrid("gridPOISettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                SettingsManager.SavePOIVisibility(poiVisibility);
-            }
+                if (_allPOIs.Count == 0)
+                {
+                    grid.DisableNextElements();
+                }
 
-            if (!poiVisibility)
-            {
-                grid.DisableNextElements();
-            }
+                bool poiEnabled = SettingsManager.CurrentSettings.POIVisibility;
 
-            float poiScale = SettingsManager.CurrentSettings.POIScale;
-            if (grid.Slider("POI scale", ref poiScale, 0.1f, 1f, 0.01f, format: "%.01f"))
-            {
-                SettingsManager.SavePOIScale(poiScale);
-            }
+                //Display POI settings
+                SettingsManager.DisplaySettingsToggleWithReset(grid,
+                    "Display POI",
+                    "Display or hide POI.",
+                    $"Reset POI display state to default value.",
+                    poiEnabled,
+                    SettingsManager.POI_DISPLAY_STATE_DEFAULT_VALUE,
+                     (x) => SettingsManager.SavePOIVisibility(x),
+                     () => SettingsManager.ResetPOIVisibility());
 
-            float poiHeight = SettingsManager.CurrentSettings.POIHeight;
-            if (grid.Slider("POI height", ref poiHeight, 0.1f, 15f, 0.1f, format: "%.1f"))
-            {
-                SettingsManager.SavePOIHeight(poiHeight);
+                if (!poiEnabled)
+                {
+                    grid.DisableNextElements();
+                }
+
+                //POI scale settings
+                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                    "POI scale",
+                    "Define POI scale value.",
+                    $"Reset POI scale  to default value ({SettingsManager.POI_SCALE_DEFAULT_VALUE}).",
+                    SettingsManager.CurrentSettings.POIScale,
+                    0.1f,
+                    1.0f,
+                    0.1f,
+                    SettingsManager.POI_SCALE_DEFAULT_VALUE,
+                    "%.1f",
+                     (x) => SettingsManager.SavePOIScale(x),
+                     () => SettingsManager.ResetPOIScale());
+
+                //POI height settings
+                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                    "POI height",
+                    "Define POI height value.",
+                    $"Reset POI height  to default value ({SettingsManager.POI_HEIGHT_DEFAULT_VALUE}).",
+                    SettingsManager.CurrentSettings.POIHeight,
+                    0f,
+                    3f,
+                    0.1f,
+                    SettingsManager.POI_HEIGHT_DEFAULT_VALUE,
+                    "%.1f",
+                     (x) => SettingsManager.SavePOIHeight(x),
+                     () => SettingsManager.ResetPOIHeight());
             }
         }
         #endregion

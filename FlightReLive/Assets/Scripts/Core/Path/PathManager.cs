@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
 using Fu;
@@ -25,8 +26,10 @@ namespace FlightReLive.Core.Paths
         [SerializeField] private Camera _camera;
         [SerializeField] private Material _progressionPathMaterial;
         [SerializeField] private LayerMask _raycastMask;
-        [SerializeField] private float _glowDuration = 1f;
         [SerializeField] private Transform _droneAnchorTransform;
+        [SerializeField] private Color _dronePositionColor;
+        [SerializeField] private Color _pathStartColor;
+        [SerializeField] private Color _pathEndColor;
 
         private List<PathPoint> _fullPath;
         private List<FlightDataPoint> _interpolatedToFlightPoint;
@@ -38,8 +41,8 @@ namespace FlightReLive.Core.Paths
         private MeshRenderer _progressionPathRenderer;
         private Material _progressionPathMaterialInstance;
         private PathColliderUpdater _progressionPathColliderUpdater;
-        private float _glowTimer = 0f;
         private float _currentProgress;
+        private POIEntity _dronePoiEntity;
         #endregion
 
         #region PROPERTIES
@@ -93,10 +96,7 @@ namespace FlightReLive.Core.Paths
 
         private void Update()
         {
-            if (LoadingManager.Instance.CurrentFlightData == null ||
-                _fullPath == null ||
-                _fullPath.Count < 2 ||
-                _interpolatedToFlightPoint.Count == 0)
+            if (LoadingManager.Instance.CurrentFlightData == null || _fullPath == null || _fullPath.Count < 2 || _interpolatedToFlightPoint.Count == 0)
             {
                 return;
             }
@@ -121,7 +121,6 @@ namespace FlightReLive.Core.Paths
                         long totalFrames = TimeBarManager.Instance.TotalFrameCount;
                         long targetFrame = Mathf.FloorToInt(hoverProgress * totalFrames);
                         TimeBarManager.Instance.SetFrame(targetFrame, false);
-                        _glowTimer = _glowDuration;
                     }
                 }
                 else if (TimeBarManager.Instance.IsHovering && TimeBarManager.Instance.HoverSourceID == "PathManager")
@@ -146,13 +145,7 @@ namespace FlightReLive.Core.Paths
                 }
             }
 
-            //Interpolate UV for progression
-            float targetProgress = GetProgressAtTime(
-                _interpolatedToFlightPoint[0].Time +
-                TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
-
-            _currentProgress = Mathf.Lerp(_currentProgress, targetProgress, Time.deltaTime * 5f);
-            _progressionPathMaterialInstance.SetFloat("_Progress", _currentProgress);
+            _currentProgress = GetProgressAtTime(_interpolatedToFlightPoint[0].Time + TimeSpan.FromSeconds(TimeBarManager.Instance.Time));
 
             //Refresh drone position
             Vector3 position = GetWorldPositionAtUVProgress(_currentProgress);
@@ -181,22 +174,29 @@ namespace FlightReLive.Core.Paths
             }
 
             _droneAnchorTransform.position = position;
-            _droneAnchorTransform.rotation = Quaternion.Slerp(
-                _droneAnchorTransform.rotation,
-                targetRotation,
-                Time.deltaTime * 5f);
+            _droneAnchorTransform.rotation = Quaternion.Slerp(_droneAnchorTransform.rotation, targetRotation, Time.deltaTime * 5f);
 
-            //Glow effect
-            if (_glowTimer > 0f)
+            //Update POI time text
+            if (_dronePoiEntity != null)
             {
-                _glowTimer -= Time.deltaTime;
-                float glowProgress = Mathf.Clamp01(_glowTimer / _glowDuration);
-                _progressionPathMaterialInstance.SetFloat("_GlowProgress", glowProgress);
+                //Current flight time
+                TimeSpan span = TimeSpan.FromSeconds(TimeBarManager.Instance.Time);
+
+                //Format MM:SS.mmm
+                string formattedTime = $"{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
+                _dronePoiEntity.SetText(formattedTime);
             }
-            else
+        }
+
+        private void LateUpdate()
+        {
+            if (_progressionPathMaterialInstance == null)
             {
-                _progressionPathMaterialInstance.SetFloat("_GlowProgress", 0f);
+                return;
             }
+
+            //Apply only after world transforms are settled
+            _progressionPathMaterialInstance.SetFloat("_Progress", _currentProgress);
         }
 
         private void OnDisable()
@@ -244,6 +244,16 @@ namespace FlightReLive.Core.Paths
 
             //Update path thickness from user settings
             UpdatePathThickness();
+
+            //Create path POI
+            _dronePoiEntity = POIManager.Instance.CreatePOIText("", _droneAnchorTransform, _dronePositionColor, 50f);
+
+            //Create POI at start and end of path
+            if (_fullPath != null && _fullPath.Count > 1)
+            {
+                POIManager.Instance.CreatePOIText("Start", _fullPath.First().Position, _pathStartColor, 0f);
+                POIManager.Instance.CreatePOIText("End", _fullPath.Last().Position, _pathEndColor, 0f);
+            }
         }
 
         private Vector3 GetWorldPositionAtUVProgress(float progress)
@@ -271,6 +281,7 @@ namespace FlightReLive.Core.Paths
                 _progressionPathFilter.sharedMesh = null;
                 _progressionPathCollider.enabled = false;
                 _progressionPathCollider.sharedMesh = null;
+                _dronePoiEntity = null;
             });
         }
         #endregion

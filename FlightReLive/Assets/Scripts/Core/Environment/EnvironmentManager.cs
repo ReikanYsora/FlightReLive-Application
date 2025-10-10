@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core.Building;
 using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using System;
@@ -840,6 +841,12 @@ namespace FlightReLive.Core.Environment
             layout.Separator();
 
             BuildingManager.Instance.DisplayBuildingsSettings();
+
+            layout.Separator();
+            layout.FramedText("POI");
+            layout.Separator();
+
+            POIManager.Instance.DisplayPOISettings();
         }
         #endregion
     }

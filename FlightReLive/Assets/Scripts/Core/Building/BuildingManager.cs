@@ -1,4 +1,4 @@
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
@@ -13,7 +13,6 @@ using VexTile.Mapbox.VectorTile.Geometry;
 
 namespace FlightReLive.Core.Building
 {
-    [RequireComponent(typeof(BuildingPool))]
     public class BuildingManager : MonoBehaviour
     {
         #region CONSTANTS
@@ -24,16 +23,15 @@ namespace FlightReLive.Core.Building
         #region ATTRIBUTES
         [Header("Materials")]
         [SerializeField] private Material _buildingMaterial;
-
-        private BuildingPool _buildingPool;
-        private List<GameObject> _buildingGameobjects;
         private Material _buildingMaterialInstance;
+        private CombinedMeshBuilder _combinedBuilder;
+        private GameObject _combinedBuildings;
+        private bool _isBaked;
         #endregion
 
         #region PROPERTIES
         public static BuildingManager Instance { get; private set; }
         #endregion
-
 
         #region UNITY METHODS
         private void Awake()
@@ -45,8 +43,8 @@ namespace FlightReLive.Core.Building
             }
 
             Instance = this;
-            _buildingPool = GetComponent<BuildingPool>();
-            _buildingGameobjects = new List<GameObject>();
+
+            _combinedBuilder = new CombinedMeshBuilder();
             _buildingMaterialInstance = new Material(_buildingMaterial);
         }
 
@@ -84,9 +82,38 @@ namespace FlightReLive.Core.Building
         {
             bool displayBuilding = SettingsManager.CurrentSettings.BuildingVisibility;
 
-            foreach (GameObject building in _buildingGameobjects)
+            if (_isBaked)
             {
-                building.GetComponent<MeshRenderer>().enabled = displayBuilding;
+                if (_combinedBuildings != null)
+                {
+                    MeshRenderer mr = _combinedBuildings.GetComponent<MeshRenderer>();
+
+                    if (mr != null)
+                    {
+                        mr.enabled = displayBuilding;
+                    }
+                }
+
+                return;
+            }
+
+            //Bake buildings meshes
+            if (_combinedBuilder.HasData)
+            {
+                Mesh combined = _combinedBuilder.ToMesh();
+
+                _combinedBuildings = new GameObject("Buildings (Combined)");
+                _combinedBuildings.transform.SetParent(transform, worldPositionStays: true);
+                _combinedBuildings.transform.position = Vector3.zero;
+                _combinedBuildings.transform.rotation = Quaternion.identity;
+
+                MeshFilter mf = _combinedBuildings.AddComponent<MeshFilter>();
+                MeshRenderer mr = _combinedBuildings.AddComponent<MeshRenderer>();
+                mf.sharedMesh = combined;
+                mr.sharedMaterial = _buildingMaterialInstance;
+                mr.enabled = displayBuilding;
+                _isBaked = true;
+                _combinedBuilder.Clear();
             }
         }
 
@@ -94,12 +121,13 @@ namespace FlightReLive.Core.Building
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                foreach (GameObject tempBuilding in _buildingGameobjects)
-                {
-                    _buildingPool.Return(tempBuilding);
-                }
+                _combinedBuilder.Clear();
+                _isBaked = false;
 
-                _buildingGameobjects.Clear();
+                if (_combinedBuildings != null)
+                {
+                    Destroy(_combinedBuildings);
+                }
             });
         }
 
@@ -113,7 +141,10 @@ namespace FlightReLive.Core.Building
                 }
 
                 List<Point2d<int>> ring = new(ringRaw.Count);
-                foreach (SerializablePoint2D pt in ringRaw) ring.Add(pt.ToPoint2D());
+                foreach (SerializablePoint2D pt in ringRaw)
+                {
+                    ring.Add(pt.ToPoint2D());
+                }
 
                 ring = ClipRingToExtent(ring);
 
@@ -141,7 +172,9 @@ namespace FlightReLive.Core.Building
                 Vector3 position = new(center.x, terrainAltitude * flight.GlobalScale, center.y);
                 float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
                 MeshData meshData = TriangulateAndExtrude(flight, contour, estimatedHeight);
-                CreateBuilding(meshData, position, _buildingMaterialInstance);
+                Mesh unityMesh = meshData.ConvertToUnityMesh();
+                _combinedBuilder.AddUnityMesh(unityMesh, position);
+                Destroy(unityMesh);
             }
         }
 
@@ -234,21 +267,6 @@ namespace FlightReLive.Core.Building
             }
 
             return meshData;
-        }
-
-        private void CreateBuilding(MeshData meshData, Vector3 position, Material mat)
-        {
-            Mesh mesh = meshData.ConvertToUnityMesh();
-            GameObject go = _buildingPool.Get();
-            MeshFilter meshFilter = go.GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = mat;
-            meshRenderer.enabled = false;
-            meshFilter.sharedMesh = mesh;
-            go.transform.SetParent(transform);
-            go.transform.position = position;
-            go.transform.rotation = Quaternion.identity;
-            _buildingGameobjects.Add(go);
         }
 
         private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY, int zoom)
@@ -477,14 +495,11 @@ namespace FlightReLive.Core.Building
         private void DisplayBuildingsFromSettings()
         {
             bool enabled = SettingsManager.CurrentSettings.BuildingVisibility;
-            foreach (GameObject go in _buildingGameobjects)
-            {
-                MeshRenderer rend = go.GetComponent<MeshRenderer>();
 
-                if (rend != null)
-                {
-                    rend.enabled = enabled;
-                }
+            if (_combinedBuildings != null)
+            {
+                var rend = _combinedBuildings.GetComponent<MeshRenderer>();
+                if (rend != null) rend.enabled = enabled;
             }
         }
 
@@ -511,7 +526,7 @@ namespace FlightReLive.Core.Building
         {
             using (FuGrid grid = new FuGrid("gridBuildingsSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                if (_buildingGameobjects.Count == 0)
+                if (_combinedBuildings == null)
                 {
                     grid.DisableNextElements();
                 }

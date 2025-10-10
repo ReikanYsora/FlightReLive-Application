@@ -4,10 +4,10 @@ using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Pipeline.API;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
-using FlightReLive.Core.Video;
 using FlightReLive.Core.Workspace;
 using FlightReLive.UI.FlightCharts;
 using Fu;
@@ -15,6 +15,7 @@ using Fu.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -188,7 +189,6 @@ namespace FlightReLive.Core.Loading
                 
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);
-                //VideoSyncManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
@@ -338,11 +338,11 @@ namespace FlightReLive.Core.Loading
             {
                 TimeBarManager.Instance.Unload(),
                 FlightChartsManager.Instance.Unload(),
-                //VideoSyncManager.Instance.Unload(),
                 ProceduralTerrainManager.Instance.Unload(),
                 PathManager.Instance.Unload(),
                 EnvironmentManager.Instance.Unload(),
-                BuildingManager.Instance.Unload()
+                BuildingManager.Instance.Unload(),
+                POIManager.Instance.Unload()
             };
 
             try

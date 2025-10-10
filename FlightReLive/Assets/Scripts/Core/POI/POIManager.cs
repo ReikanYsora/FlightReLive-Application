@@ -1,25 +1,34 @@
-﻿using FlightReLive.Core.Settings;
+﻿using FlightReLive.Core.Cameras;
+using FlightReLive.Core.OpenVectorTile;
+using FlightReLive.Core.Settings;
 using Fu.Framework;
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core.POI
 {
     /// <summary>
-    /// Manager responsible for handling 3D world-space UI icons (POIs).
-    /// Supports tile-by-tile loading/unloading for dynamic streaming.
+    /// Optimized POI Manager: dynamically activates POIs from OpenVectorTile based on distance, angle and zoom.
+    /// Uses pooled entities and only renders what’s visible in front of the camera.
     /// </summary>
     [RequireComponent(typeof(POIPool))]
     public class POIManager : MonoBehaviour
     {
-        #region ATTRIBUTES
-        [SerializeField] private Camera _mainCamera;
-        private POIPool _poiPool;
+        #region CONSTANTS
+        private const float UPDATE_INTERVAL = 0.5f;         // seconds between visibility updates
+        #endregion
 
-        private readonly List<POIEntity> _allPOIs = new List<POIEntity>();
-        private readonly Dictionary<(int, int), List<POIEntity>> _tileToPOIs = new Dictionary<(int, int), List<POIEntity>>();
+        #region ATTRIBUTES
+        [SerializeField] private float _poiMaxDistance;
+        [SerializeField] private float _poiMaxViewAngle;
+        private POIPool _poiPool;
+        private Camera _camera;
+
+        private readonly Dictionary<POIData, POIEntity> _activePOIs = new Dictionary<POIData, POIEntity>();
+        private readonly List<POIEntity> _fixedPOIs = new List<POIEntity>();
+        private float _lastUpdate;
         #endregion
 
         #region PROPERTIES
@@ -41,6 +50,8 @@ namespace FlightReLive.Core.POI
 
         private void Start()
         {
+            _camera = CameraManager.Instance.ReLiveCamera;
+
             SettingsManager.OnPOIScaleChanged += OnPOIScaleChanged;
             SettingsManager.OnPOIHeightChanged += OnPOIHeightChanged;
             SettingsManager.OnPOIVisibilityChanged += OnPOIVisibilityChanged;
@@ -48,7 +59,23 @@ namespace FlightReLive.Core.POI
 
         private void LateUpdate()
         {
-            UpdatePOIVisibility();
+            if (_camera == null)
+                _camera = CameraManager.Instance.ReLiveCamera;
+
+            if (_camera == null)
+                return;
+
+            if (!SettingsManager.CurrentSettings.POIVisibility)
+            {
+                HideAllDynamicPOIs();
+                return;
+            }
+
+            if (Time.time - _lastUpdate > UPDATE_INTERVAL)
+            {
+                _lastUpdate = Time.time;
+                UpdateDynamicPOIs();
+            }
         }
 
         private void OnDestroy()
@@ -59,109 +86,200 @@ namespace FlightReLive.Core.POI
         }
         #endregion
 
-        #region METHODS
-        internal POIEntity CreatePOIText(string text, Transform linkedTransform, Color color, float height = 1f)
+        #region FIXED POI
+        internal POIEntity AddFixedPOI(string name, Transform linkedTransform, Color color, float height = 1f)
         {
-            GameObject poiGO = _poiPool.Get();
-            poiGO.transform.position = linkedTransform.position;
-            POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
-            poiEntity.Initialize(_mainCamera, linkedTransform, color, text, height);
-            poiEntity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
-            _allPOIs.Add(poiEntity);
-            return poiEntity;
+            GameObject go = _poiPool.Get();
+            go.transform.position = linkedTransform.position;
+
+            POIEntity poi = go.GetComponent<POIEntity>();
+            poi.Initialize(_camera, linkedTransform, color, name, height);
+            poi.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+
+            _fixedPOIs.Add(poi);
+            return poi;
         }
 
-        internal POIEntity CreatePOIText(string text, Vector3 position, Color color, float height = 1f)
+        internal POIEntity AddFixedPOI(string name, Vector3 position, Color color, float height = 1f)
         {
-            GameObject poiGO = _poiPool.Get();
-            poiGO.transform.position = position;
-            POIEntity poiEntity = poiGO.GetComponent<POIEntity>();
-            poiEntity.Initialize(_mainCamera, position, color, text, height);
-            poiEntity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
-            _allPOIs.Add(poiEntity);
-            return poiEntity;
+            GameObject go = _poiPool.Get();
+            go.transform.position = position;
+
+            POIEntity poi = go.GetComponent<POIEntity>();
+            poi.Initialize(_camera, position, color, name, height);
+            poi.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+
+            _fixedPOIs.Add(poi);
+            return poi;
         }
 
-        /// <summary>
-        /// Updates visibility of POIs based on global toggle.
-        /// </summary>
-        internal void UpdatePOIVisibility()
+        internal void DeleteFixedPOI(POIEntity entity)
         {
-            bool globalVisibility = SettingsManager.CurrentSettings.POIVisibility;
-
-            foreach (POIEntity poi in _allPOIs)
+            if (entity != null)
             {
-                if (poi != null && poi.gameObject.activeSelf != globalVisibility)
+                _poiPool.Return(entity.gameObject);
+                _fixedPOIs.Remove(entity);
+            }
+        }
+        #endregion
+
+        #region DYNAMIC LOGIC
+        private void UpdateDynamicPOIs()
+        {
+            IReadOnlyList<POIData> baked = OpenVectorTileManager.Instance?.BakedPOIs;
+
+            if (baked == null || baked.Count == 0)
+            {
+                HideAllDynamicPOIs();
+                return;
+            }
+
+            Vector3 camPos = _camera.transform.position;
+            Vector3 camForward = _camera.transform.forward;
+            float currentZoom = ComputeCameraZoom();
+
+            HashSet<POIData> visibleNow = new HashSet<POIData>();
+
+            foreach (var poi in baked)
+            {
+                if (string.IsNullOrEmpty(poi.Name))
                 {
-                    poi.gameObject.SetActive(globalVisibility);
+                    continue;
                 }
+
+                Vector3 dir = poi.WorldPosition - camPos;
+                float dist = dir.magnitude;
+
+                //Distance culling
+                if (dist > _poiMaxDistance)
+                {
+                    DeactivatePOI(poi);
+                    continue;
+                }
+
+                //Angle culling (FOV)
+                float angle = Vector3.Angle(camForward, dir.normalized);
+                if (angle > _poiMaxViewAngle)
+                {
+                    DeactivatePOI(poi);
+                    continue;
+                }
+
+                //Zoom / rank filtering
+                if (!IsPOIVisibleAtZoom(poi.Rank, currentZoom))
+                {
+                    DeactivatePOI(poi);
+                    continue;
+                }
+
+                //Activate if needed
+                if (!_activePOIs.ContainsKey(poi))
+                {
+                    GameObject go = _poiPool.Get();
+                    go.transform.position = poi.WorldPosition;
+
+                    POIEntity entity = go.GetComponent<POIEntity>();
+                    entity.Initialize(_camera, poi.WorldPosition, Color.red, poi.Name, 50f);
+                    entity.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+
+                    _activePOIs.Add(poi, entity);
+                }
+
+                visibleNow.Add(poi);
+            }
+
+            //Remove POIs that are no longer visible
+
+            List<POIData> toRemove = _activePOIs.Keys.Except(visibleNow).ToList();
+            foreach (POIData removed in toRemove)
+            {
+                DeactivatePOI(removed);
             }
         }
 
-        /// <summary>
-        /// Unloads all POIs from the scene.
-        /// </summary>
+        private void DeactivatePOI(POIData poi)
+        {
+            if (_activePOIs.TryGetValue(poi, out var entity))
+            {
+                _poiPool.Return(entity.gameObject);
+                _activePOIs.Remove(poi);
+            }
+        }
+
+        private void HideAllDynamicPOIs()
+        {
+            foreach (var kv in _activePOIs)
+            {
+                if (kv.Value != null)
+                    _poiPool.Return(kv.Value.gameObject);
+            }
+
+            _activePOIs.Clear();
+        }
+
+        private float ComputeCameraZoom()
+        {
+            // Adapté à ta logique de zoom (ex: altitude relative)
+            float height = _camera.transform.position.y;
+            return Mathf.Lerp(4f, 14f, Mathf.InverseLerp(50f, 1000f, height)); // simplifié
+        }
+
+        private bool IsPOIVisibleAtZoom(int rank, float zoom)
+        {
+            if (zoom <= 6) return rank <= 3;
+            if (zoom <= 8) return rank <= 5;
+            if (zoom <= 10) return rank <= 8;
+            return true;
+        }
+        #endregion
+
+        #region UNLOAD
         internal async Task Unload()
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                foreach (POIEntity poi in _allPOIs)
-                {
+                foreach (var poi in _activePOIs.Values)
                     _poiPool.Return(poi.gameObject);
-                }
+                _activePOIs.Clear();
 
-                _allPOIs.Clear();
-                _tileToPOIs.Clear();
+                foreach (var poi in _fixedPOIs)
+                    _poiPool.Return(poi.gameObject);
+                _fixedPOIs.Clear();
             });
-        }
-
-        /// <summary>
-        /// Delete a specific POI point
-        /// </summary>
-        /// <param name="pivotPointPOI"></param>
-        internal void Delete(POIEntity pivotPointPOI)
-        {
-            bool poiFounded = false;
-
-            foreach (POIEntity poi in _allPOIs)
-            {
-                if (poi == pivotPointPOI)
-                {
-                    _poiPool.Return(poi.gameObject);
-                    poiFounded = true;
-                    break;
-                }
-            }
-
-            if (poiFounded)
-            {
-                _allPOIs.Remove(pivotPointPOI);
-            }
         }
         #endregion
 
         #region CALLBACKS
         private void OnPOIScaleChanged(float value)
         {
-            foreach (POIEntity poi in _allPOIs)
-            {
-                poi.ScaleFactor = value / 100f;
-            }
+            float scale = value / 100f;
+
+            foreach (var poi in _fixedPOIs)
+                poi.ScaleFactor = scale;
+            foreach (var kv in _activePOIs)
+                kv.Value.ScaleFactor = scale;
         }
 
         private void OnPOIHeightChanged(float factor)
         {
-            foreach (POIEntity poi in _allPOIs)
-            {
+            foreach (var poi in _fixedPOIs)
                 poi.ElevationFactor = factor;
-            }
+            foreach (var kv in _activePOIs)
+                kv.Value.ElevationFactor = factor;
         }
 
-        private void OnPOIVisibilityChanged(bool visibility)
+        private void OnPOIVisibilityChanged(bool visible)
         {
-            foreach (POIEntity poi in _allPOIs)
+            if (!visible)
             {
-                poi.gameObject.SetActive(visibility);
+                HideAllDynamicPOIs();
+                foreach (var poi in _fixedPOIs)
+                    poi.gameObject.SetActive(false);
+            }
+            else
+            {
+                foreach (var poi in _fixedPOIs)
+                    poi.gameObject.SetActive(true);
             }
         }
         #endregion
@@ -169,57 +287,45 @@ namespace FlightReLive.Core.POI
         #region UI
         internal void DisplayPOISettings()
         {
-            using (FuGrid grid = new FuGrid("gridPOISettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
+            using (FuGrid grid = new FuGrid("gridPOISettings",
+                new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }),
+                FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
-                if (_allPOIs.Count == 0)
-                {
-                    grid.DisableNextElements();
-                }
-
                 bool poiEnabled = SettingsManager.CurrentSettings.POIVisibility;
 
-                //Display POI settings
                 SettingsManager.DisplaySettingsToggleWithReset(grid,
                     "Display POI",
-                    "Display or hide POI.",
-                    $"Reset POI display state to default value.",
+                    "Display or hide all POIs.",
+                    "Reset POI visibility to default.",
                     poiEnabled,
                     SettingsManager.POI_DISPLAY_STATE_DEFAULT_VALUE,
-                     (x) => SettingsManager.SavePOIVisibility(x),
-                     () => SettingsManager.ResetPOIVisibility());
+                    (x) => SettingsManager.SavePOIVisibility(x),
+                    () => SettingsManager.ResetPOIVisibility());
 
                 if (!poiEnabled)
-                {
                     grid.DisableNextElements();
-                }
 
-                //POI scale settings
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "POI scale",
-                    "Define POI scale value.",
-                    $"Reset POI scale  to default value ({SettingsManager.POI_SCALE_DEFAULT_VALUE}).",
+                    "Adjust POI global scale.",
+                    $"Reset to {SettingsManager.POI_SCALE_DEFAULT_VALUE}.",
                     SettingsManager.CurrentSettings.POIScale,
-                    0.1f,
-                    1.0f,
-                    0.1f,
+                    0.1f, 1.0f, 0.1f,
                     SettingsManager.POI_SCALE_DEFAULT_VALUE,
                     "%.1f",
-                     (x) => SettingsManager.SavePOIScale(x),
-                     () => SettingsManager.ResetPOIScale());
+                    (x) => SettingsManager.SavePOIScale(x),
+                    () => SettingsManager.ResetPOIScale());
 
-                //POI height settings
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "POI height",
-                    "Define POI height value.",
-                    $"Reset POI height  to default value ({SettingsManager.POI_HEIGHT_DEFAULT_VALUE}).",
+                    "Vertical offset of POIs.",
+                    $"Reset to {SettingsManager.POI_HEIGHT_DEFAULT_VALUE}.",
                     SettingsManager.CurrentSettings.POIHeight,
-                    0f,
-                    3f,
-                    0.1f,
+                    0f, 3f, 0.1f,
                     SettingsManager.POI_HEIGHT_DEFAULT_VALUE,
                     "%.1f",
-                     (x) => SettingsManager.SavePOIHeight(x),
-                     () => SettingsManager.ResetPOIHeight());
+                    (x) => SettingsManager.SavePOIHeight(x),
+                    () => SettingsManager.ResetPOIHeight());
             }
         }
         #endregion

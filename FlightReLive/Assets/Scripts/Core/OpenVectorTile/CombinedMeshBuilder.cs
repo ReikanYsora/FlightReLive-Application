@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace FlightReLive.Core.Building
+namespace FlightReLive.Core.OpenVectorTile
 {
     internal sealed class CombinedMeshBuilder
     {

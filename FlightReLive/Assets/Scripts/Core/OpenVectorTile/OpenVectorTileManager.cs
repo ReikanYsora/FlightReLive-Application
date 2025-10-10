@@ -1,19 +1,21 @@
 ﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Pipeline;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
 using LibTessDotNet;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
 using VexTile.Mapbox.VectorTile.Geometry;
 
-namespace FlightReLive.Core.Building
+namespace FlightReLive.Core.OpenVectorTile
 {
-    public class BuildingManager : MonoBehaviour
+    public class OpenVectorTileManager : MonoBehaviour
     {
         #region CONSTANTS
         private const float BOTTOM_EXTRUSION = 1f;
@@ -27,10 +29,19 @@ namespace FlightReLive.Core.Building
         private CombinedMeshBuilder _combinedBuilder;
         private GameObject _combinedBuildings;
         private bool _isBaked;
+        private readonly List<POIData> _bakedPOIs = new List<POIData>();
         #endregion
 
         #region PROPERTIES
-        public static BuildingManager Instance { get; private set; }
+        public static OpenVectorTileManager Instance { get; private set; }
+
+        internal IReadOnlyList<POIData> BakedPOIs
+        {
+            get
+            {
+                return _bakedPOIs;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -66,14 +77,26 @@ namespace FlightReLive.Core.Building
         #region METHODS
         internal void LoadTile(TileDefinition tile, FlightData flight)
         {
-            foreach (OpenMapTileFeature feature in tile.Features)
+            if (tile.Features != null)
             {
-                if (feature is BuildingFeature building)
+                foreach (OpenMapTileFeature feature in tile.Features)
                 {
-                    UnityMainThreadDispatcher.AddActionInMainThread(() =>
+                    if (feature is BuildingFeature building)
                     {
-                        GenerateBuilding(building, tile, flight);
-                    });
+                        //Buildings
+                        UnityMainThreadDispatcher.AddActionInMainThread(() =>
+                        {
+                            GenerateBuilding(building, tile, flight);
+                        });
+                    }
+                    else
+                    {
+                        //POI
+                        UnityMainThreadDispatcher.AddActionInMainThread(() =>
+                        {
+                            TryBakePOIFromFeature(feature, tile, flight);
+                        });
+                    }
                 }
             }
         }
@@ -123,12 +146,97 @@ namespace FlightReLive.Core.Building
             {
                 _combinedBuilder.Clear();
                 _isBaked = false;
+                _bakedPOIs.Clear();
 
                 if (_combinedBuildings != null)
                 {
                     Destroy(_combinedBuildings);
                 }
             });
+        }
+
+        private void TryBakePOIFromFeature(OpenMapTileFeature feature, TileDefinition tile, FlightData flight)
+        {
+            if (feature.Geometry == null || feature.Geometry.Count == 0)
+            {
+                return;
+            }
+
+            Vector2 pointWorld = Vector2.zero;
+            bool found = false;
+
+            List<SerializablePoint2D> firstRing = feature.Geometry[0];
+            if (firstRing != null && firstRing.Count > 1)
+            {
+                List<Point2d<int>> ring = firstRing.Select(p => p.ToPoint2D()).ToList();
+                Vector2 bary = ComputeRingBarycenterWorld(ring, flight, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+                if (!float.IsNaN(bary.x))
+                {
+                    pointWorld = bary;
+                    found = true;
+                }
+            }
+            else if (firstRing != null && firstRing.Count == 1)
+            {
+                Point2d<int> pt = firstRing[0].ToPoint2D();
+                pointWorld = ConvertTilePointToWorld(pt, flight, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+                found = true;
+            }
+
+            if (!found)
+            {
+                return;
+            }
+
+            string name = string.Empty;
+            int rank = 999;
+
+            switch (feature)
+            {
+                case POIFeature poi:
+                    name = poi.Name;
+                    rank = int.TryParse(poi.Rank, out int pr) ? pr : 999;
+                    break;
+                case PlaceFeature place:
+                    name = place.Name;
+                    rank = place.Rank;
+                    break;
+                case MountainPeakFeature peak:
+                    name = peak.Name;
+                    rank = int.TryParse(peak.Rank, out int r1) ? r1 : 999;
+                    break;
+                case AerodromeLabelFeature air:
+                    name = air.Name;
+                    rank = 5;
+                    break;
+                case TransportationNameFeature tr:
+                    name = tr.Name;
+                    rank = 8;
+                    break;
+                case WaterNameFeature wn:
+                    name = wn.Name;
+                    rank = 10;
+                    break;
+            }
+
+            //Height from terrain
+            FlightGPSData gps = ComputeRingBarycenterGPS(feature.Geometry[0].Select(p => p.ToPoint2D()).ToList(), tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+            float altitude = flight.GetAltitudeAtPosition(tile, gps);
+            Vector3 worldPos = new Vector3(pointWorld.x, altitude * flight.GlobalScale, pointWorld.y);
+
+            // Register
+            _bakedPOIs.Add(new POIData(name, feature.FeatureType, worldPos, rank));
+        }
+
+        private Vector2 ConvertTilePointToWorld(Point2d<int> p, FlightData flight, int tileX, int tileY, int zoom)
+        {
+            ComputeTileWorldCorners(flight, tileX, tileY, zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE);
+            float u = p.X / OPENMAPTILE_EXTENT;
+            float v = p.Y / OPENMAPTILE_EXTENT;
+            Vector3 top = Vector3.Lerp(worldNW, worldNE, u);
+            Vector3 bottom = Vector3.Lerp(worldSW, worldSE, u);
+            Vector3 world = Vector3.Lerp(top, bottom, v);
+            return new Vector2(world.x, world.z);
         }
 
         private void GenerateBuilding(BuildingFeature building, TileDefinition tile, FlightData flight)

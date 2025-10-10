@@ -407,7 +407,7 @@ namespace FlightReLive.Core.Pipeline.API
             if (await CacheManager.OpenMapTileDataExistsAsync(zoom, x, y))
             {
                 List<OpenMapTileFeature> cached = await CacheManager.LoadOpenMapTileDataAsync(zoom, x, y);
-                cached.ForEach(x => x.TileDefinition = tile);
+                cached.ForEach(f => f.TileDefinition = tile);
 
                 return new ResourceResult<List<OpenMapTileFeature>>(cached, TileResourceSource.Cache);
             }
@@ -431,7 +431,6 @@ namespace FlightReLive.Core.Pipeline.API
             using (token.Register(() => tcs.TrySetCanceled(token)))
             {
                 byte[] pbf = await tcs.Task;
-
                 if (pbf == null)
                 {
                     return null;
@@ -440,14 +439,14 @@ namespace FlightReLive.Core.Pipeline.API
                 VectorTileReader reader = new VectorTileReader(pbf);
                 List<OpenMapTileFeature> results = new List<OpenMapTileFeature>();
 
-                //Building
+                //Buildings
                 if (reader.LayerNames().Contains("building"))
                 {
                     VectorTileLayer layer = reader.GetLayer("building");
                     for (int i = 0; i < layer.FeatureCount(); i++)
                     {
                         VectorTileFeature feat = layer.GetFeature(i);
-                        Dictionary<string, object> props = feat.GetProperties();
+                        Dictionary<string, object> props = GetSafeProperties(feat);
 
                         float renderHeight = props.ContainsKey("render_height") ? Convert.ToSingle(props["render_height"]) : 10f;
                         float renderMinHeight = props.ContainsKey("render_min_height") ? Convert.ToSingle(props["render_min_height"]) : 0f;
@@ -457,7 +456,7 @@ namespace FlightReLive.Core.Pipeline.API
                             Geometry = ConvertGeometry(feat),
                             RenderHeight = renderHeight,
                             RenderMinHeight = renderMinHeight,
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Building,
                             TileDefinition = tile
                         });
                     }
@@ -475,7 +474,7 @@ namespace FlightReLive.Core.Pipeline.API
                         results.Add(new LanduseFeature
                         {
                             Geometry = ConvertGeometry(feat),
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Landuse,
                             Class = props.TryGetValue("class", out var v) ? v?.ToString() : null,
                             TileDefinition = tile
                         });
@@ -494,7 +493,7 @@ namespace FlightReLive.Core.Pipeline.API
                         results.Add(new LandcoverFeature
                         {
                             Geometry = ConvertGeometry(feat),
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Landcover,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
                             Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null,
                             TileDefinition = tile
@@ -514,9 +513,49 @@ namespace FlightReLive.Core.Pipeline.API
                         results.Add(new WaterFeature
                         {
                             Geometry = ConvertGeometry(feat),
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Water,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
                             IsIntermittent = props.TryGetValue("intermittent", out var it) && it?.ToString() == "1",
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Waterway
+                if (reader.LayerNames().Contains("waterway"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("waterway");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new WaterwayFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.Waterway,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            IsIntermittent = props.TryGetValue("intermittent", out var it) && it?.ToString() == "1",
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Water name
+                if (reader.LayerNames().Contains("water_name"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("water_name");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new WaterNameFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.WaterName,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
                             TileDefinition = tile
                         });
                     }
@@ -534,7 +573,7 @@ namespace FlightReLive.Core.Pipeline.API
                         results.Add(new ParkFeature
                         {
                             Geometry = ConvertGeometry(feat),
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Park,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
                             Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null,
                             TileDefinition = tile
@@ -542,7 +581,7 @@ namespace FlightReLive.Core.Pipeline.API
                     }
                 }
 
-                //Aeroway 
+                //Aeroway
                 if (reader.LayerNames().Contains("aeroway"))
                 {
                     VectorTileLayer layer = reader.GetLayer("aeroway");
@@ -554,17 +593,234 @@ namespace FlightReLive.Core.Pipeline.API
                         results.Add(new AerowayFeature
                         {
                             Geometry = ConvertGeometry(feat),
-                            LayerName = layer.Name,
+                            FeatureType = OpenMapTileFeatureType.Aeroway,
                             Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
                             TileDefinition = tile
                         });
                     }
                 }
 
-                await CacheManager.SaveOpenMapTileDataAsync(results, zoom, x, y);
+                //Aerodrome label
+                if (reader.LayerNames().Contains("aerodrome_label"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("aerodrome_label");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
 
+                        results.Add(new AerodromeLabelFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.AerodromeLabel,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Iata = props.TryGetValue("iata", out var iata) ? iata?.ToString() : null,
+                            Icao = props.TryGetValue("icao", out var icao) ? icao?.ToString() : null,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //POI
+                if (reader.LayerNames().Contains("poi"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("poi");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new POIFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.POI,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null,
+                            Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Place
+                if (reader.LayerNames().Contains("place"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("place");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new PlaceFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.Place,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            Rank = props.TryGetValue("rank", out var r) ? Convert.ToInt32(r) : 0,
+                            Population = props.TryGetValue("population", out var p) ? Convert.ToInt32(p) : 0,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Mountain peak
+                if (reader.LayerNames().Contains("mountain_peak"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("mountain_peak");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new MountainPeakFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.MountainPeak,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Elevation = props.TryGetValue("ele", out var e) ? Convert.ToSingle(e) : 0f,
+                            Rank = props.TryGetValue("rank", out var r) ? r?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Housenumber
+                if (reader.LayerNames().Contains("housenumber"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("housenumber");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new HouseNumberFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.HouseNumber,
+                            Housenumber = props.TryGetValue("housenumber", out var h) ? h?.ToString() : null,
+                            Street = props.TryGetValue("street", out var s) ? s?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Transportation
+                if (reader.LayerNames().Contains("transportation"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("transportation");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new TransportationFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.Transportation,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            Subclass = props.TryGetValue("subclass", out var s) ? s?.ToString() : null,
+                            IsBridge = props.TryGetValue("brunnel", out var br) && br?.ToString() == "bridge",
+                            IsTunnel = props.TryGetValue("brunnel", out var tu) && tu?.ToString() == "tunnel",
+                            Layer = props.TryGetValue("layer", out var l) ? Convert.ToInt32(l) : 0,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Transportation name
+                if (reader.LayerNames().Contains("transportation_name"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("transportation_name");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new TransportationNameFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.TransportationName,
+                            Name = props.TryGetValue("name", out var n) ? n?.ToString() : null,
+                            Ref = props.TryGetValue("ref", out var r) ? r?.ToString() : null,
+                            Class = props.TryGetValue("class", out var c) ? c?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                //Boundary
+                if (reader.LayerNames().Contains("boundary"))
+                {
+                    VectorTileLayer layer = reader.GetLayer("boundary");
+                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    {
+                        VectorTileFeature feat = layer.GetFeature(i);
+                        Dictionary<string, object> props = feat.GetProperties();
+
+                        results.Add(new BoundaryFeature
+                        {
+                            Geometry = ConvertGeometry(feat),
+                            FeatureType = OpenMapTileFeatureType.Boundary,
+                            AdminLevel = props.TryGetValue("admin_level", out var a) ? a?.ToString() : null,
+                            Maritime = props.TryGetValue("maritime", out var m) ? m?.ToString() : null,
+                            TileDefinition = tile
+                        });
+                    }
+                }
+
+                await CacheManager.SaveOpenMapTileDataAsync(results, zoom, x, y);
                 return new ResourceResult<List<OpenMapTileFeature>>(results, TileResourceSource.Download);
             }
+        }
+
+        /// <summary>
+        /// Safe manual version of GetProperties() that rebuilds feature attributes
+        /// while ignoring duplicate keys that crash VexTile's default parser.
+        /// </summary>
+        private static Dictionary<string, object> GetSafeProperties(VectorTileFeature feature)
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+
+            try
+            {
+                VectorTileLayer layer = feature.Layer;
+                if (layer == null)
+                {
+                    return result;
+                }
+
+                //Each feature contains a list of tag index pairs (key,value) which reference the layer's "keys" and "values" lists.
+                List<string> keys = layer.Keys;
+                List<object> values = layer.Values;
+
+                for (int i = 0; i < feature.Tags.Count; i += 2)
+                {
+                    int keyIndex = feature.Tags[i];
+                    int valueIndex = feature.Tags[i + 1];
+
+                    if (keyIndex < 0 || keyIndex >= keys.Count || valueIndex < 0 || valueIndex >= values.Count)
+                    {
+                        continue;
+                    }
+
+                    string key = keys[keyIndex];
+                    object value = values[valueIndex];
+
+                    if (!result.ContainsKey(key))
+                    {
+                        result[key] = value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[OpenMapTile] Failed to read feature properties: {ex.Message}");
+            }
+
+            return result;
         }
 
         /// <summary>

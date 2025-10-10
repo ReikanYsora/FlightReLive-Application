@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.Building;
+﻿using FlightReLive.Core.OpenVectorTile;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
@@ -840,7 +840,7 @@ namespace FlightReLive.Core.Environment
             layout.FramedText("Buildings");
             layout.Separator();
 
-            BuildingManager.Instance.DisplayBuildingsSettings();
+            OpenVectorTileManager.Instance.DisplayBuildingsSettings();
 
             layout.Separator();
             layout.FramedText("POI");

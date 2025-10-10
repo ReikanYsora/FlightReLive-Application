@@ -1,5 +1,4 @@
-﻿using FlightReLive.Core.Compass;
-using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.POI;
@@ -184,7 +183,7 @@ namespace FlightReLive.Core.Cameras
             {
                 if (_pivotPointPOI != null)
                 {
-                    POIManager.Instance.Delete(_pivotPointPOI);
+                    POIManager.Instance.DeleteFixedPOI(_pivotPointPOI);
                 }
 
                 UpdateCameraTransformTracking();
@@ -337,14 +336,14 @@ namespace FlightReLive.Core.Cameras
 
                         if (_pivotPointPOI != null)
                         {
-                            POIManager.Instance.Delete(_pivotPointPOI);
+                            POIManager.Instance.DeleteFixedPOI(_pivotPointPOI);
                         }
                         
                         if (LoadingManager.Instance.CurrentFlightData != null)
                         {
                             string poiText = string.Empty;
                             FlightGPSData data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
-                            _pivotPointPOI = POIManager.Instance.CreatePOIText($"{data.Latitude}, {data.Longitude}", newPivot, Color.blueViolet, 50f);
+                            _pivotPointPOI = POIManager.Instance.AddFixedPOI($"{data.Latitude}, {data.Longitude}", newPivot, Color.blueViolet, 50f);
                         }
                     }
                 }

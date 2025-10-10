@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.Building;
+﻿using FlightReLive.Core.OpenVectorTile;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Paths;
@@ -183,12 +183,12 @@ namespace FlightReLive.Core.Loading
                     //We need to call this method only when BuildTileLookup and InitializeAltitude has been executed
                     foreach (TileDefinition tileDefinition in loadedTiles)
                     {
-                        BuildingManager.Instance.LoadTile(tileDefinition, flightData);
+                        OpenVectorTileManager.Instance.LoadTile(tileDefinition, flightData);
                     }
                 }
                 
                 ProceduralTerrainManager.Instance.Load(flightData);
-                BuildingManager.Instance.Load(flightData);
+                OpenVectorTileManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
                 FlightChartsManager.Instance.Load(flightData);
                 PathManager.Instance.Load(flightData);
@@ -341,7 +341,7 @@ namespace FlightReLive.Core.Loading
                 ProceduralTerrainManager.Instance.Unload(),
                 PathManager.Instance.Unload(),
                 EnvironmentManager.Instance.Unload(),
-                BuildingManager.Instance.Unload(),
+                OpenVectorTileManager.Instance.Unload(),
                 POIManager.Instance.Unload()
             };
 

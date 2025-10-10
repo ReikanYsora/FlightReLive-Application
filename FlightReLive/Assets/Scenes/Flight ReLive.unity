@@ -494,6 +494,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 289568083}
+  - component: {fileID: 289568086}
   - component: {fileID: 289568084}
   - component: {fileID: 289568085}
   m_Layer: 0
@@ -560,6 +561,20 @@ MonoBehaviour:
   _followPosition: {fileID: 283911657}
   _minFOVSerialized: 30
   _maxFOVSerialized: 90
+--- !u!114 &289568086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 289568082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca47df7bf7273b44b925ccb3a93e0f92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Cameras.CameraManager
+  ReLiveCamera: {fileID: 796242730}
+  POVCamera: {fileID: 137108794}
 --- !u!1 &311396843
 GameObject:
   m_ObjectHideFlags: 0
@@ -1064,7 +1079,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1160b43617fb1d4a88fd39968a53143, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.POI.POIManager
-  _mainCamera: {fileID: 796242730}
+  _poiMaxDistance: 250
+  _poiMaxViewAngle: 75
 --- !u!114 &892340462
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1902,9 +1918,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1618281188}
-  - component: {fileID: 1618281190}
+  - component: {fileID: 1618281189}
   m_Layer: 0
-  m_Name: BuildingManager
+  m_Name: OpenVectorTileManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1925,7 +1941,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1896134859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1618281190
+--- !u!114 &1618281189
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1934,9 +1950,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1618281187}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 126c05bd4818b094690c736a2650cba4, type: 3}
+  m_Script: {fileID: 11500000, guid: e4be7c840ae0fd74ca14a4c68a8843a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BuildingManager
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.OpenVectorTile.OpenVectorTileManager
   _buildingMaterial: {fileID: 2100000, guid: 5cd7825245fbecd438bbd7ca79367f6c, type: 2}
 --- !u!1 &1698214559
 GameObject:
@@ -2145,11 +2161,11 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1618281188}
   - {fileID: 289568083}
   - {fileID: 1583283020}
   - {fileID: 1092402792}
   - {fileID: 311396844}
+  - {fileID: 1618281188}
   - {fileID: 1289900097}
   - {fileID: 892340460}
   - {fileID: 739676617}

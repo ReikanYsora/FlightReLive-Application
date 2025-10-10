@@ -120,7 +120,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudNearPlane: 1177.7533
+    - _CloudNearPlane: 1180.7942
     - _Cull: 2
     - _Cutoff: 0.5
     - _DensityMultiplier: 0.32000002
@@ -173,9 +173,9 @@ Material:
     - _SunSize: 0.04
     - _SunSizeConvergence: 5
     - _Surface: 0
-    - _VerticalErosionWindDisplacement: -0.25203985
+    - _VerticalErosionWindDisplacement: -472.0878
     - _VerticalShapeNoiseOffset: 0
-    - _VerticalShapeWindDisplacement: -252.03983
+    - _VerticalShapeWindDisplacement: -71887.24
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

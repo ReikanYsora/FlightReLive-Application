@@ -160,5 +160,11 @@ namespace FlightReLive.UI
 
         protected static string _SunClouds = "\uE098";
         public static string SunClouds { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SunClouds; }
+
+	protected static string _Sunrise = "\uE099";
+	public static string Sunrise { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunrise; }
+
+	protected static string _Sunset = "\uE09A";
+	public static string Sunset { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunset; }
     }
 }

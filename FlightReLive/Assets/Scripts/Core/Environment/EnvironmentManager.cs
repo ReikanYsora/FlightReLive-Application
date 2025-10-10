@@ -17,6 +17,10 @@ namespace FlightReLive.Core.Environment
     /// </summary>
     public class EnvironmentManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const double ENVIRONMENT_UPDATE_INTERVAL = 1.0;
+        #endregion
+
         #region ATTRIBUTES
         [SerializeField] private Light _mainLight;
 
@@ -45,16 +49,26 @@ namespace FlightReLive.Core.Environment
 
         //Baseline values
         private float _dayTime;
+        private DateTime _originalTime;
         private DateTime _originalTimeUTC;
         private DateTime _dateTimeUTC;
         private double _latitude;
         private double _longitude;
         private float _baseContrast;
         private float _baseSaturation;
+        private double _lastEnvUpdateTime;
         #endregion
 
         #region PROPERTIES
         internal static EnvironmentManager Instance { get; private set; }
+
+        internal DateTime OriginalTime
+        {
+            get
+            {
+                return _originalTime;
+            }
+        }
 
         internal DateTime OriginalTimeUTC
         {
@@ -221,6 +235,7 @@ namespace FlightReLive.Core.Environment
                 //Saved mandatory attributes
                 _dateTimeUTC = flightUtc;
                 _originalTimeUTC = flightUtc;
+                _originalTime = flightData.Date;
                 _latitude = flightData.GPSOrigin.Latitude;
                 _longitude = flightData.GPSOrigin.Longitude;
                 _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
@@ -233,6 +248,12 @@ namespace FlightReLive.Core.Environment
 
                 //Apply environment base on current flightdata and datetime
                 ApplyEnvironment(_dateTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+
+                if (TimeBar.TimeBarManager.Instance != null)
+                {
+                    TimeBar.TimeBarManager.Instance.OnProgressChanged -= OnTimeBarProgressChanged;
+                    TimeBar.TimeBarManager.Instance.OnProgressChanged += OnTimeBarProgressChanged;
+                }
             });
         }
 
@@ -245,10 +266,16 @@ namespace FlightReLive.Core.Environment
             {
                 _dateTimeUTC = DateTime.MinValue;
                 _originalTimeUTC = DateTime.MinValue;
+                _originalTime = DateTime.MinValue;
                 _latitude = 0;
                 _longitude = 0;
                 _dayTime = 0f;
                 _sunTimes = new SunTimes();
+
+                if (TimeBar.TimeBarManager.Instance != null)
+                {
+                    TimeBar.TimeBarManager.Instance.OnProgressChanged -= OnTimeBarProgressChanged;
+                }
 
                 UninitializeEnvironment();
             });
@@ -558,6 +585,27 @@ namespace FlightReLive.Core.Environment
         internal void ApplyTimeOfDay(float ratio)
         {
             ApplyTimeOfDay(_dateTimeUTC, _latitude, _longitude, ratio);
+        }
+
+        /// <summary>
+        /// Called when TimeBar playback progress changes (throttled to ~1Hz).
+        /// </summary>
+        private void OnTimeBarProgressChanged(float progress, int index, FlightDataPoint point)
+        {
+            if (!_environmentLoaded || _originalTimeUTC == DateTime.MinValue)
+            {
+                return;
+            }
+
+            double now = Time.timeAsDouble;
+            if (now - _lastEnvUpdateTime < ENVIRONMENT_UPDATE_INTERVAL)
+            {
+                return;
+            }
+
+            _lastEnvUpdateTime = now;
+            DateTime currentUtc = GetDateTimeFromNormalized(progress, _originalTimeUTC);
+            ApplyEnvironment(currentUtc, _latitude, _longitude);
         }
 
         /// <summary>

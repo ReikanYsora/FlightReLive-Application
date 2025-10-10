@@ -3,9 +3,12 @@ using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -17,6 +20,13 @@ namespace FlightReLive.Core.Pipeline.API
 {
     internal static class MapTilerAPIHelper
     {
+        #region ATTRIBUTES
+        private static readonly HashSet<string> _supportedLanguages = new HashSet<string>
+        {
+            "fr", "en", "de", "it", "es", "ja", "zh", "pt", "ru"
+        };
+        #endregion
+
         #region CONSTANTS
         private const int TILE_SIZE = 512;
         #endregion
@@ -430,88 +440,39 @@ namespace FlightReLive.Core.Pipeline.API
 
             using (token.Register(() => tcs.TrySetCanceled(token)))
             {
-                byte[] pbf = await tcs.Task;
-                if (pbf == null)
-                {
-                    return null;
-                }
-
-                VectorTileReader reader = new VectorTileReader(pbf);
                 List<BuildingFeature> results = new List<BuildingFeature>();
+                byte[] pbf = await tcs.Task;
 
-                //Buildings
-                if (reader.LayerNames().Contains("building"))
+                if (pbf != null)
                 {
-                    VectorTileLayer layer = reader.GetLayer("building");
+                    VectorTileReader reader = new VectorTileReader(pbf);
 
-                    for (int i = 0; i < layer.FeatureCount(); i++)
+                    //Buildings
+                    if (reader.LayerNames().Contains("building"))
                     {
-                        VectorTileFeature feat = layer.GetFeature(i);
-                        Dictionary<string, object> props = GetSafeProperties(feat);
+                        VectorTileLayer layer = reader.GetLayer("building");
 
-                        float renderHeight = props.ContainsKey("render_height") ? Convert.ToSingle(props["render_height"]) : 10f;
-                        float renderMinHeight = props.ContainsKey("render_min_height") ? Convert.ToSingle(props["render_min_height"]) : 0f;
-
-                        results.Add(new BuildingFeature
+                        for (int i = 0; i < layer.FeatureCount(); i++)
                         {
-                            Geometry = ConvertGeometry(feat),
-                            RenderHeight = renderHeight,
-                            RenderMinHeight = renderMinHeight,
-                            TileDefinition = tile
-                        });
+                            VectorTileFeature feat = layer.GetFeature(i);
+                            Dictionary<string, object> props = feat.GetProperties();
+                            float renderHeight = props.ContainsKey("render_height") ? Convert.ToSingle(props["render_height"]) : 10f;
+                            float renderMinHeight = props.ContainsKey("render_min_height") ? Convert.ToSingle(props["render_min_height"]) : 0f;
+
+                            results.Add(new BuildingFeature
+                            {
+                                Geometry = ConvertGeometry(feat),
+                                RenderHeight = renderHeight,
+                                RenderMinHeight = renderMinHeight,
+                                TileDefinition = tile
+                            });
+                        }
                     }
                 }
 
                 await CacheManager.SaveBuildingAsync(results, zoom, x, y);
                 return new ResourceResult<List<BuildingFeature>>(results, TileResourceSource.Download);
             }
-        }
-
-        /// <summary>
-        /// Safe manual version of GetProperties() that rebuilds feature attributes
-        /// while ignoring duplicate keys that crash VexTile's default parser.
-        /// </summary>
-        private static Dictionary<string, object> GetSafeProperties(VectorTileFeature feature)
-        {
-            Dictionary<string, object> result = new Dictionary<string, object>();
-
-            try
-            {
-                VectorTileLayer layer = feature.Layer;
-                if (layer == null)
-                {
-                    return result;
-                }
-
-                //Each feature contains a list of tag index pairs (key,value) which reference the layer's "keys" and "values" lists.
-                List<string> keys = layer.Keys;
-                List<object> values = layer.Values;
-
-                for (int i = 0; i < feature.Tags.Count; i += 2)
-                {
-                    int keyIndex = feature.Tags[i];
-                    int valueIndex = feature.Tags[i + 1];
-
-                    if (keyIndex < 0 || keyIndex >= keys.Count || valueIndex < 0 || valueIndex >= values.Count)
-                    {
-                        continue;
-                    }
-
-                    string key = keys[keyIndex];
-                    object value = values[valueIndex];
-
-                    if (!result.ContainsKey(key))
-                    {
-                        result[key] = value;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[OpenMapTile] Failed to read feature properties: {ex.Message}");
-            }
-
-            return result;
         }
 
         /// <summary>
@@ -525,7 +486,140 @@ namespace FlightReLive.Core.Pipeline.API
         }
         #endregion
 
+        #region GEODATA
+        private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+        {
+            string lang = GetPreferredLanguage();
+
+            if (await CacheManager.GeoTileDataExistsAsync(tile.X, tile.Y, lang))
+            {
+                return await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+            }
+
+            FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
+
+            string url = string.Format(
+                CultureInfo.InvariantCulture,
+                "https://api.maptiler.com/geocoding/{0},{1}.json?key={2}&bbox={3},{4},{5},{6}&language={7}",
+                center.Longitude,
+                center.Latitude,
+                SettingsManager.CurrentSettings.MapTilerAPIKey,
+                tile.BoundingBox.MinLongitude,
+                tile.BoundingBox.MinLatitude,
+                tile.BoundingBox.MaxLongitude,
+                tile.BoundingBox.MaxLatitude,
+                lang
+            );
+
+            TaskCompletionSource<string> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            DownloadManager.EnqueueDownload(
+                url,
+                data =>
+                {
+                    if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
+                    tcs.TrySetResult(Encoding.UTF8.GetString(data));
+                },
+                error => tcs.TrySetResult(null),
+                (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
+            );
+
+            using (token.Register(() => tcs.TrySetCanceled(token)))
+            {
+                string json;
+                try
+                {
+                    json = await tcs.Task.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return null;
+                }
+
+                if (string.IsNullOrEmpty(json))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    FeatureCollection raw = JsonConvert.DeserializeObject<FeatureCollection>(json);
+                    FeatureCollection filtered = FilterByBoundingBox(raw, tile.BoundingBox);
+
+                    if (filtered != null && filtered.features != null && filtered.features.Count > 0)
+                    {
+                        await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
+                    }
+
+                    return filtered;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"Failed to parse GeoData for tile {tile.X}_{tile.Y}_{lang} : {ex.Message}");
+                    return null;
+                }
+            }
+        }
+
+        private static FeatureCollection FilterByBoundingBox(FeatureCollection collection, GPSBoundingBox bbox)
+        {
+            if (collection == null || collection.features == null)
+            {
+                return collection;
+            }
+
+            collection.features = collection.features
+                .Where(f =>
+                {
+                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2) { return false; }
+
+                    double lon = f.geometry.coordinates[0];
+                    double lat = f.geometry.coordinates[1];
+                    return lon >= bbox.MinLongitude && lon <= bbox.MaxLongitude && lat >= bbox.MinLatitude && lat <= bbox.MaxLatitude;
+                })
+                .ToList();
+
+            return collection;
+        }
+        #endregion
+
         #region COMMONS
+        private static string GetPreferredLanguage()
+        {
+            SystemLanguage lang = Application.systemLanguage;
+            string isoLang = ConvertToIsoCode(lang);
+
+            return _supportedLanguages.Contains(isoLang) ? isoLang : "en";
+        }
+
+        private static string ConvertToIsoCode(SystemLanguage lang)
+        {
+            switch (lang)
+            {
+                default:
+                case SystemLanguage.English:
+                    return "en";
+                case SystemLanguage.French:
+                    return "fr";
+                case SystemLanguage.German:
+                    return "de";
+                case SystemLanguage.Italian:
+                    return "it";
+                case SystemLanguage.Spanish:
+                    return "es";
+                case SystemLanguage.Japanese:
+                    return "ja";
+                case SystemLanguage.ChineseSimplified:
+                case SystemLanguage.ChineseTraditional:
+                case SystemLanguage.Chinese:
+                    return "zh";
+                case SystemLanguage.Portuguese:
+                    return "pt";
+                case SystemLanguage.Russian:
+                    return "ru";
+            }
+        }
+
         private static Texture2D CombinePNGTiles(Dictionary<(int, int), Texture2D> tiles)
         {
             int minX = tiles.Keys.Min(k => k.Item1);

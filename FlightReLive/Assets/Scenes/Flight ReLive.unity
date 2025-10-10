@@ -533,7 +533,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e0a97e5b4037dd4d817fd7238326888, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _targetCamera: {fileID: 796242730}
   _distance: 20
   _droneAnchorTransform: {fileID: 283911657}
   _mode: 1
@@ -541,7 +540,6 @@ MonoBehaviour:
   _maxYAngle: 85
   _minDistance: 3
   _maxDistance: 70
-  _panSensitivity: 1
   _collisionMask:
     serializedVersion: 2
     m_Bits: 23
@@ -1834,6 +1832,9 @@ MonoBehaviour:
   _rotatingPart: {fileID: 634706096}
   _cameraDistance: 2.8
   _pitchAngle: 50
+  _compassLayer:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &1595949481
 GameObject:
   m_ObjectHideFlags: 0

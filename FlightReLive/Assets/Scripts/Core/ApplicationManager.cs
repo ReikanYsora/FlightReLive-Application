@@ -64,7 +64,7 @@ namespace FlightReLive.Core
             SettingsManager.SaveCurrentVersion(Application.version);
 
             //Initialize cache
-            CacheManager.Initialize();
+            CacheManager.InitializeCache();
 
             //Initialize workspace cache
             CacheManager.InitializeWorkspaceCache();

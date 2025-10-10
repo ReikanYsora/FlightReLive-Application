@@ -30,7 +30,7 @@ namespace FlightReLive.Core.Cache
         /// <summary>
         /// Initialize cache folder
         /// </summary>
-        internal static void Initialize()
+        internal static void InitializeCache()
         {
             _cacheFolder = Path.Combine(Application.persistentDataPath, CACHE_FOLDER_NAME);
 
@@ -56,6 +56,9 @@ namespace FlightReLive.Core.Cache
         /// <summary>
         /// Clear cache
         /// </summary>
+        /// <summary>
+        /// Clear cache except WorkspaceCache folder
+        /// </summary>
         internal static void ClearCache()
         {
             if (string.IsNullOrEmpty(_cacheFolder))
@@ -67,12 +70,29 @@ namespace FlightReLive.Core.Cache
             {
                 if (Directory.Exists(_cacheFolder))
                 {
-                    Directory.Delete(_cacheFolder, true);
+                    //We don't want to delete WorkspaceCache folder
+                    foreach (string dir in Directory.GetDirectories(_cacheFolder))
+                    {
+                        if (!dir.Equals(_flightsCacheFolder, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Directory.Delete(dir, true);
+                        }
+                    }
+
+                    foreach (string file in Directory.GetFiles(_cacheFolder))
+                    {
+                        File.Delete(file);
+                    }
+                }
+                else
+                {
+                    Directory.CreateDirectory(_cacheFolder);
                 }
 
-                Initialize();
+                InitializeCache();
+                InitializeWorkspaceCache();
 
-                Fugui.Notify("Successful operation", "The local cache has been cleared successfully.", StateType.Info, 3f);
+                Fugui.Notify("Successful operation", "The local cache has been cleared successfully (workspace preserved).", StateType.Info, 3f);
             }
             catch (Exception ex)
             {
@@ -464,7 +484,7 @@ namespace FlightReLive.Core.Cache
 
         internal static async Task SaveBuildingAsync(List<BuildingFeature> features, int zoom, int tileX, int tileY)
         {
-            if (features == null || features.Count == 0)
+            if (features == null)
             {
                 return;
             }

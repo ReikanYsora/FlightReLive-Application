@@ -1,4 +1,5 @@
 using FlightReLive.Core.Compass;
+using FlightReLive.Core.Loading;
 using Fu;
 using ImGuiNET;
 using System;
@@ -45,7 +46,7 @@ namespace FlightReLive.Core.UI.Overlays
 
         private void DisplayCompassOverlayUI()
         {
-            if (CompassManager.Instance == null || CompassManager.Instance.CompassTexture == null || _syncCamera == null)
+            if (CompassManager.Instance == null || CompassManager.Instance.CompassTexture == null || _syncCamera == null || !LoadingManager.Instance.IsLoaded)
             {
                 return;
             }
@@ -60,7 +61,6 @@ namespace FlightReLive.Core.UI.Overlays
             IntPtr textureId = Fugui.CurrentContext.TextureManager.GetTextureId(CompassManager.Instance.CompassTexture);
             drawList.AddImage(textureId, globalMin, globalMax, new Vector2(0, 0), new Vector2(1, 1), ImGui.ColorConvertFloat4ToU32(Vector4.one));
         }
-
         #endregion
     }
 }

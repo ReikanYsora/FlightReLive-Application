@@ -147,7 +147,7 @@ namespace FlightReLive.UI.Overlays
                     //Hover rectangle
                     drawList.AddRectFilled(new Vector2(startX, barPos.y), new Vector2(endX, barEnd.y), hoverColor, 0f);
 
-                    // Offset text
+                    //Offset text
                     double offsetSeconds = (timeBar.HoverRatio - ratio) * timeBar.Duration;
                     TimeSpan offsetSpan = TimeSpan.FromSeconds(Math.Abs(offsetSeconds));
                     string offsetText = (offsetSeconds >= 0 ? "+" : "-") + offsetSpan.ToString(@"mm\:ss");

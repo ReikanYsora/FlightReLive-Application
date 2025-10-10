@@ -55,7 +55,7 @@ namespace FlightReLive.Core.TimeBar
 
         internal double Length => (_currentFlightData == null || Duration <= 0) ? 0f : Duration;
 
-        internal float HoverRatio 
+        internal float HoverRatio
         {
             get
             {
@@ -92,12 +92,12 @@ namespace FlightReLive.Core.TimeBar
         internal PlaybackSpeed Speed
         {
             get
-            { 
+            {
                 return _playbackSpeed;
             }
             set
-            { 
-                _playbackSpeed = value; 
+            {
+                _playbackSpeed = value;
             }
         }
 

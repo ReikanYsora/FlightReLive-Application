@@ -1,6 +1,8 @@
+using FlightReLive.Core.Cameras;
 using FlightReLive.Core.FlightDefinition;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
+using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
 using FlightReLive.UI.FlightCharts;
@@ -160,9 +162,86 @@ namespace FlightReLive.UI.Inspector
 
                     Fugui.PopFont();
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                layout.Collapsable(FlightReLiveIcons.GPSMarker + "  Points of Interest##collapsable", () =>
+                {
+                    Fugui.PushFont(14, FontType.Regular);
+
+                    using (FuGrid grid = new FuGrid("poiDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        // On récupère la liste des POI autour de la caméra
+                        List<POIEntity> nearbyPOIs = POIManager.Instance.GetPOIsWithinDistance(100f);
+
+                        if (nearbyPOIs.Count > 0)
+                        {
+                            int index = 0;
+                            foreach (POIEntity poi in nearbyPOIs)
+                            {
+                                if (poi == null)
+                                {
+                                    continue;
+                                }
+
+                                // Calcul de la distance caméra -> POI
+                                Camera cam = CameraManager.Instance.ReLiveCamera;
+
+                                if (cam == null)
+                                {
+                                    break;
+                                }
+
+                                float distance = cam != null ? Vector3.Distance(cam.transform.position, poi.transform.position) : 0f;
+
+                                //Convert distance to user unit system
+                                string formattedDistance = FormatDistance(distance);
+
+                                //Formatted GPS position
+                                FlightGPSData gpsData = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(poi.transform.position);
+                                string formattedPosition = $"{gpsData.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {gpsData.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
+
+                                //Name with distance
+                                string label = $"{poi.Text} ({formattedDistance})";
+
+                                //Unique ID for ImGui
+                                string uniqueId = $"POI_{index++}";
+
+                                Draw(window, uniqueId, grid, layout, FlightReLiveIcons.GPSMarker,
+                                    label,
+                                    "Point of interest position",
+                                    FlightReLiveIcons.Maps,
+                                    () =>
+                                    {
+                                        OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)gpsData.Latitude, (float)gpsData.Longitude));
+                                    },
+                                    "Display on OpenStreetMap");
+                            }
+                        }
+                    }
+
+                    Fugui.PopFont();
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
+
             }
 
             ImGui.EndChild();
+        }
+
+        /// <summary>
+        /// Format a distance value according to the current unit system.
+        /// </summary>
+        private static string FormatDistance(float distanceMeters)
+        {
+            switch (SettingsManager.CurrentSettings.UnitSystemType)
+            {
+                case UnitSystemType.Imperial:
+                case UnitSystemType.Nautical:
+                    float feet = distanceMeters * 3.28084f;
+                    return $"{feet:F0} ft";
+                case UnitSystemType.Custom:
+                    return $"{distanceMeters:F1} m";
+                default: // Metric
+                    return $"{distanceMeters:F1} m";
+            }
         }
         #endregion
 
@@ -175,7 +254,7 @@ namespace FlightReLive.UI.Inspector
             Fugui.PopFont();
             grid.NextColumn();
 
-            layout.FramedText(value, 0.5f);
+            layout.FramedText(value, 0.5f, FuTextWrapping.Clip);
 
             if (layout.LastItemHovered)
             {

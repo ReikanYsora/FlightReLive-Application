@@ -61,6 +61,27 @@ namespace FlightReLive.Core.POI
         internal bool IsVisible { get; set; }
 
         internal bool IgnoreDistanceFade { get; set; }
+
+        internal Color Color
+        {
+            get
+            {
+                return _color;
+            }
+            set
+            {
+                _color = value;
+                ApplyColor(value);
+            }
+        }
+
+        internal string Text
+        {
+            get
+            {
+                return _text != null ? _text.text : string.Empty;
+            }
+        }
         #endregion
 
         #region UNITY METHODS
@@ -341,7 +362,7 @@ namespace FlightReLive.Core.POI
             _lineRenderer.SetPosition(1, end);
 
             float distance = Vector3.Distance(_targetCamera.transform.position, start);
-            float worldLineWidth = 2f * distance * Mathf.Tan(_targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height * 2f;
+            float worldLineWidth = 1.2f * distance * Mathf.Tan(_targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height * 2f;
 
             _lineRenderer.startWidth = worldLineWidth;
             _lineRenderer.endWidth = worldLineWidth;

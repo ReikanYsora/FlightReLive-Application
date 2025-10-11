@@ -13,35 +13,15 @@ using UnityEngine.Rendering.Universal;
 #endif
 class VolumetricCloudsEditor : VolumeComponentEditor
 {
-    // TODO: implement the missing features
-
     // General
     SerializedDataParameter m_Enable;
     SerializedDataParameter m_LocalClouds;
 
-    // Shape
-    //SerializedDataParameter m_CloudControl;
-
-    //SerializedDataParameter m_CloudSimpleMode;
+    // Shape (simple mode + curves)
     SerializedDataParameter m_CloudPreset;
     SerializedDataParameter m_DensityCurve;
     SerializedDataParameter m_ErosionCurve;
     SerializedDataParameter m_AmbientOcclusionCurve;
-
-    //SerializedDataParameter m_CumulusMap;
-    //SerializedDataParameter m_CumulusMapMultiplier;
-    //SerializedDataParameter m_AltoStratusMap;
-    //SerializedDataParameter m_AltoStratusMapMultiplier;
-    //SerializedDataParameter m_CumulonimbusMap;
-    //SerializedDataParameter m_CumulonimbusMapMultiplier;
-    //SerializedDataParameter m_RainMap;
-    //SerializedDataParameter m_CloudMapResolution;
-
-    //SerializedDataParameter m_CloudMap;
-    //SerializedDataParameter m_CloudLut;
-
-    //SerializedDataParameter m_CloudTiling;
-    //SerializedDataParameter m_CloudOffset;
 
     SerializedDataParameter m_BottomAltitude;
     SerializedDataParameter m_AltitudeRange;
@@ -49,18 +29,17 @@ class VolumetricCloudsEditor : VolumeComponentEditor
     SerializedDataParameter m_FadeInStart;
     SerializedDataParameter m_FadeInDistance;
 
-    // Shape
-    // General
+    // Shape params
     SerializedDataParameter m_DensityMultiplier;
-    // Shape
     SerializedDataParameter m_ShapeFactor;
     SerializedDataParameter m_ShapeScale;
     SerializedDataParameter m_ShapeOffset;
     SerializedDataParameter m_EarthCurvature;
+
     // Erosion
     SerializedDataParameter m_ErosionFactor;
     SerializedDataParameter m_ErosionScale;
-    //SerializedDataParameter m_ErosionNoiseType;
+
     // Micro-erosion
     SerializedDataParameter m_MicroErosion;
     SerializedDataParameter m_MicroErosionFactor;
@@ -77,7 +56,6 @@ class VolumetricCloudsEditor : VolumeComponentEditor
     // Wind
     SerializedDataParameter m_GlobalWindSpeed;
     SerializedDataParameter m_Orientation;
-    //SerializedDataParameter m_CloudMapSpeedMultiplier;
     SerializedDataParameter m_ShapeSpeedMultiplier;
     SerializedDataParameter m_ErosionSpeedMultiplier;
     SerializedDataParameter m_VerticalShapeWindSpeed;
@@ -86,7 +64,6 @@ class VolumetricCloudsEditor : VolumeComponentEditor
 
     // Quality
     SerializedDataParameter m_TemporalAccumulationFactor;
-    //SerializedDataParameter m_GhostingReduction;
     SerializedDataParameter m_PerceptualBlending;
     SerializedDataParameter m_NumPrimarySteps;
     SerializedDataParameter m_NumLightSteps;
@@ -118,6 +95,9 @@ class VolumetricCloudsEditor : VolumeComponentEditor
     const string k_FixButtonName = "Fix";
     const string k_EnableButtonName = "Enable";
 
+    // --- Reflection cache
+    private static FieldInfo RenderDataListFieldInfo;
+
     public override void OnEnable()
     {
         var o = new PropertyFetcher<VolumetricClouds>(serializedObject);
@@ -128,29 +108,11 @@ class VolumetricCloudsEditor : VolumeComponentEditor
         m_Enable = Unpack(o.Find(x => x.state));
         m_LocalClouds = Unpack(o.Find(x => x.localClouds));
 
-        // Shape
-        //m_CloudControl = Unpack(o.Find(x => x.cloudControl));
-
-        //m_CloudSimpleMode = Unpack(o.Find(x => x.cloudSimpleMode));
+        // Simple mode + curves
         m_CloudPreset = Unpack(o.Find(x => x.cloudPreset));
         m_DensityCurve = Unpack(o.Find(x => x.densityCurve));
         m_ErosionCurve = Unpack(o.Find(x => x.erosionCurve));
         m_AmbientOcclusionCurve = Unpack(o.Find(x => x.ambientOcclusionCurve));
-
-        //m_CumulusMap = Unpack(o.Find(x => x.cumulusMap));
-        //m_CumulusMapMultiplier = Unpack(o.Find(x => x.cumulusMapMultiplier));
-        //m_AltoStratusMap = Unpack(o.Find(x => x.altoStratusMap));
-        //m_AltoStratusMapMultiplier = Unpack(o.Find(x => x.altoStratusMapMultiplier));
-        //m_CumulonimbusMap = Unpack(o.Find(x => x.cumulonimbusMap));
-        //m_CumulonimbusMapMultiplier = Unpack(o.Find(x => x.cumulonimbusMapMultiplier));
-        //m_RainMap = Unpack(o.Find(x => x.rainMap));
-        //m_CloudMapResolution = Unpack(o.Find(x => x.cloudMapResolution));
-
-        //m_CloudMap = Unpack(o.Find(x => x.cloudMap));
-        //m_CloudLut = Unpack(o.Find(x => x.cloudLut));
-
-        //m_CloudTiling = Unpack(o.Find(x => x.cloudTiling));
-        //m_CloudOffset = Unpack(o.Find(x => x.cloudOffset));
 
         m_BottomAltitude = Unpack(o.Find(x => x.bottomAltitude));
         m_AltitudeRange = Unpack(o.Find(x => x.altitudeRange));
@@ -159,14 +121,16 @@ class VolumetricCloudsEditor : VolumeComponentEditor
         m_FadeInStart = Unpack(o.Find(x => x.fadeInStart));
         m_FadeInDistance = Unpack(o.Find(x => x.fadeInDistance));
 
+        // Shape
         m_DensityMultiplier = Unpack(o.Find(x => x.densityMultiplier));
         m_ShapeFactor = Unpack(o.Find(x => x.shapeFactor));
         m_ShapeScale = Unpack(o.Find(x => x.shapeScale));
         m_ShapeOffset = Unpack(o.Find(x => x.shapeOffset));
         m_EarthCurvature = Unpack(o.Find(x => x.earthCurvature));
+
+        // Erosion
         m_ErosionFactor = Unpack(o.Find(x => x.erosionFactor));
         m_ErosionScale = Unpack(o.Find(x => x.erosionScale));
-        //m_ErosionNoiseType = Unpack(o.Find(x => x.erosionNoiseType));
 
         // Micro-erosion
         m_MicroErosion = Unpack(o.Find(x => x.microErosion));
@@ -184,7 +148,6 @@ class VolumetricCloudsEditor : VolumeComponentEditor
         // Wind
         m_Orientation = Unpack(o.Find(x => x.globalOrientation));
         m_GlobalWindSpeed = Unpack(o.Find(x => x.globalSpeed));
-        //m_CloudMapSpeedMultiplier = Unpack(o.Find(x => x.cloudMapSpeedMultiplier));
         m_ShapeSpeedMultiplier = Unpack(o.Find(x => x.shapeSpeedMultiplier));
         m_ErosionSpeedMultiplier = Unpack(o.Find(x => x.erosionSpeedMultiplier));
         m_AltitudeDistortion = Unpack(o.Find(x => x.altitudeDistortion));
@@ -193,7 +156,6 @@ class VolumetricCloudsEditor : VolumeComponentEditor
 
         // Quality
         m_TemporalAccumulationFactor = Unpack(o.Find(x => x.temporalAccumulationFactor));
-        //m_GhostingReduction = Unpack(o.Find(x => x.ghostingReduction));
         m_PerceptualBlending = Unpack(o.Find(x => x.perceptualBlending));
         m_NumPrimarySteps = Unpack(o.Find(x => x.numPrimarySteps));
         m_NumLightSteps = Unpack(o.Find(x => x.numLightSteps));
@@ -210,14 +172,24 @@ class VolumetricCloudsEditor : VolumeComponentEditor
 
     public override void OnInspectorGUI()
     {
-        var clouds = GetRendererFeature(k_VolumetricCloudsRendererFeature) as VolumetricCloudsURP;
-        if (clouds == null)
+        // --- Secure feature lookup and cast
+        var feature = GetRendererFeature(k_VolumetricCloudsRendererFeature);
+        if (feature == null)
         {
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(k_NoRendererFeatureMessage, MessageType.Error, wide: true);
             return;
         }
-        else if (!clouds.isActive)
+
+        var clouds = feature as VolumetricCloudsURP;
+        if (clouds == null)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox("The VolumetricCloudsURP renderer feature exists but is not of the expected type.", MessageType.Warning, wide: true);
+            return;
+        }
+
+        if (!clouds.isActive)
         {
             EditorGUILayout.Space();
             CoreEditorUtils.DrawFixMeBox(k_RendererFeatureOffMessage, MessageType.Warning, k_FixButtonName, () =>
@@ -227,16 +199,32 @@ class VolumetricCloudsEditor : VolumeComponentEditor
             });
             EditorGUILayout.Space();
         }
-        else if (clouds.AmbientUpdateMode == VolumetricCloudsURP.CloudsAmbientMode.Dynamic && !Shader.IsKeywordEnabled(k_VISUAL_ENVIRONMENT_DYNAMIC_SKY))
+        else
         {
-            if (RenderSettings.skybox != null && RenderSettings.skybox.GetPassName(0) == k_UniversalForward)
+            if (clouds.AmbientUpdateMode == VolumetricCloudsURP.CloudsAmbientMode.Dynamic && !Shader.IsKeywordEnabled(k_VISUAL_ENVIRONMENT_DYNAMIC_SKY))
             {
-                EditorGUILayout.HelpBox(k_CustomSkyShaderGraphMessage, MessageType.Info, wide: true);
-
+                var sb = RenderSettings.skybox;
+                if (sb != null)
+                {
+                    // GetPassName(0) can throw on some shaders — guard it
+                    string pass0 = string.Empty;
+                    try { pass0 = sb.GetPassName(0); } catch { /* ignore */ }
+                    if (pass0 == k_UniversalForward)
+                    {
+                        EditorGUILayout.HelpBox(k_CustomSkyShaderGraphMessage, MessageType.Info, wide: true);
+                    }
+                }
             }
         }
 
-        bool showDebuggerMessage = DebugManager.instance.isAnyDebugUIActive && !clouds.RenderingDebugger;
+        bool anyDebugUI = false;
+        try
+        {
+            anyDebugUI = DebugManager.instance != null && DebugManager.instance.isAnyDebugUIActive;
+        }
+        catch { /* safety */ }
+
+        bool showDebuggerMessage = anyDebugUI && !clouds.RenderingDebugger;
         bool enableClouds = m_Enable.value.boolValue && m_Enable.overrideState.boolValue;
 
         if (clouds.isActive && enableClouds && showDebuggerMessage)
@@ -252,7 +240,7 @@ class VolumetricCloudsEditor : VolumeComponentEditor
 
         PropertyField(m_Enable);
 
-    #if URP_PBSKY
+#if URP_PBSKY
         var stack = VolumeManager.instance.stack;
         VisualEnvironment visualEnvVolume = stack.GetComponent<VisualEnvironment>();
         bool hasVisualEnvVolume = visualEnvVolume != null && visualEnvVolume.IsActive() && visualEnvVolume.skyType.value != 0;
@@ -262,21 +250,19 @@ class VolumetricCloudsEditor : VolumeComponentEditor
         {
             PropertyField(m_LocalClouds);
         }
-    #else
+#else
         bool hasVisualEnvVolume = false;
         PropertyField(m_LocalClouds);
-    #endif
+#endif
 
         bool hasCloudMap = CloudsShapeUI(hasVisualEnvVolume);
 
-        //DrawHeader("Wind");
+        // --- Wind
         PropertyField(m_GlobalWindSpeed);
         if (showAdditionalProperties)
         {
             using (new IndentLevelScope())
             {
-                //if (hasCloudMap)
-                    //PropertyField(m_CloudMapSpeedMultiplier);
                 PropertyField(m_ShapeSpeedMultiplier);
                 PropertyField(m_ErosionSpeedMultiplier);
             }
@@ -290,56 +276,86 @@ class VolumetricCloudsEditor : VolumeComponentEditor
         PropertyField(m_VerticalShapeWindSpeed);
         PropertyField(m_VerticalErosionWindSpeed);
 
-        //DrawHeader("Lighting");
+        // --- Lighting
+        PropertyField(m_AmbientLightProbeDimmer);
+        PropertyField(m_SunLightDimmer);
+        PropertyField(m_ErosionOcclusion);
+        PropertyField(m_ScatteringTint);
+        PropertyField(m_PowderEffectIntensity);
+        PropertyField(m_MultiScattering);
+
+        // --- Shadows
+        PropertyField(m_Shadows);
+        using (new IndentLevelScope())
         {
-            PropertyField(m_AmbientLightProbeDimmer);
-            PropertyField(m_SunLightDimmer);
-            PropertyField(m_ErosionOcclusion);
-            PropertyField(m_ScatteringTint);
-            PropertyField(m_PowderEffectIntensity);
-            PropertyField(m_MultiScattering);
+            PropertyField(m_ShadowResolution);
+            PropertyField(m_ShadowOpacity);
+            PropertyField(m_ShadowDistance);
+            PropertyField(m_ShadowOpacityFallback);
         }
 
-        //DrawHeader("Shadows");
+        // --- Quality
+        PropertyField(m_TemporalAccumulationFactor);
+
+        using (var scope = new OverridablePropertyScope(m_PerceptualBlending, k_PerceptualBlending, this))
+            m_PerceptualBlending.value.floatValue = EditorGUILayout.Toggle(k_PerceptualBlending, m_PerceptualBlending.value.floatValue == 1.0f) ? 1.0f : 0.0f;
+
+        PropertyField(m_NumPrimarySteps);
+        PropertyField(m_NumLightSteps);
+        PropertyField(m_FadeInMode);
+        using (new IndentLevelScope())
         {
-            PropertyField(m_Shadows);
-            using (new IndentLevelScope())
+            if ((VolumetricClouds.CloudFadeInMode)m_FadeInMode.value.enumValueIndex == VolumetricClouds.CloudFadeInMode.Manual)
             {
-                PropertyField(m_ShadowResolution);
-                PropertyField(m_ShadowOpacity);
-                PropertyField(m_ShadowDistance);
-                PropertyField(m_ShadowOpacityFallback);
+                PropertyField(m_FadeInStart);
+                PropertyField(m_FadeInDistance);
             }
         }
 
-        //DrawHeader("Quality");
-        {
-            PropertyField(m_TemporalAccumulationFactor);
-            //PropertyField(m_GhostingReduction);
-
-            // Here we intentionally choose to display the perceptual blending as a toggle and not as float value to prevent the user from inputing arbitrary values
-            // between 0.0f and 1.0f while preserving the ability to interpolate/blend between volumes.
-            using (var scope = new OverridablePropertyScope(m_PerceptualBlending, k_PerceptualBlending, this))
-                m_PerceptualBlending.value.floatValue = EditorGUILayout.Toggle(k_PerceptualBlending, m_PerceptualBlending.value.floatValue == 1.0f) ? 1.0f : 0.0f;
-
-            PropertyField(m_NumPrimarySteps);
-            PropertyField(m_NumLightSteps);
-            PropertyField(m_FadeInMode);
-            using (new IndentLevelScope())
-            {
-                if ((VolumetricClouds.CloudFadeInMode)m_FadeInMode.value.enumValueIndex == (VolumetricClouds.CloudFadeInMode.Manual))
-                {
-                    PropertyField(m_FadeInStart);
-                    PropertyField(m_FadeInDistance);
-                }
-            }
-        }
+        // --- Défense anti-crash AnimationCurve
+        EnsureCurvesAreDistinctInstances();
     }
-    void LoadPresetValues(VolumetricClouds.CloudPresets preset, bool microDetails)
+
+    // -----------------------------
+    // Curves helpers & simple mode
+    // -----------------------------
+
+    static AnimationCurve CloneCurve(AnimationCurve src)
+    {
+        if (src == null) return new AnimationCurve();
+        // deep copy keys – guarantees a distinct instance
+        return new AnimationCurve(src.keys);
+    }
+
+    void EnsureCurvesAreDistinctInstances()
+    {
+        // Sur certains blends de volumes, Unity essaie de copier une courbe "dans elle-même"
+        // (dest et src référencent la même instance) => crash. On force ici une instance unique.
+        TryCloneCurve(m_DensityCurve);
+        TryCloneCurve(m_ErosionCurve);
+        TryCloneCurve(m_AmbientOcclusionCurve);
+    }
+
+    void TryCloneCurve(SerializedDataParameter curveParam)
+    {
+        try
         {
-            switch (preset)
-            {
-                case VolumetricClouds.CloudPresets.Sparse:
+            var c = curveParam?.value?.animationCurveValue;
+            if (c == null) return;
+
+            // Crée systématiquement une nouvelle instance — évite tout aliasing de référence
+            var cloned = CloneCurve(c);
+            if (!ReferenceEquals(c, cloned))
+                curveParam.value.animationCurveValue = cloned;
+        }
+        catch { /* safe guard */ }
+    }
+
+    void LoadPresetValues(VolumetricClouds.CloudPresets preset, bool microDetails)
+    {
+        switch (preset)
+        {
+            case VolumetricClouds.CloudPresets.Sparse:
                 {
                     m_DensityMultiplier.value.floatValue = 0.4f;
                     if (microDetails)
@@ -359,17 +375,16 @@ class VolumetricCloudsEditor : VolumeComponentEditor
                         m_ErosionScale.value.floatValue = 107.0f;
                     }
 
-                    // Curves
-                    m_DensityCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.05f, 1.0f), new Keyframe(0.75f, 1.0f), new Keyframe(1.0f, 0.0f));
-                    m_ErosionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f));
-                    m_AmbientOcclusionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.25f, 0.5f), new Keyframe(1.0f, 0.0f));
+                    m_DensityCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.05f, 1.0f), new Keyframe(0.75f, 1.0f), new Keyframe(1.0f, 0.0f)));
+                    m_ErosionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f)));
+                    m_AmbientOcclusionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.25f, 0.5f), new Keyframe(1.0f, 0.0f)));
 
-                    // Layer properties
                     m_BottomAltitude.value.floatValue = 3000.0f;
                     m_AltitudeRange.value.floatValue = 1000.0f;
                 }
                 break;
-                case VolumetricClouds.CloudPresets.Cloudy:
+
+            case VolumetricClouds.CloudPresets.Cloudy:
                 {
                     m_DensityMultiplier.value.floatValue = 0.4f;
 
@@ -390,17 +405,16 @@ class VolumetricCloudsEditor : VolumeComponentEditor
                         m_ErosionScale.value.floatValue = 107.0f;
                     }
 
-                    // Curves
-                    m_DensityCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.15f, 1.0f), new Keyframe(1.0f, 0.1f));
-                    m_ErosionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f));
-                    m_AmbientOcclusionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.25f, 0.4f), new Keyframe(1.0f, 0.0f));
+                    m_DensityCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.15f, 1.0f), new Keyframe(1.0f, 0.1f)));
+                    m_ErosionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f)));
+                    m_AmbientOcclusionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.25f, 0.4f), new Keyframe(1.0f, 0.0f)));
 
-                    // Layer properties
                     m_BottomAltitude.value.floatValue = 1200.0f;
                     m_AltitudeRange.value.floatValue = 2000.0f;
                 }
                 break;
-                case VolumetricClouds.CloudPresets.Overcast:
+
+            case VolumetricClouds.CloudPresets.Overcast:
                 {
                     m_DensityMultiplier.value.floatValue = 0.3f;
 
@@ -421,17 +435,16 @@ class VolumetricCloudsEditor : VolumeComponentEditor
                         m_ErosionScale.value.floatValue = 107.0f;
                     }
 
-                    // Curves
-                    m_DensityCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.05f, 1.0f), new Keyframe(0.9f, 0.0f), new Keyframe(1.0f, 0.0f));
-                    m_ErosionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f));
-                    m_AmbientOcclusionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1.0f, 0.0f));
+                    m_DensityCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.05f, 1.0f), new Keyframe(0.9f, 0.0f), new Keyframe(1.0f, 0.0f)));
+                    m_ErosionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.1f, 0.9f), new Keyframe(1.0f, 1.0f)));
+                    m_AmbientOcclusionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1.0f, 0.0f)));
 
-                    // Layer properties
                     m_BottomAltitude.value.floatValue = 1500.0f;
                     m_AltitudeRange.value.floatValue = 2500.0f;
                 }
                 break;
-                case VolumetricClouds.CloudPresets.Stormy:
+
+            case VolumetricClouds.CloudPresets.Stormy:
                 {
                     m_DensityMultiplier.value.floatValue = 0.35f;
 
@@ -452,180 +465,134 @@ class VolumetricCloudsEditor : VolumeComponentEditor
                         m_ErosionScale.value.floatValue = 107.0f;
                     }
 
-                    // Curves
-                    m_DensityCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.037f, 1.0f), new Keyframe(0.6f, 1.0f), new Keyframe(1.0f, 0.0f));
-                    m_ErosionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.05f, 0.8f), new Keyframe(0.2438f, 0.9498f), new Keyframe(0.5f, 1.0f), new Keyframe(0.93f, 0.9268f), new Keyframe(1.0f, 1.0f));
-                    m_AmbientOcclusionCurve.value.animationCurveValue = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.1f, 0.4f), new Keyframe(1.0f, 0.0f));
+                    m_DensityCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.037f, 1.0f), new Keyframe(0.6f, 1.0f), new Keyframe(1.0f, 0.0f)));
+                    m_ErosionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(
+                                                                                    new Keyframe(0f, 1f),
+                                                                                    new Keyframe(0.05f, 0.8f),
+                                                                                    new Keyframe(0.2438f, 0.9498f),
+                                                                                    new Keyframe(0.5f, 1.0f),
+                                                                                    new Keyframe(0.93f, 0.9268f),
+                                                                                    new Keyframe(1.0f, 1.0f)));
+                    m_AmbientOcclusionCurve.value.animationCurveValue = CloneCurve(new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.1f, 0.4f), new Keyframe(1.0f, 0.0f)));
 
-                    // Layer properties
                     m_BottomAltitude.value.floatValue = 1000.0f;
                     m_AltitudeRange.value.floatValue = 5000.0f;
                 }
                 break;
-                default:
-                    break;
-            }
+
+            default:
+                break;
         }
+
+        // Par sécurité, on s’assure que chaque curve est une instance unique
+        EnsureCurvesAreDistinctInstances();
+    }
 
     void SimpleControlMode(bool controlChanged)
     {
         VolumetricClouds.CloudPresets previousControlPreset = (VolumetricClouds.CloudPresets)m_CloudPreset.value.enumValueIndex;
 
-        // Start checking for changes
         EditorGUI.BeginChangeCheck();
+        PropertyField(m_CloudPreset);
+        VolumetricClouds.CloudPresets controlPreset = (VolumetricClouds.CloudPresets)m_CloudPreset.value.enumValueIndex;
 
-        // Display the preset list
-        //using (new IndentLevelScope())
+        if (EditorGUI.EndChangeCheck() || previousControlPreset != controlPreset)
         {
-            PropertyField(m_CloudPreset);
-            VolumetricClouds.CloudPresets controlPreset = (VolumetricClouds.CloudPresets)m_CloudPreset.value.enumValueIndex;
-
-            // Has the cloud preset property changed?
-            if (EditorGUI.EndChangeCheck() || previousControlPreset != controlPreset)
-            {
-                // If it was changed to anything but custom, this means we need to load the values into the volume
-                if (controlPreset != VolumetricClouds.CloudPresets.Custom)
-                {
-                    LoadPresetValues(controlPreset, m_MicroErosion.value.boolValue);
-                }
-            }
-
             if (controlPreset != VolumetricClouds.CloudPresets.Custom)
             {
-                // If we are in simple mode and the preset button is enabled, we need to enable all the
-                // subsidiary properties. This is different from the quality settings, all the properties need to be forced
-                // If a preset is selected and active.
-                m_DensityMultiplier.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_DensityCurve.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_ShapeFactor.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_ShapeScale.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_ErosionFactor.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_ErosionScale.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                //m_ErosionNoiseType.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_ErosionCurve.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_MicroErosionFactor.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_MicroErosionScale.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_AmbientOcclusionCurve.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_BottomAltitude.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-                m_AltitudeRange.overrideState.boolValue = m_CloudPreset.overrideState.boolValue;
-            }
-
-            // Start checking for changes
-            EditorGUI.BeginChangeCheck();
-
-            // We can only touch the properties if the preset is overridden on this volume
-            using (new EditorGUI.DisabledScope(!(m_CloudPreset.overrideState.boolValue)))
-            {
-                using (new IndentLevelScope())
-                {
-                    PropertyField(m_DensityMultiplier);
-                    PropertyField(m_DensityCurve);
-                    PropertyField(m_ShapeFactor);
-                    PropertyField(m_ShapeScale);
-                    PropertyField(m_ErosionFactor);
-                    PropertyField(m_ErosionScale);
-                    //PropertyField(m_ErosionNoiseType);
-                    PropertyField(m_ErosionCurve);
-                }
-            }
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Has the any of the properties have changed and we were not in the custom mode, it means we need to switch to the custom mode
-                if (controlPreset != VolumetricClouds.CloudPresets.Custom)
-                {
-                    m_CloudPreset.value.enumValueIndex = (int)VolumetricClouds.CloudPresets.Custom;
-                }
-            }
-
-            using (new IndentLevelScope())
-            {
-                PropertyField(m_MicroErosion);
-                if (m_MicroErosion.value.boolValue)
-                {
-                    PropertyField(m_MicroErosionFactor);
-                    PropertyField(m_MicroErosionScale);
-                }
-            }
-
-            // Start checking for changes
-            EditorGUI.BeginChangeCheck();
-
-            using (new EditorGUI.DisabledScope(!(m_CloudPreset.overrideState.boolValue)))
-            {
-                using (new IndentLevelScope())
-                {
-
-                    PropertyField(m_AmbientOcclusionCurve);
-
-                    // Layer properties
-                    PropertyField(m_BottomAltitude);
-                    PropertyField(m_AltitudeRange);
-                }
-            }
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Has the any of the properties have changed and we were not in the custom mode, it means we need to switch to the custom mode
-                if (controlPreset != VolumetricClouds.CloudPresets.Custom)
-                {
-                    m_CloudPreset.value.enumValueIndex = (int)VolumetricClouds.CloudPresets.Custom;
-                }
+                LoadPresetValues(controlPreset, m_MicroErosion.value.boolValue);
             }
         }
+
+        if (controlPreset != VolumetricClouds.CloudPresets.Custom)
+        {
+            bool ovr = m_CloudPreset.overrideState.boolValue;
+            m_DensityMultiplier.overrideState.boolValue = ovr;
+            m_DensityCurve.overrideState.boolValue = ovr;
+            m_ShapeFactor.overrideState.boolValue = ovr;
+            m_ShapeScale.overrideState.boolValue = ovr;
+            m_ErosionFactor.overrideState.boolValue = ovr;
+            m_ErosionScale.overrideState.boolValue = ovr;
+            m_ErosionCurve.overrideState.boolValue = ovr;
+            m_MicroErosionFactor.overrideState.boolValue = ovr;
+            m_MicroErosionScale.overrideState.boolValue = ovr;
+            m_AmbientOcclusionCurve.overrideState.boolValue = ovr;
+            m_BottomAltitude.overrideState.boolValue = ovr;
+            m_AltitudeRange.overrideState.boolValue = ovr;
+        }
+
+        // Tweaks group 1
+        EditorGUI.BeginChangeCheck();
+        using (new EditorGUI.DisabledScope(!(m_CloudPreset.overrideState.boolValue)))
+        {
+            using (new IndentLevelScope())
+            {
+                PropertyField(m_DensityMultiplier);
+                PropertyField(m_DensityCurve);
+                PropertyField(m_ShapeFactor);
+                PropertyField(m_ShapeScale);
+                PropertyField(m_ErosionFactor);
+                PropertyField(m_ErosionScale);
+                PropertyField(m_ErosionCurve);
+            }
+        }
+        if (EditorGUI.EndChangeCheck() && controlPreset != VolumetricClouds.CloudPresets.Custom)
+        {
+            m_CloudPreset.value.enumValueIndex = (int)VolumetricClouds.CloudPresets.Custom;
+        }
+
+        using (new IndentLevelScope())
+        {
+            PropertyField(m_MicroErosion);
+            if (m_MicroErosion.value.boolValue)
+            {
+                PropertyField(m_MicroErosionFactor);
+                PropertyField(m_MicroErosionScale);
+            }
+        }
+
+        // Tweaks group 2
+        EditorGUI.BeginChangeCheck();
+        using (new EditorGUI.DisabledScope(!(m_CloudPreset.overrideState.boolValue)))
+        {
+            using (new IndentLevelScope())
+            {
+                PropertyField(m_AmbientOcclusionCurve);
+                PropertyField(m_BottomAltitude);
+                PropertyField(m_AltitudeRange);
+            }
+        }
+        if (EditorGUI.EndChangeCheck() && controlPreset != VolumetricClouds.CloudPresets.Custom)
+        {
+            m_CloudPreset.value.enumValueIndex = (int)VolumetricClouds.CloudPresets.Custom;
+        }
+
+        // Clone defensif
+        EnsureCurvesAreDistinctInstances();
     }
 
     bool CloudsShapeUI(bool hasVisualEnvVolume)
     {
-        //EditorGUILayout.LabelField("Shape", EditorStyles.miniLabel);
-
-        bool hasCloudMap = false;
         SimpleControlMode(controlChanged: false);
-
-        // Evaluate the previous control Mode
-        //VolumetricClouds.CloudControl previousControlMode = (VolumetricClouds.CloudControl)m_CloudControl.value.enumValueIndex;
-        //PropertyField(m_CloudControl);
-        //VolumetricClouds.CloudControl controlMode = (VolumetricClouds.CloudControl)m_CloudControl.value.enumValueIndex;
-
-        /*
-        bool hasCloudMap = true;
-        using (new IndentLevelScope())
-        {
-            if (controlMode == VolumetricClouds.CloudControl.Advanced)
-                AdvancedControlMode();
-            else if (controlMode == VolumetricClouds.CloudControl.Manual)
-                ManualControlMode();
-            else
-            {
-                hasCloudMap = false;
-                SimpleControlMode(previousControlMode != controlMode);
-            }
-        }
-        */
 
         // Additional properties
         PropertyField(m_ShapeOffset);
 
-    #if URP_PBSKY
-        if (hasVisualEnvVolume) { EditorGUILayout.HelpBox(k_EarthCurvatureMessage, MessageType.Info, wide: true);}
+#if URP_PBSKY
+        if (hasVisualEnvVolume) { EditorGUILayout.HelpBox(k_EarthCurvatureMessage, MessageType.Info, wide: true); }
         using (new EditorGUI.DisabledScope(hasVisualEnvVolume))
         {
             PropertyField(m_EarthCurvature);
         }
-    #else
+#else
         PropertyField(m_EarthCurvature);
-    #endif
-
-        // For the other sections
-        return hasCloudMap;
+#endif
+        return false;
     }
 
-    /// <summary>
-    /// Check if the Volumetric Clouds renderer feature has been added.
-    /// From "https://forum.unity.com/threads/enable-or-disable-render-features-at-runtime.932571/"
-    /// </summary>
-    #region Reflection
-    private static FieldInfo RenderDataListFieldInfo;
+    // -----------------------------
+    // RendererFeature helpers
+    // -----------------------------
 
     private static ScriptableRendererData[] GetRendererDataList(UniversalRenderPipelineAsset asset = null)
     {
@@ -634,18 +601,14 @@ class VolumetricCloudsEditor : VolumeComponentEditor
             if (asset == null)
                 asset = (UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline;
 
-            if (asset == null)
+            if (asset == null || RenderDataListFieldInfo == null)
                 return null;
- 
-            if (RenderDataListFieldInfo == null)
-                return null;
- 
+
             var renderDataList = (ScriptableRendererData[])RenderDataListFieldInfo.GetValue(asset);
             return renderDataList;
         }
         catch
         {
-            // Fail silently if reflection failed.
             return null;
         }
     }
@@ -658,19 +621,17 @@ class VolumetricCloudsEditor : VolumeComponentEditor
 
         foreach (var renderData in renderDataList)
         {
+            if (renderData == null || renderData.rendererFeatures == null) continue;
+
             foreach (var rendererFeature in renderData.rendererFeatures)
             {
-                if (rendererFeature == null)
-                    continue;
+                if (rendererFeature == null) continue;
 
-                if (rendererFeature.GetType().Name.Contains(typeName))
-                {
+                var t = rendererFeature.GetType();
+                if (t != null && t.Name != null && t.Name.Contains(typeName))
                     return rendererFeature;
-                }
             }
         }
-
         return null;
     }
-    #endregion
 }

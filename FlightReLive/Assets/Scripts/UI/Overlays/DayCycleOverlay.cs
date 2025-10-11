@@ -224,7 +224,7 @@ namespace FlightReLive.UI.Overlays
             Vector2 middleRectMax = new Vector2(middleRectMin.x + totalMidWidth, rowY + rowHeight);
             drawList.AddRectFilled(middleRectMin, middleRectMax, semiTransparentBg, radius);
             string middleText = $"{sunriseText}   |   {sunsetText}";
-            Fugui.PushFont(12, FontType.Regular);
+            Fugui.PushFont(14, FontType.Bold);
             Vector2 middleSize = ImGui.CalcTextSize(middleText);
             float middleTextX = middleRectMin.x + (totalMidWidth - middleSize.x) * 0.5f;
             float middleTextY = rowY + (rowHeight - middleSize.y) * 0.5f;

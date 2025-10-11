@@ -171,6 +171,49 @@ namespace FlightReLive.Core.POI
 
             _poiList.Clear();
         }
+
+        /// <summary>
+        /// Returns a list of all POIs within a specified distance from the camera, sorted by distance (nearest first).
+        /// </summary>
+        /// <param name="maxDistance">Maximum distance from the camera (in world units).</param>
+        /// <returns>List of POIEntity instances within range, sorted by proximity.</returns>
+        internal List<POIEntity> GetPOIsWithinDistance(float maxDistance)
+        {
+            List<POIEntity> nearbyPOIs = new List<POIEntity>();
+
+            if (_camera == null || _poiList == null || _poiList.Count == 0)
+            {
+                return nearbyPOIs;
+            }
+
+            Vector3 camPos = _camera.transform.position;
+            float sqrMaxDist = maxDistance * maxDistance;
+
+            //Collect all POIs within range
+            foreach (POIEntity poi in _poiList)
+            {
+                if (poi == null || poi.IgnoreDistanceFade)
+                {
+                    continue;
+                }
+
+                float sqrDist = (poi.transform.position - camPos).sqrMagnitude;
+                if (sqrDist <= sqrMaxDist)
+                {
+                    nearbyPOIs.Add(poi);
+                }
+            }
+
+            //Sort them by squared distance
+            nearbyPOIs.Sort((a, b) =>
+            {
+                float distA = (a.transform.position - camPos).sqrMagnitude;
+                float distB = (b.transform.position - camPos).sqrMagnitude;
+                return distA.CompareTo(distB);
+            });
+
+            return nearbyPOIs;
+        }
         #endregion
 
         #region COLOR LOGIC

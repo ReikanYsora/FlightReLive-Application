@@ -56,8 +56,6 @@ MonoBehaviour:
   _background: {fileID: 3579146345610888131}
   _lineMaterial: {fileID: 2100000, guid: e42fe6339d96c9e4096937ba6d397f99, type: 2}
   _textYOffsetFromPoint: 4
-  _minVisibleDistance: 30
-  _maxVisibleDistance: 2000
 --- !u!1 &4164295304431874847
 GameObject:
   m_ObjectHideFlags: 0
@@ -125,8 +123,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: POI
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 199a5f0d8fa27433b90f2ba017d6bb23, type: 2}
+  m_sharedMaterial: {fileID: 6074570285754236595, guid: 199a5f0d8fa27433b90f2ba017d6bb23, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

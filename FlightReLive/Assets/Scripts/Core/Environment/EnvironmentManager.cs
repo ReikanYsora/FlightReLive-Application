@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using System.Reflection;
 
 namespace FlightReLive.Core.Environment
 {
@@ -19,6 +20,8 @@ namespace FlightReLive.Core.Environment
     {
         #region CONSTANTS
         private const double ENVIRONMENT_UPDATE_INTERVAL = 1.0;
+
+        private const float RUNTIME_VOLUME_PRIORITY = 1000f;
         #endregion
 
         #region ATTRIBUTES
@@ -56,7 +59,9 @@ namespace FlightReLive.Core.Environment
         private double _longitude;
         private float _baseContrast;
         private float _baseSaturation;
-        private double _lastEnvUpdateTime;
+
+        private GameObject _runtimeVolumeGO;
+        private Volume _runtimeVolume;
         #endregion
 
         #region PROPERTIES
@@ -296,7 +301,7 @@ namespace FlightReLive.Core.Environment
             float softDay = Mathf.SmoothStep(0f, 1f, daylight);
             float unityIntensity = Mathf.Lerp(0.02f, 6f, softDay);
             float middayFlatten = Mathf.SmoothStep(0.55f, 0.85f, daylight) * 0.5f;
-            unityIntensity *= (1f - middayFlatten);
+            unityIntensity *= 1f - middayFlatten;
             unityIntensity = Mathf.Max(unityIntensity, 0.05f);
 
             //Vignette
@@ -345,6 +350,9 @@ namespace FlightReLive.Core.Environment
             {
                 exposure = 0.95f;
             }
+
+            RenderSettings.ambientIntensity = Mathf.Lerp(0.4f, 1f, daylight);
+            Shader.SetGlobalFloat("_GlobalExposureMultiplier", exposure);
             _physicallyBasedSky.exposure.Override(exposure);
 
             //Athmospheric scattering
@@ -412,21 +420,24 @@ namespace FlightReLive.Core.Environment
 
                 RenderSettings.sun = _mainLight;
                 RenderSettings.ambientMode = AmbientMode.Skybox;
-                RenderSettings.ambientIntensity = Mathf.Lerp(0.25f, 0.8f, daylight);   // moins d’ambient global
+                RenderSettings.ambientIntensity = Mathf.Lerp(0.25f, 0.8f, daylight);
                 RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-                RenderSettings.reflectionIntensity = Mathf.Lerp(0.5f, 0.9f, daylight); // moins de réflection aussi
+                RenderSettings.reflectionIntensity = Mathf.Lerp(0.5f, 0.9f, daylight);
+                Shader.SetGlobalVector("_MainLightPosition", -_mainLight.transform.forward);
+                Shader.SetGlobalVector("_MainLightDirection", -_mainLight.transform.forward);
+                Shader.SetGlobalColor("_MainLightColor", _mainLight.color * _mainLight.intensity);
             }
 
             //Lens flare
             if (_lensFlare != null)
             {
-                _lensFlare.intensity = Mathf.Lerp(0.3f, 1.6f, daylight * daylight); // divisé par 2
+                _lensFlare.intensity = Mathf.Lerp(0.3f, 1.6f, daylight * daylight);
                 _lensFlare.scale = Mathf.Lerp(0.8f, 1.2f, Mathf.Sqrt(daylight));
                 _lensFlare.occlusionRadius = Mathf.Lerp(0.3f, 0.9f, daylight);
                 _lensFlare.enabled = true;
             }
 
-            //pply user custom settings
+            //Apply user custom settings
             ApplyVignettingIntensity();
             ApplyContrast();
             ApplySaturation();
@@ -441,32 +452,92 @@ namespace FlightReLive.Core.Environment
         /// </summary>
         private void InitializeEnvironment()
         {
-            //Initialize post-processing components
+            if (_volumeProfile == null)
+                return;
+
+            // 1) Cloner le profil (instance mémoire, pas l’asset)
+            _volumeProfile = ScriptableObject.Instantiate(_volumeProfile);
+
+            // 2) Créer (ou réutiliser) un Volume global runtime et lui assigner le clone
+            if (_runtimeVolumeGO == null)
+            {
+                _runtimeVolumeGO = new GameObject("[Runtime] Environment Volume");
+                _runtimeVolumeGO.hideFlags = HideFlags.DontSave;
+                _runtimeVolume = _runtimeVolumeGO.AddComponent<Volume>();
+                _runtimeVolume.isGlobal = true;
+                _runtimeVolume.priority = RUNTIME_VOLUME_PRIORITY;
+                _runtimeVolume.weight = 1f;
+
+                // Mettre sur un layer vu par ta/tes caméra(s) (sinon le VolumeManager l’ignore)
+                // Ex: si tes caméras utilisent le culling mask "Default", mets ce GO sur Default
+                _runtimeVolumeGO.layer = 0; // Default
+            }
+
+            _runtimeVolume.profile = _volumeProfile;
+
+            // 3) Initialiser les refs des composants sur le clone
             InitializePostProcessingComponents();
 
-            //Relive camera
-            if (_reliveCamera != null)
-            {
-                _reliveCamera.clearFlags = CameraClearFlags.Skybox;
-            }
-
-            //POV camera
-            if (_povCamera != null)
-            {
-                _povCamera.clearFlags = CameraClearFlags.Skybox;
-            }
-
+            // 4) Activer les overrides côté runtime
             _vignette.active = true;
             _colorAdjustments.active = true;
             _toneMapping.active = true;
+
             _physicallyBasedSky.active = true;
             _fog.active = true;
             _fog.enabled.Override(true);
             _visualEnvironment.active = true;
+
             _volumetricClouds.state.Override(true);
             _volumetricClouds.active = true;
+
+            // 5) Clonage défensif de TOUTES les curves du profil (pas seulement 2 composants)
+            CloneAllCurvesInProfile(_volumeProfile);
+
+            // 6) Caméras en skybox (comme avant)
+            if (_reliveCamera != null) _reliveCamera.clearFlags = CameraClearFlags.Skybox;
+            if (_povCamera != null) _povCamera.clearFlags = CameraClearFlags.Skybox;
+
             _environmentLoaded = true;
         }
+
+        private static void CloneAllCurvesInProfile(VolumeProfile profile)
+        {
+            if (profile == null) return;
+
+            foreach (var comp in profile.components)
+                CloneVolumeCurves(comp);
+        }
+
+
+
+        private static void CloneVolumeCurves(VolumeComponent volume)
+        {
+            if (volume == null) return;
+
+            var fields = volume.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            foreach (var f in fields)
+            {
+                if (!typeof(VolumeParameter).IsAssignableFrom(f.FieldType))
+                    continue;
+
+                var param = f.GetValue(volume) as VolumeParameter;
+                if (param is AnimationCurveParameter curveParam)
+                {
+                    var src = curveParam.value;
+                    if (src == null) continue;
+
+                    // Deep clone: keys + wrap modes
+                    var dst = new AnimationCurve(src.keys);
+                    dst.preWrapMode = src.preWrapMode;
+                    dst.postWrapMode = src.postWrapMode;
+
+                    curveParam.value = dst;
+                }
+            }
+        }
+
+
 
         /// <summary>
         /// Remove all post-processing components from the serialized VolumeProfile, reset cameras and light properties.
@@ -540,6 +611,17 @@ namespace FlightReLive.Core.Environment
 
             _baseContrast = 0f;
             _baseSaturation = 0f;
+
+            if (_runtimeVolume != null)
+            {
+                _runtimeVolume.profile = null;
+            }
+            if (_runtimeVolumeGO != null)
+            {
+                DestroyImmediate(_runtimeVolumeGO);
+                _runtimeVolumeGO = null;
+                _runtimeVolume = null;
+            }
         }
 
         /// <summary>

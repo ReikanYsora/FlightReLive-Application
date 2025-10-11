@@ -74,7 +74,7 @@ namespace FlightReLive.UI.Inspector
 
         public override void OnUI(FuWindow window, FuLayout windowLayout)
         {
-            if (LoadingManager.Instance.CurrentFlightData != null)
+            if (LoadingManager.Instance.IsLoaded)
             {
                 using (FuLayout layout = new FuLayout())
                 {

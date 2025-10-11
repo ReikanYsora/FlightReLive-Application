@@ -232,15 +232,13 @@ namespace FlightReLive.Core.Environment
                     return;
                 }
 
-                //Calculate sun position
                 TimeZoneInfo userTimeZone = SettingsManager.CurrentSettings.UserTimeZone;
                 DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
                 DateTime flightUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
 
-                //Saved mandatory attributes
-                _dateTimeUTC = flightUtc;
-                _originalTimeUTC = flightUtc;
                 _originalTime = flightData.Date;
+                _originalTimeUTC = flightUtc;
+                _dateTimeUTC = flightUtc;
                 _latitude = flightData.GPSOrigin.Latitude;
                 _longitude = flightData.GPSOrigin.Longitude;
                 _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
@@ -248,11 +246,9 @@ namespace FlightReLive.Core.Environment
                 //Initialize volume profile
                 InitializeEnvironment();
 
-                //Calculate sun times
-                _sunTimes = SunHelper.GetSunriseSunset(_dateTimeUTC, _latitude, _longitude);
-
-                //Apply environment base on current flightdata and datetime
-                ApplyEnvironment(_dateTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+                //Use local time to get correct sunrise/sunset hours
+                _sunTimes = SunHelper.GetSunriseSunset(localTime, _latitude, _longitude);
+                ApplyEnvironment(localTime, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
         }
 

@@ -36,6 +36,7 @@ namespace FlightReLive.Core.POI
         private Color _color;
         private float _lerpSpeed = 10f;
         private bool _hasLinkedTransform;
+        private bool _isVisible;
         #endregion
 
         #region PROPERTIES
@@ -48,6 +49,7 @@ namespace FlightReLive.Core.POI
             set
             {
                 _scaleFactor = value;
+
                 if (_lineRenderer != null)
                 {
                     bool shouldBeVisible = _scaleFactor > Mathf.Epsilon && Mathf.Abs(_heightFixedOffset) > Mathf.Epsilon;
@@ -58,7 +60,18 @@ namespace FlightReLive.Core.POI
 
         internal float ElevationFactor { get; set; }
 
-        internal bool IsVisible { get; set; }
+        internal bool IsVisible
+        {
+            get
+            {
+                return _isVisible;
+            }
+            set
+            {
+                _isVisible = value;
+                ApplyVisibility(value);
+            }
+        }
 
         internal bool IgnoreDistanceFade { get; set; }
 
@@ -183,7 +196,9 @@ namespace FlightReLive.Core.POI
         private void EnsureLineRenderer()
         {
             if (_lineRenderer != null)
+            {
                 return;
+            }
 
             _lineRenderer = gameObject.AddComponent<LineRenderer>();
             _lineRenderer.material = _lineMaterial;
@@ -209,6 +224,30 @@ namespace FlightReLive.Core.POI
                 Color alphaColor = color;
                 alphaColor.a = MAX_BACKGROUND_ALPHA;
                 _background.color = alphaColor;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ApplyVisibility(bool visible)
+        {
+            if (_pointImage != null)
+            {
+                _pointImage.enabled = visible;
+            }
+
+            if (_background != null)
+            {
+                _background.enabled = visible;
+            }
+
+            if (_text != null)
+            {
+                _text.enabled = visible;
+            }
+
+            if (_lineRenderer != null)
+            {
+                _lineRenderer.enabled = visible && _scaleFactor > Mathf.Epsilon && Mathf.Abs(_heightFixedOffset) > Mathf.Epsilon;
             }
         }
 
@@ -387,7 +426,9 @@ namespace FlightReLive.Core.POI
                 textRect.sizeDelta = new Vector2(textWidth, textRect.sizeDelta.y);
 
                 if (_backgroundRect != null)
+                {
                     _backgroundRect.sizeDelta = textRect.sizeDelta;
+                }
             }
         }
 

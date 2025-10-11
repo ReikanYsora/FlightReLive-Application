@@ -67,22 +67,26 @@ namespace FlightReLive.Core.POI
             ClearAllPOIs();
 
             if (flightData?.MapDefinition?.TileDefinitions == null)
+            {
                 return;
+            }
 
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)
             {
                 FeatureCollection collection = tile.GeoData;
                 if (collection?.features == null)
+                {
                     continue;
+                }
 
                 foreach (Feature feature in collection.features)
                 {
                     if (feature?.geometry?.coordinates == null || feature.geometry.coordinates.Count < 2)
+                    {
                         continue;
+                    }
 
-                    string poiLabel = !string.IsNullOrEmpty(feature.text)
-                        ? feature.text
-                        : feature.place_name;
+                    string poiLabel = !string.IsNullOrEmpty(feature.text) ? feature.text : feature.place_name;
 
                     FlightGPSData poiGPS = new FlightGPSData
                     {
@@ -165,6 +169,7 @@ namespace FlightReLive.Core.POI
             {
                 if (poi != null)
                 {
+                    poi.Reset();
                     _poiPool.Return(poi.gameObject);
                 }
             }
@@ -319,9 +324,7 @@ namespace FlightReLive.Core.POI
         #region UI
         internal void DisplayPOISettings()
         {
-            using (FuGrid grid = new FuGrid("gridPOISettings",
-                new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }),
-                FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
+            using (FuGrid grid = new FuGrid("gridPOISettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
                 bool poiEnabled = SettingsManager.CurrentSettings.POIVisibility;
 

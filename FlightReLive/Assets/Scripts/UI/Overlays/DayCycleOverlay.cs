@@ -188,9 +188,15 @@ namespace FlightReLive.UI.Overlays
             float radius = BUTTON_RADIUS * scale;
 
             //Times
-            DateTime currentDate = new DateTime(2024, 1, 1, 0, 0, 0).AddMinutes(1440.0 * _displayedProgress);
-            string currentTimeText = currentDate.ToString("HH:mm");
-            string originalTimeText = EnvironmentManager.Instance.OriginalTimeUTC.ToLocalTime().ToString("HH:mm");
+            TimeZoneInfo userTz = SettingsManager.CurrentSettings.UserTimeZone;
+            DateTime currentUtcTime = EnvironmentManager.Instance.OriginalTimeUTC.Date.AddMinutes(1440.0 * _displayedProgress);
+            DateTime currentLocalTime = TimeZoneInfo.ConvertTimeFromUtc(currentUtcTime, userTz);
+            DateTime originalLocalTime = TimeZoneInfo.ConvertTimeFromUtc(EnvironmentManager.Instance.OriginalTimeUTC, userTz);
+
+            //Texts
+            string currentTimeText = currentLocalTime.ToString("HH:mm");
+            string originalTimeText = originalLocalTime.ToString("HH:mm");
+
             string sunriseText = EnvironmentManager.Instance.SunTimes.HasSunrise
                 ? $"Sunrise: {EnvironmentManager.Instance.SunTimes.SunriseUTC.ToLocalTime():HH:mm}"
                 : "Sunrise: --:--";

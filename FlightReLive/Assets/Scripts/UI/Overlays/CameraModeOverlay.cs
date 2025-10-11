@@ -75,6 +75,11 @@ namespace FlightReLive.Core.UI.Overlays
             {
                 uiGrid.ButtonsGroup<CameraMode>("Camera mode", (index) => ExternalCameraManipulator.Instance.Mode = (CameraMode)index, () => ExternalCameraManipulator.Instance.Mode, 0f, FuButtonsGroupFlags.Default);
             }
+
+            if (Fugui.GetKeyPressed(FuKeysCode.Space))
+            {
+                ExternalCameraManipulator.Instance.RecenterCamera();
+            }
         }
         #endregion
     }

@@ -19,8 +19,6 @@ namespace FlightReLive.Core.Environment
     public class EnvironmentManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const double ENVIRONMENT_UPDATE_INTERVAL = 1.0;
-
         private const float RUNTIME_VOLUME_PRIORITY = 1000f;
         #endregion
 
@@ -38,9 +36,10 @@ namespace FlightReLive.Core.Environment
 
         [Header("Sky")]
         [SerializeField] private Cubemap _spaceBackground;
-        private SunTimes _sunTimes;
 
         //Post-processing elements
+        private GameObject _runtimeVolumeGO;
+        private Volume _runtimeVolume;
         private bool _environmentLoaded;
         private Vignette _vignette;
         private ColorAdjustments _colorAdjustments;
@@ -51,43 +50,36 @@ namespace FlightReLive.Core.Environment
         private VolumetricClouds _volumetricClouds;
 
         //Baseline values
-        private float _dayTime;
-        private DateTime _originalTime;
-        private DateTime _originalTimeUTC;
-        private DateTime _dateTimeUTC;
-        private double _latitude;
-        private double _longitude;
         private float _baseContrast;
         private float _baseSaturation;
 
-        private GameObject _runtimeVolumeGO;
-        private Volume _runtimeVolume;
+        //Location
+        private double _latitude;
+        private double _longitude;
+
+        //Time control
+        private float _dayRatio;
+        private DateTime _flightTimeUTC;
+        private DateTime _sceneTimeUTC;
+        private SunTimes _sunTimes;
         #endregion
 
         #region PROPERTIES
         internal static EnvironmentManager Instance { get; private set; }
 
-        internal DateTime OriginalTime
+        internal DateTime FlightTimeUTC
         {
             get
             {
-                return _originalTime;
+                return _flightTimeUTC;
             }
         }
 
-        internal DateTime OriginalTimeUTC
+        internal float DayRatio
         {
             get
             {
-                return _originalTimeUTC;
-            }
-        }
-
-        internal float DayTime
-        {
-            get
-            {
-                return _dayTime;
+                return _dayRatio;
             }
         }
 
@@ -236,19 +228,18 @@ namespace FlightReLive.Core.Environment
                 DateTime localTime = DateTime.SpecifyKind(flightData.Date, DateTimeKind.Unspecified);
                 DateTime flightUtc = TimeZoneInfo.ConvertTimeToUtc(localTime, userTimeZone);
 
-                _originalTime = flightData.Date;
-                _originalTimeUTC = flightUtc;
-                _dateTimeUTC = flightUtc;
+                _flightTimeUTC = flightUtc;
+                _sceneTimeUTC = flightUtc;
                 _latitude = flightData.GPSOrigin.Latitude;
                 _longitude = flightData.GPSOrigin.Longitude;
-                _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
+                _dayRatio = GetNormalizedTimeOfDay(_sceneTimeUTC);
 
                 //Initialize volume profile
                 InitializeEnvironment();
 
                 //Use local time to get correct sunrise/sunset hours
                 _sunTimes = SunHelper.GetSunriseSunset(localTime, _latitude, _longitude);
-                ApplyEnvironment(localTime, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
+                ApplyEnvironment(_sceneTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
         }
 
@@ -259,12 +250,11 @@ namespace FlightReLive.Core.Environment
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                _dateTimeUTC = DateTime.MinValue;
-                _originalTimeUTC = DateTime.MinValue;
-                _originalTime = DateTime.MinValue;
+                _sceneTimeUTC = DateTime.MinValue;
+                _flightTimeUTC = DateTime.MinValue;
                 _latitude = 0;
                 _longitude = 0;
-                _dayTime = 0f;
+                _dayRatio = 0f;
                 _sunTimes = new SunTimes();
                 UninitializeEnvironment();
             });
@@ -449,12 +439,13 @@ namespace FlightReLive.Core.Environment
         private void InitializeEnvironment()
         {
             if (_volumeProfile == null)
+            {
                 return;
+            }
 
-            // 1) Cloner le profil (instance mémoire, pas l’asset)
             _volumeProfile = ScriptableObject.Instantiate(_volumeProfile);
 
-            // 2) Créer (ou réutiliser) un Volume global runtime et lui assigner le clone
+            //Create runtime volume if not existing
             if (_runtimeVolumeGO == null)
             {
                 _runtimeVolumeGO = new GameObject("[Runtime] Environment Volume");
@@ -463,18 +454,14 @@ namespace FlightReLive.Core.Environment
                 _runtimeVolume.isGlobal = true;
                 _runtimeVolume.priority = RUNTIME_VOLUME_PRIORITY;
                 _runtimeVolume.weight = 1f;
-
-                // Mettre sur un layer vu par ta/tes caméra(s) (sinon le VolumeManager l’ignore)
-                // Ex: si tes caméras utilisent le culling mask "Default", mets ce GO sur Default
-                _runtimeVolumeGO.layer = 0; // Default
+                _runtimeVolumeGO.layer = 0;
             }
 
             _runtimeVolume.profile = _volumeProfile;
 
-            // 3) Initialiser les refs des composants sur le clone
             InitializePostProcessingComponents();
 
-            // 4) Activer les overrides côté runtime
+            //Enable all effects
             _vignette.active = true;
             _colorAdjustments.active = true;
             _toneMapping.active = true;
@@ -487,43 +474,71 @@ namespace FlightReLive.Core.Environment
             _volumetricClouds.state.Override(true);
             _volumetricClouds.active = true;
 
-            // 5) Clonage défensif de TOUTES les curves du profil (pas seulement 2 composants)
+            //Clone all AnimationCurveParameter to avoid shared references between instances
             CloneAllCurvesInProfile(_volumeProfile);
 
-            // 6) Caméras en skybox (comme avant)
-            if (_reliveCamera != null) _reliveCamera.clearFlags = CameraClearFlags.Skybox;
-            if (_povCamera != null) _povCamera.clearFlags = CameraClearFlags.Skybox;
+            //Initialize cameras
+            if (_reliveCamera != null)
+            {
+                _reliveCamera.clearFlags = CameraClearFlags.Skybox;
+            }
+
+            if (_povCamera != null)
+            {
+                _povCamera.clearFlags = CameraClearFlags.Skybox;
+            }
 
             _environmentLoaded = true;
         }
 
+        /// <summary>
+        /// Deep clone all AnimationCurveParameter in a VolumeProfile to avoid shared references between instances.
+        /// </summary>
+        /// <param name="profile"></param>
         private static void CloneAllCurvesInProfile(VolumeProfile profile)
         {
-            if (profile == null) return;
+            if (profile == null)
+            {
+                return;
+            }
 
             foreach (var comp in profile.components)
+            {
                 CloneVolumeCurves(comp);
+            }
         }
 
-
-
+        /// <summary>
+        /// Deep clone all AnimationCurveParameter in a VolumeComponent to avoid shared references between instances.
+        /// </summary>
+        /// <param name="volume"></param>
         private static void CloneVolumeCurves(VolumeComponent volume)
         {
-            if (volume == null) return;
+            if (volume == null)
+            {
+                return;
+            }
 
-            var fields = volume.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (var f in fields)
+            FieldInfo[] fields = volume.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+            foreach (FieldInfo f in fields)
             {
                 if (!typeof(VolumeParameter).IsAssignableFrom(f.FieldType))
+                {
                     continue;
+                }
 
-                var param = f.GetValue(volume) as VolumeParameter;
+                VolumeParameter param = f.GetValue(volume) as VolumeParameter;
+
                 if (param is AnimationCurveParameter curveParam)
                 {
                     var src = curveParam.value;
-                    if (src == null) continue;
+                    if (src == null)
+                    {
+                        continue;
+                    }
 
-                    // Deep clone: keys + wrap modes
+                    //Deep clone: keys + wrap modes
                     var dst = new AnimationCurve(src.keys);
                     dst.preWrapMode = src.preWrapMode;
                     dst.postWrapMode = src.postWrapMode;
@@ -532,8 +547,6 @@ namespace FlightReLive.Core.Environment
                 }
             }
         }
-
-
 
         /// <summary>
         /// Remove all post-processing components from the serialized VolumeProfile, reset cameras and light properties.
@@ -650,7 +663,17 @@ namespace FlightReLive.Core.Environment
         /// <param name="ratio"></param>
         internal void ApplyTimeOfDay(float ratio)
         {
-            ApplyTimeOfDay(_dateTimeUTC, _latitude, _longitude, ratio);
+            ApplyTimeOfDay(_sceneTimeUTC, _latitude, _longitude, ratio);
+        }
+
+        /// <summary>
+        /// Update sun position based on normalized time of day (0→1 = 00:00→23:59).
+        /// </summary>
+        private void ApplyTimeOfDay(DateTime utcDateTime, double latitude, double longitude, float normalized)
+        {
+            _dayRatio = normalized;
+            DateTime newUtc = GetDateTimeFromNormalized(normalized, utcDateTime);
+            ApplyEnvironment(newUtc, latitude, longitude);
         }
 
         /// <summary>
@@ -689,6 +712,9 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Apply clouds preset from user settings (URP)
+        /// </summary>
         private void ApplyCloudsPreset()
         {
             if (_volumetricClouds != null)
@@ -724,6 +750,9 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Apply cloud shadows enabled from user settings (URP)
+        /// </summary>
         private void ApplyCloudShadowsEnabled()
         {
             if (_volumetricClouds != null)
@@ -738,6 +767,9 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Apply cloud shadows opacity from user settings (URP)
+        /// </summary>
         private void ApplyCloudShadowsOpacity()
         {
             if (_volumetricClouds != null)
@@ -747,6 +779,9 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Apply wind type from user settings (URP)
+        /// </summary>
         private void ApplyWindType()
         {
             if (_volumetricClouds != null)
@@ -776,57 +811,77 @@ namespace FlightReLive.Core.Environment
         #endregion
 
         #region CALLBACKS
-
+        /// <summary>
+        /// Apply contrast custom settings (URP)
+        /// </summary>
+        /// <param name="offset"></param>
         private void OnContrastOffsetChanged(float offset)
         {
             ApplyContrast();
         }
 
+        /// <summary>
+        /// Apply saturation custom settings (URP)
+        /// </summary>
+        /// <param name="offset"></param>
         private void OnSaturationOffsetChanged(float offset)
         {
             ApplySaturation();
         }
 
+        /// <summary>
+        /// Apply vignetting intensity from user settings (URP)
+        /// </summary>
+        /// <param name="intensity"></param>
         private void OnVignettingIntensityChanged(float intensity)
         {
             ApplyVignettingIntensity();
         }
 
+        /// <summary>
+        /// Apply clouds preset from user settings (URP)
+        /// </summary>
+        /// <param name="obj"></param>
         private void OnCloudsPresetChanged(CloudsPreset obj)
         {
             ApplyCloudsPreset();
         }
 
+        /// <summary>
+        /// Apply cloud shadows enabled from user settings (URP)
+        /// </summary>
+        /// <param name="obj"></param>
         private void OnCloudShadowsEnabledChanged(bool obj)
         {
             ApplyCloudShadowsEnabled();
         }
 
+        /// <summary>
+        /// Apply cloud shadows opacity from user settings (URP)
+        /// </summary>
+        /// <param name="obj"></param>
         private void OnCloudShadowsOpacityChanged(float obj)
         {
             ApplyCloudShadowsOpacity();
         }
 
+        /// <summary>
+        /// Apply wind type from user settings (URP)
+        /// </summary>
+        /// <param name="obj"></param>
         private void OnWindTypeChanged(WindType obj)
         {
             ApplyWindType();
         }
 
         /// <summary>
-        /// Update sun position based on normalized time of day (0→1 = 00:00→23:59).
+        /// Reset time of day to the original flight time.
         /// </summary>
-        private void ApplyTimeOfDay(DateTime utcDateTime, double latitude, double longitude, float normalized)
-        {
-            _dayTime = normalized;
-            DateTime newUtc = GetDateTimeFromNormalized(normalized, utcDateTime);
-            ApplyEnvironment(newUtc, latitude, longitude);
-        }
-
         internal void ResetTimeOfDay()
         {
-            _dateTimeUTC = _originalTimeUTC;
-            _dayTime = GetNormalizedTimeOfDay(_dateTimeUTC);
-            ApplyEnvironment(_dateTimeUTC, _latitude, _longitude);
+            _sceneTimeUTC = _flightTimeUTC;
+            _dayRatio = GetNormalizedTimeOfDay(_sceneTimeUTC);
+            ApplyEnvironment(_sceneTimeUTC, _latitude, _longitude);
         }
 
         /// <summary>
@@ -855,6 +910,10 @@ namespace FlightReLive.Core.Environment
         #endregion
 
         #region UI
+        /// <summary>
+        /// Draw post-processing settings in the settings window.
+        /// </summary>
+        /// <param name="layout"></param>
         internal void DrawPostProcessingSettings(FuLayout layout)
         {
             layout.FramedText("Vignetting");
@@ -925,6 +984,10 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Draw sky & clouds settings in the settings window.
+        /// </summary>
+        /// <param name="layout"></param>
         internal void DrawSunCloudsSettings(FuLayout layout)
         {
             layout.FramedText("Sky & Clouds");
@@ -992,6 +1055,10 @@ namespace FlightReLive.Core.Environment
             }
         }
 
+        /// <summary>
+        /// Draw buildings & POI settings in the settings window.
+        /// </summary>
+        /// <param name="layout"></param>
         internal void DrawSceneSettings(FuLayout layout)
         {
             layout.FramedText("Buildings");

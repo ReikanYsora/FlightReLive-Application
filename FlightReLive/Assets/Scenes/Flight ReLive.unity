@@ -1041,7 +1041,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 892340460}
-  - component: {fileID: 892340462}
   - component: {fileID: 892340461}
   m_Layer: 0
   m_Name: POIManager
@@ -1077,23 +1076,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1160b43617fb1d4a88fd39968a53143, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.POI.POIManager
-  _poiMaxDistance: 250
-  _poiMaxViewAngle: 75
---- !u!114 &892340462
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 892340459}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb70eacff80b6a49b057b5f27b686ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.POI.POIPool
   _mainCanvas: {fileID: 1721477100}
   _poiPrefab: {fileID: 245362082703216664, guid: 4743d8e731bdeef4082a091545bac382, type: 3}
-  _initialSize: 100
+  _poiDefaultHeight: 30
 --- !u!1 &954186472
 GameObject:
   m_ObjectHideFlags: 0
@@ -2134,11 +2119,11 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1618281188}
   - {fileID: 289568083}
   - {fileID: 1583283020}
   - {fileID: 1092402792}
   - {fileID: 311396844}
-  - {fileID: 1618281188}
   - {fileID: 1289900097}
   - {fileID: 892340460}
   - {fileID: 739676617}

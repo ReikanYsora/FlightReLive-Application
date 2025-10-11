@@ -84,7 +84,7 @@ namespace FlightReLive.UI.Overlays
             Vector2 barEnd = new Vector2(barPos.x + barWidth, barPos.y + barHeight);
             drawList.AddRectFilled(barPos, barEnd, barBgColor, 4f);
 
-            float targetProgress = EnvironmentManager.Instance.DayTime;
+            float targetProgress = EnvironmentManager.Instance.DayRatio;
             if (!_isHovering)
             {
                 _displayedProgress = Mathf.Lerp(_displayedProgress, targetProgress, Time.deltaTime * 4f);
@@ -103,7 +103,7 @@ namespace FlightReLive.UI.Overlays
                 if (!_isHovering)
                 {
                     _isHovering = true;
-                    _preHoverProgress = EnvironmentManager.Instance.DayTime;
+                    _preHoverProgress = EnvironmentManager.Instance.DayRatio;
                 }
                 _hoveredProgress = hoverRatio;
                 EnvironmentManager.Instance.ApplyTimeOfDay(_hoveredProgress);
@@ -189,9 +189,9 @@ namespace FlightReLive.UI.Overlays
 
             //Times
             TimeZoneInfo userTz = SettingsManager.CurrentSettings.UserTimeZone;
-            DateTime currentUtcTime = EnvironmentManager.Instance.OriginalTimeUTC.Date.AddMinutes(1440.0 * _displayedProgress);
+            DateTime currentUtcTime = EnvironmentManager.Instance.FlightTimeUTC.Date.AddMinutes(1440.0 * _displayedProgress);
             DateTime currentLocalTime = TimeZoneInfo.ConvertTimeFromUtc(currentUtcTime, userTz);
-            DateTime originalLocalTime = TimeZoneInfo.ConvertTimeFromUtc(EnvironmentManager.Instance.OriginalTimeUTC, userTz);
+            DateTime originalLocalTime = TimeZoneInfo.ConvertTimeFromUtc(EnvironmentManager.Instance.FlightTimeUTC, userTz);
 
             //Texts
             string currentTimeText = currentLocalTime.ToString("HH:mm");
@@ -275,7 +275,7 @@ namespace FlightReLive.UI.Overlays
                 if (layout.Button(FlightReLiveIcons.Undo, new FuElementSize(BUTTON_WIDTH, BUTTON_HEIGHT), customButton))
                 {
                     EnvironmentManager.Instance.ResetTimeOfDay();
-                    _displayedProgress = EnvironmentManager.Instance.DayTime;
+                    _displayedProgress = EnvironmentManager.Instance.DayRatio;
                 }
             }
             Fugui.PopFont();

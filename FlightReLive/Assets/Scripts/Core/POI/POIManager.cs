@@ -13,13 +13,12 @@ namespace FlightReLive.Core.POI
     /// Simple POI Manager — handles only creation and destruction of POIs.
     /// POI visibility, scaling, and height are managed directly by POIEntity instances.
     /// </summary>
-    [RequireComponent(typeof(POIPool))]
     public class POIManager : MonoBehaviour
     {
         #region ATTRIBUTES
+        [SerializeField] private Canvas _mainCanvas;
+        [SerializeField] private GameObject _poiPrefab;
         [SerializeField] private float _poiDefaultHeight = 30f;
-
-        private POIPool _poiPool;
         private Camera _camera;
         private readonly List<POIEntity> _poiList = new List<POIEntity>();
         #endregion
@@ -38,7 +37,6 @@ namespace FlightReLive.Core.POI
             }
 
             Instance = this;
-            _poiPool = GetComponent<POIPool>();
         }
 
         private void Start()
@@ -95,10 +93,7 @@ namespace FlightReLive.Core.POI
                     };
 
                     float altitude = flightData.GetAltitudeAtPosition(tile, poiGPS);
-                    Vector3 position = flightData.ConvertGPSPositionToWorld(
-                        new Vector3(feature.geometry.coordinates[1], altitude, feature.geometry.coordinates[0])
-                    );
-
+                    Vector3 position = flightData.ConvertGPSPositionToWorld(new Vector3(feature.geometry.coordinates[1], altitude, feature.geometry.coordinates[0]));
                     Color poiColor = GetColorForPOIType(feature.properties?.kind);
                     AddPOI(poiLabel, position, poiColor, _poiDefaultHeight);
                 }
@@ -110,7 +105,7 @@ namespace FlightReLive.Core.POI
         /// </summary>
         internal POIEntity AddPOI(string name, Vector3 position, Color color, float height, bool ignoreDistanceFade = false)
         {
-            GameObject go = _poiPool.Get();
+            GameObject go = GameObject.Instantiate(_poiPrefab, _mainCanvas.transform);
             go.transform.position = position;
 
             POIEntity poi = go.GetComponent<POIEntity>();
@@ -126,7 +121,7 @@ namespace FlightReLive.Core.POI
         /// </summary>
         internal POIEntity AddPOI(string name, Transform transform, Color color, float height, bool ignoreDistanceFade = false)
         {
-            GameObject go = _poiPool.Get();
+            GameObject go = GameObject.Instantiate(_poiPrefab, _mainCanvas.transform);
             go.transform.position = transform.position;
 
             POIEntity poi = go.GetComponent<POIEntity>();
@@ -147,9 +142,8 @@ namespace FlightReLive.Core.POI
                 return;
             }
 
-            entity.Reset();
-            _poiPool.Return(entity.gameObject);
             _poiList.Remove(entity);
+            Destroy(entity.gameObject);
         }
 
         /// <summary>
@@ -169,8 +163,7 @@ namespace FlightReLive.Core.POI
             {
                 if (poi != null)
                 {
-                    poi.Reset();
-                    _poiPool.Return(poi.gameObject);
+                    Destroy(poi.gameObject);
                 }
             }
 

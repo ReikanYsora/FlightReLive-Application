@@ -10,7 +10,7 @@ namespace FlightReLive.Core.POI
     {
         #region CONSTANTS
         private const float START_FADING_DISTANCE = 100f;
-        private const float STOP_FADING_DISTANCE = 400f;
+        private const float STOP_FADING_DISTANCE = 250f;
         private const float MAX_BACKGROUND_ALPHA = 0.8f;
         #endregion
 
@@ -430,18 +430,6 @@ namespace FlightReLive.Core.POI
                     _backgroundRect.sizeDelta = textRect.sizeDelta;
                 }
             }
-        }
-
-        internal void Reset()
-        {
-            IsVisible = false;
-            IgnoreDistanceFade = false;
-            _linkedTransform = null;
-            _fixedWorldPosition = null;
-            _targetCamera = null;
-            _color = Color.white;
-            _scaleFactor = 0.1f;
-            _heightFixedOffset = -1f;
         }
         #endregion
     }

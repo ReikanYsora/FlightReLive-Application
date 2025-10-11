@@ -535,7 +535,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _distance: 20
   _droneAnchorTransform: {fileID: 283911657}
-  _mode: 1
+  _mode: 0
   _minYAngle: 15
   _maxYAngle: 85
   _minDistance: 3
@@ -1832,9 +1832,6 @@ MonoBehaviour:
   _rotatingPart: {fileID: 634706096}
   _cameraDistance: 2.8
   _pitchAngle: 50
-  _compassLayer:
-    serializedVersion: 2
-    m_Bits: 128
 --- !u!1 &1595949481
 GameObject:
   m_ObjectHideFlags: 0

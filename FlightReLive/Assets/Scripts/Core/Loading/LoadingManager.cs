@@ -90,6 +90,10 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region METHODS
+        /// <summary>
+        /// Starts loading the scene for the given flight file.
+        /// </summary>
+        /// <param name="flightFile"></param>
         internal async void StartLoadingScene(FlightFile flightFile)
         {
             await CancelLoading();
@@ -162,7 +166,7 @@ namespace FlightReLive.Core.Loading
                             token,
                             (phase, progress, source) =>
                             {
-                                _tileProgress = (phase + progress) / 3f;
+                                _tileProgress = (phase + progress) / 4f;
 
                                 if (source == TileResourceSource.Cache)
                                 {
@@ -196,6 +200,7 @@ namespace FlightReLive.Core.Loading
                     }
                 }
 
+                POIManager.Instance.Load(flightData);
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);
                 EnvironmentManager.Instance.Load(flightData);
@@ -218,6 +223,9 @@ namespace FlightReLive.Core.Loading
             }
         }
 
+        /// <summary>
+        /// Unloads the current flight data and associated resources.
+        /// </summary>
         internal async void UnloadFlightData()
         {
             await UnloadFlightDataInModules();
@@ -334,12 +342,20 @@ namespace FlightReLive.Core.Loading
             return flightData;
         }
 
+        /// <summary>
+        /// Notifies the user of an error during loading and stops the loading process.
+        /// </summary>
+        /// <param name="message"></param>
         private void NotifyError(string message)
         {
             Fugui.Notify("Resource loading error", message, StateType.Danger, 3f);
             IsLoading = false;
         }
 
+        /// <summary>
+        /// Unloads flight data in all modules.
+        /// </summary>
+        /// <returns></returns>
         private async Task UnloadFlightDataInModules()
         {
             List<Task> unloadTasks = new List<Task>
@@ -368,6 +384,10 @@ namespace FlightReLive.Core.Loading
             OnFlightUnloaded?.Invoke();
         }
 
+        /// <summary>
+        /// Cancels the current loading operation.
+        /// </summary>
+        /// <returns></returns>
         private async Task CancelLoading()
         {
             _tileProgress = 0f;
@@ -385,6 +405,10 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region CALLBACKS
+        /// <summary>
+        /// Callback when a flight file is selected in the workspace.
+        /// </summary>
+        /// <param name="flightFile"></param>
         private async void OnFlightFileSelected(FlightFile flightFile)
         {
             if (CurrentFlightData != null)
@@ -397,6 +421,9 @@ namespace FlightReLive.Core.Loading
         #endregion
 
         #region UI
+        /// <summary>
+        /// Displays the loading modal with progress information.
+        /// </summary>
         internal void DisplayLoading()
         {
             float scale = Fugui.CurrentContext.Scale;

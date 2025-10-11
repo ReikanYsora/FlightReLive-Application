@@ -542,7 +542,7 @@ namespace FlightReLive.Core.Cache
 
         internal static async Task SaveGeoTileDataAsync(FeatureCollection geoData, int tileX, int tileY, string lang)
         {
-            if (geoData == null || geoData.features == null || geoData.features.Count == 0)
+            if (geoData == null || geoData.features == null)
             {
                 return;
             }

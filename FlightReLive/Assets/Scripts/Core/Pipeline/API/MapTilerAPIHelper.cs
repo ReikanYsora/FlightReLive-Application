@@ -80,6 +80,15 @@ namespace FlightReLive.Core.Pipeline.API
                 }
                 token.ThrowIfCancellationRequested();
 
+                //Phase 3 : GeoData
+                ResourceResult<FeatureCollection> geo = await DownloadGeoDataAsync(tile, token, p => onProgress?.Invoke(3, p, null));
+                if (geo != null)
+                {
+                    tile.GeoData = geo.Data;
+                    onProgress?.Invoke(3, 1f, geo.Source);
+                }
+                token.ThrowIfCancellationRequested();
+
                 return tile;
             }
             catch (OperationCanceledException)
@@ -488,13 +497,14 @@ namespace FlightReLive.Core.Pipeline.API
         #endregion
 
         #region GEODATA
-        private static async Task<FeatureCollection> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
+        private static async Task<ResourceResult<FeatureCollection>> DownloadGeoDataAsync(TileDefinition tile, CancellationToken token, Action<float> onProgress)
         {
             string lang = GetPreferredLanguage();
 
             if (await CacheManager.GeoTileDataExistsAsync(tile.X, tile.Y, lang))
             {
-                return await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+                FeatureCollection cached = await CacheManager.LoadGeoTileDataAsync(tile.X, tile.Y, lang);
+                return new ResourceResult<FeatureCollection>(cached, TileResourceSource.Cache);
             }
 
             FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
@@ -518,8 +528,10 @@ namespace FlightReLive.Core.Pipeline.API
                 url,
                 data =>
                 {
-                    if (token.IsCancellationRequested) { tcs.TrySetCanceled(token); return; }
-                    tcs.TrySetResult(Encoding.UTF8.GetString(data));
+                    if (!token.IsCancellationRequested)
+                    {
+                        tcs.TrySetResult(Encoding.UTF8.GetString(data));
+                    }
                 },
                 error => tcs.TrySetResult(null),
                 (received, total) => onProgress?.Invoke(total > 0 ? (float)received / total : 0f)
@@ -527,32 +539,29 @@ namespace FlightReLive.Core.Pipeline.API
 
             using (token.Register(() => tcs.TrySetCanceled(token)))
             {
-                string json;
-                try
-                {
-                    json = await tcs.Task.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    return null;
-                }
+                string json = await tcs.Task;
+                if (string.IsNullOrEmpty(json)) { return null; }
 
-                if (string.IsNullOrEmpty(json))
-                {
-                    return null;
-                }
+
+
 
                 try
                 {
                     FeatureCollection raw = JsonConvert.DeserializeObject<FeatureCollection>(json);
                     FeatureCollection filtered = FilterByBoundingBox(raw, tile.BoundingBox);
 
-                    if (filtered != null && filtered.features != null && filtered.features.Count > 0)
+                    if (filtered == null)
                     {
-                        await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
+                        filtered = new FeatureCollection();
                     }
 
-                    return filtered;
+                    if (filtered.features == null)
+                    {
+                        filtered.features = new List<Feature>();
+                    }
+
+                    await CacheManager.SaveGeoTileDataAsync(filtered, tile.X, tile.Y, lang);
+                    return new ResourceResult<FeatureCollection>(filtered, TileResourceSource.Download);
                 }
                 catch (Exception ex)
                 {
@@ -572,10 +581,7 @@ namespace FlightReLive.Core.Pipeline.API
             collection.features = collection.features
                 .Where(f =>
                 {
-                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2)
-                    {
-                        return false;
-                    }
+                    if (f.geometry?.coordinates == null || f.geometry.coordinates.Count < 2) { return false; }
 
                     double lon = f.geometry.coordinates[0];
                     double lat = f.geometry.coordinates[1];
@@ -586,7 +592,6 @@ namespace FlightReLive.Core.Pipeline.API
             return collection;
         }
         #endregion
-
         #region COMMONS
         private static string GetPreferredLanguage()
         {

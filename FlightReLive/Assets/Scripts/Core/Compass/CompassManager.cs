@@ -36,6 +36,11 @@ namespace FlightReLive.Core.Compass
             SetupCompassCamera();
         }
 
+        private void Update()
+        {
+            _compassLight.enabled = Loading.LoadingManager.Instance.IsLoaded;
+        }
+
         private void LateUpdate()
         {
             UpdateCompass();

@@ -55,7 +55,7 @@ namespace FlightReLive.UI.Inspector
                 layout.Spacing();
                 layout.SameLine();
 
-                if (currentFlightData != null)
+                if (LoadingManager.Instance.IsLoaded)
                 {
                     Fugui.PushFont(12, FontType.Bold);
                     Vector2 textSize = ImGui.CalcTextSize(currentFlightData.Name);

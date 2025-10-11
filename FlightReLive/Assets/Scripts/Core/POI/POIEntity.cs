@@ -8,14 +8,18 @@ namespace FlightReLive.Core.POI
 {
     public class POIEntity : MonoBehaviour
     {
+        #region CONSTANTS
+        private const float START_FADING_DISTANCE = 100f;
+        private const float STOP_FADING_DISTANCE = 400f;
+        private const float MAX_BACKGROUND_ALPHA = 0.8f;
+        #endregion
+
         #region ATTRIBUTES
         [SerializeField] private Transform _point;
         [SerializeField] private TMP_Text _text;
         [SerializeField] private Image _background;
         [SerializeField] private Material _lineMaterial;
         [SerializeField] private float _textYOffsetFromPoint = 2f;
-        [SerializeField] private float _minVisibleDistance = 10f;
-        [SerializeField] private float _maxVisibleDistance = 2000f;
 
         private LineRenderer _lineRenderer;
         private Image _pointImage;
@@ -44,7 +48,6 @@ namespace FlightReLive.Core.POI
             set
             {
                 _scaleFactor = value;
-
                 if (_lineRenderer != null)
                 {
                     bool shouldBeVisible = _scaleFactor > Mathf.Epsilon && Mathf.Abs(_heightFixedOffset) > Mathf.Epsilon;
@@ -53,23 +56,11 @@ namespace FlightReLive.Core.POI
             }
         }
 
-        internal float ElevationFactor { set; get; }
+        internal float ElevationFactor { get; set; }
 
-        internal Vector3 WorldPosition
-        {
-            get
-            {
-                return _hasLinkedTransform ? _linkedTransform.position : (_fixedWorldPosition ?? transform.position);
-            }
-        }
+        internal bool IsVisible { get; set; }
 
-        internal string Text
-        {
-            get
-            {
-                return _text != null ? _text.text : string.Empty;
-            }
-        }
+        internal bool IgnoreDistanceFade { get; set; }
         #endregion
 
         #region UNITY METHODS
@@ -89,6 +80,11 @@ namespace FlightReLive.Core.POI
 
         private void Update()
         {
+            if (_targetCamera == null || !IsVisible)
+            {
+                return;
+            }
+
             FollowLinkedTransform();
             ElevatePOI();
             ApplyLerpedVisuals();
@@ -97,44 +93,27 @@ namespace FlightReLive.Core.POI
 
         private void LateUpdate()
         {
+            if (_targetCamera == null || !IsVisible)
+            {
+                return;
+            }
+
             ScaleByDistance();
             UpdateTransparencyByDistance();
             UpdateLineRenderer();
         }
         #endregion
 
-        #region METHODS
-        internal void Initialize(Camera camera, Transform linkedTransform, Color color, string text = "", float height = -1f)
-        {
-            _targetCamera = camera;
-            _linkedTransform = linkedTransform;
-            _hasLinkedTransform = linkedTransform != null;
-            _heightFixedOffset = height;
-            _color = color;
-
-            if (!string.IsNullOrEmpty(text))
-            {
-                SetText(text);
-            }
-
-            if (height > Mathf.Epsilon)
-            {
-                EnsureLineRenderer();
-            }
-
-            ApplyColor(color);
-            ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
-            BillboardToCamera();
-            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
-        }
-
-        internal void Initialize(Camera camera, Vector3 worldPosition, Color color, string text = "", float height = -1f)
+        #region INITIALIZATION
+        internal void Initialize(Camera camera, Vector3 worldPosition, Color color, string text = "", float height = -1f, bool ignoreDistanceFade = false)
         {
             _targetCamera = camera;
             _fixedWorldPosition = worldPosition;
             _hasLinkedTransform = false;
             _heightFixedOffset = height;
             _color = color;
+            IgnoreDistanceFade = ignoreDistanceFade;
+            IsVisible = SettingsManager.CurrentSettings.POIVisibility;
 
             if (!string.IsNullOrEmpty(text))
             {
@@ -149,15 +128,41 @@ namespace FlightReLive.Core.POI
             ApplyColor(color);
             ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
             BillboardToCamera();
-            gameObject.SetActive(SettingsManager.CurrentSettings.POIVisibility);
+            gameObject.SetActive(true);
         }
 
+        internal void Initialize(Camera camera, Transform linkedTransform, Color color, string text = "", float height = -1f, bool ignoreDistanceFade = false)
+        {
+            _targetCamera = camera;
+            _linkedTransform = linkedTransform;
+            _hasLinkedTransform = linkedTransform != null;
+            _heightFixedOffset = height;
+            _color = color;
+            IgnoreDistanceFade = ignoreDistanceFade;
+            IsVisible = SettingsManager.CurrentSettings.POIVisibility;
+
+            if (!string.IsNullOrEmpty(text))
+            {
+                SetText(text);
+            }
+
+            if (height > Mathf.Epsilon)
+            {
+                EnsureLineRenderer();
+            }
+
+            ApplyColor(color);
+            ScaleFactor = SettingsManager.CurrentSettings.POIScale / 100f;
+            BillboardToCamera();
+            gameObject.SetActive(true);
+        }
+        #endregion
+
+        #region VISUALS
         private void EnsureLineRenderer()
         {
             if (_lineRenderer != null)
-            {
                 return;
-            }
 
             _lineRenderer = gameObject.AddComponent<LineRenderer>();
             _lineRenderer.material = _lineMaterial;
@@ -165,8 +170,6 @@ namespace FlightReLive.Core.POI
             _lineRenderer.alignment = LineAlignment.TransformZ;
             _lineRenderer.startWidth = 0.3f;
             _lineRenderer.endWidth = 0.3f;
-            _lineRenderer.numCapVertices = 0;
-            _lineRenderer.numCornerVertices = 0;
             _lineRenderer.positionCount = 2;
             _lineRenderer.startColor = _color;
             _lineRenderer.endColor = _color;
@@ -180,15 +183,10 @@ namespace FlightReLive.Core.POI
                 _pointImage.color = color;
             }
 
-            if (_lineRenderer != null && _lineRenderer.material.HasProperty("_Color"))
-            {
-                _lineRenderer.material.color = color;
-            }
-
             if (_background != null)
             {
                 Color alphaColor = color;
-                alphaColor.a = 0.4f;
+                alphaColor.a = MAX_BACKGROUND_ALPHA;
                 _background.color = alphaColor;
             }
         }
@@ -208,33 +206,45 @@ namespace FlightReLive.Core.POI
 
         private void UpdateTransparencyByDistance()
         {
-            if (_targetCamera == null)
+            float alpha = 1f;
+
+            if (!IgnoreDistanceFade)
             {
-                return;
+                float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
+                alpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(START_FADING_DISTANCE, STOP_FADING_DISTANCE, distance));
             }
 
-            float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
-            float alpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(_minVisibleDistance, _maxVisibleDistance, distance));
+            SetAlpha(alpha);
+        }
 
+        private void SetAlpha(float alpha)
+        {
             if (_lineRenderer != null && _lineRenderer.material.HasProperty("_Color"))
             {
-                Color lineColor = _lineRenderer.material.color;
-                lineColor.a = alpha;
-                _lineRenderer.material.color = lineColor;
+                Color lc = _lineRenderer.material.color;
+                lc.a = alpha;
+                _lineRenderer.material.color = lc;
             }
 
             if (_pointImage != null)
             {
-                Color iconColor = _pointImage.color;
-                iconColor.a = alpha;
-                _pointImage.color = iconColor;
+                Color pc = _pointImage.color;
+                pc.a = alpha;
+                _pointImage.color = pc;
+            }
+
+            if (_background != null)
+            {
+                Color bc = _background.color;
+                bc.a = alpha * MAX_BACKGROUND_ALPHA;
+                _background.color = bc;
             }
 
             if (_text != null)
             {
-                Color textColor = _text.color;
-                textColor.a = alpha;
-                _text.color = textColor;
+                Color tc = _text.color;
+                tc.a = alpha;
+                _text.color = tc;
             }
         }
 
@@ -249,11 +259,6 @@ namespace FlightReLive.Core.POI
 
         private void ScaleByDistance()
         {
-            if (_targetCamera == null)
-            {
-                return;
-            }
-
             Vector3 camPos = _targetCamera.transform.position;
             Vector3 toPoi = transform.position - camPos;
             float distance = toPoi.magnitude;
@@ -292,11 +297,6 @@ namespace FlightReLive.Core.POI
 
         private void ElevatePOI()
         {
-            if (_targetCamera == null || _point == null)
-            {
-                return;
-            }
-
             float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
             float elevation = _heightFixedOffset >= 0f
                 ? _heightFixedOffset * (2f * distance * Mathf.Tan(_targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad)) / Screen.height
@@ -317,7 +317,7 @@ namespace FlightReLive.Core.POI
 
         private void UpdateLineRenderer()
         {
-            if (_lineRenderer == null || Mathf.Abs(_heightFixedOffset) < Mathf.Epsilon || _targetCamera == null)
+            if (_lineRenderer == null || Mathf.Abs(_heightFixedOffset) < Mathf.Epsilon)
             {
                 return;
             }
@@ -346,7 +346,9 @@ namespace FlightReLive.Core.POI
             _lineRenderer.startWidth = worldLineWidth;
             _lineRenderer.endWidth = worldLineWidth;
         }
+        #endregion
 
+        #region TEXT / RESET
         internal void SetText(string text)
         {
             if (_text == null)
@@ -364,10 +366,20 @@ namespace FlightReLive.Core.POI
                 textRect.sizeDelta = new Vector2(textWidth, textRect.sizeDelta.y);
 
                 if (_backgroundRect != null)
-                {
                     _backgroundRect.sizeDelta = textRect.sizeDelta;
-                }
             }
+        }
+
+        internal void Reset()
+        {
+            IsVisible = false;
+            IgnoreDistanceFade = false;
+            _linkedTransform = null;
+            _fixedWorldPosition = null;
+            _targetCamera = null;
+            _color = Color.white;
+            _scaleFactor = 0.1f;
+            _heightFixedOffset = -1f;
         }
         #endregion
     }

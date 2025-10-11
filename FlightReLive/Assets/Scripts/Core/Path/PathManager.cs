@@ -226,13 +226,13 @@ namespace FlightReLive.Core.Paths
             UpdatePathThickness();
 
             //Create path POI
-            _dronePoiEntity = POIManager.Instance.AddFixedPOI("", _droneAnchorTransform, _dronePositionColor, 50f);
+            _dronePoiEntity = POIManager.Instance.AddPOI("", _droneAnchorTransform, _dronePositionColor, 50f, true);
 
             //Create POI at start and end of path
             if (_fullPath != null && _fullPath.Count > 1)
             {
-                POIManager.Instance.AddFixedPOI("Start", _fullPath.First().Position, _pathStartColor, 0f);
-                POIManager.Instance.AddFixedPOI("End", _fullPath.Last().Position, _pathEndColor, 0f);
+                POIManager.Instance.AddPOI("Start", _fullPath.First().Position, _pathStartColor, 0f, true);
+                POIManager.Instance.AddPOI("End", _fullPath.Last().Position, _pathEndColor, 0f, true);
             }
         }
 

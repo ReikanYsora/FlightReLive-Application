@@ -177,7 +177,7 @@ namespace FlightReLive.Core.Cameras
             {
                 if (_pivotPointPOI != null)
                 {
-                    POIManager.Instance.DeleteFixedPOI(_pivotPointPOI);
+                    POIManager.Instance.DeletePOI(_pivotPointPOI);
                 }
 
                 UpdateCameraTransformTracking();
@@ -328,14 +328,14 @@ namespace FlightReLive.Core.Cameras
 
                         if (_pivotPointPOI != null)
                         {
-                            POIManager.Instance.DeleteFixedPOI(_pivotPointPOI);
+                            POIManager.Instance.DeletePOI(_pivotPointPOI);
                         }
 
                         if (LoadingManager.Instance.CurrentFlightData != null)
                         {
                             string poiText = string.Empty;
                             FlightGPSData data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
-                            _pivotPointPOI = POIManager.Instance.AddFixedPOI($"{data.Latitude}, {data.Longitude}", newPivot, Color.blueViolet, 50f);
+                            _pivotPointPOI = POIManager.Instance.AddPOI($"{data.Latitude}, {data.Longitude}", newPivot, Color.blueViolet, 50f);
                         }
                     }
                 }

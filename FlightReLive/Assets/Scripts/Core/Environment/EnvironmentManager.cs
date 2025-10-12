@@ -447,10 +447,30 @@ namespace FlightReLive.Core.Environment
             }
 
             //Main light switch
+            RenderSettings.sun = _mainLight;
             Light pipelineMain = (_mainLight.intensity >= (_moonLight != null ? _moonLight.intensity : 0f)) ? _mainLight : _moonLight;
-            if (RenderSettings.sun != pipelineMain)
+
+            if (pipelineMain != null)
             {
-                RenderSettings.sun = pipelineMain;
+                Shader.SetGlobalVector("_MainLightPosition", -pipelineMain.transform.forward);
+                Shader.SetGlobalVector("_MainLightDirection", -pipelineMain.transform.forward);
+                Shader.SetGlobalColor("_MainLightColor", pipelineMain.color * pipelineMain.intensity);
+            }
+
+            if (_mainLight != null)
+            {
+                _mainLight.shadows = LightShadows.Soft;
+                _mainLight.shadowStrength = 1f;
+                _mainLight.shadowBias = 0.05f;
+                _mainLight.shadowNormalBias = 0.4f;
+            }
+
+            if (_moonLight != null)
+            {
+                _moonLight.shadows = LightShadows.Soft;
+                _moonLight.shadowStrength = 0.25f;
+                _moonLight.shadowBias = 0.2f;
+                _moonLight.shadowNormalBias = 0.5f;
             }
 
             if (pipelineMain != null)

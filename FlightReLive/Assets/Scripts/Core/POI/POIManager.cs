@@ -46,6 +46,8 @@ namespace FlightReLive.Core.POI
             SettingsManager.OnPOIScaleChanged += OnPOIScaleChanged;
             SettingsManager.OnPOIHeightChanged += OnPOIHeightChanged;
             SettingsManager.OnPOIVisibilityChanged += OnPOIVisibilityChanged;
+            SettingsManager.OnPOIMinFadeDistanceChanged += OnPOIMinFadeDistanceChanged;
+            SettingsManager.OnPOIMaxFadeDistanceChanged += OnPOIMaxFadeDistanceChanged;
         }
 
         private void OnDestroy()
@@ -53,6 +55,8 @@ namespace FlightReLive.Core.POI
             SettingsManager.OnPOIScaleChanged -= OnPOIScaleChanged;
             SettingsManager.OnPOIHeightChanged -= OnPOIHeightChanged;
             SettingsManager.OnPOIVisibilityChanged -= OnPOIVisibilityChanged;
+            SettingsManager.OnPOIMinFadeDistanceChanged -= OnPOIMinFadeDistanceChanged;
+            SettingsManager.OnPOIMaxFadeDistanceChanged -= OnPOIMaxFadeDistanceChanged;
         }
         #endregion
 
@@ -111,6 +115,8 @@ namespace FlightReLive.Core.POI
             POIEntity poi = go.GetComponent<POIEntity>();
             poi.Initialize(_camera, position, color, name, height, ignoreDistanceFade: ignoreDistanceFade);
             poi.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+            poi.MinFadeDistance = SettingsManager.CurrentSettings.POIMinFadeDistance;
+            poi.MaxFadeDistance = SettingsManager.CurrentSettings.POIMaxFadeDistance;
 
             _poiList.Add(poi);
             return poi;
@@ -127,6 +133,8 @@ namespace FlightReLive.Core.POI
             POIEntity poi = go.GetComponent<POIEntity>();
             poi.Initialize(_camera, transform, color, name, height, ignoreDistanceFade: ignoreDistanceFade);
             poi.ElevationFactor = SettingsManager.CurrentSettings.POIHeight;
+            poi.MinFadeDistance = SettingsManager.CurrentSettings.POIMinFadeDistance;
+            poi.MaxFadeDistance = SettingsManager.CurrentSettings.POIMaxFadeDistance;
 
             _poiList.Add(poi);
             return poi;
@@ -312,6 +320,28 @@ namespace FlightReLive.Core.POI
                 }
             }
         }
+
+        private void OnPOIMinFadeDistanceChanged(float minFadeDistance)
+        {
+            foreach (POIEntity poi in _poiList)
+            {
+                if (poi != null)
+                {
+                    poi.MinFadeDistance = minFadeDistance;
+                }
+            }
+        }
+
+        private void OnPOIMaxFadeDistanceChanged(float MaxFadeDistance)
+        {
+            foreach (POIEntity poi in _poiList)
+            {
+                if (poi != null)
+                {
+                    poi.MaxFadeDistance = MaxFadeDistance;
+                }
+            }
+        }
         #endregion
 
         #region UI
@@ -354,6 +384,28 @@ namespace FlightReLive.Core.POI
                     "%.1f",
                     (x) => SettingsManager.SavePOIHeight(x),
                     () => SettingsManager.ResetPOIHeight());
+
+                SettingsManager.DisplaySettingsRangeWithReset(grid,
+                    "POI fade distance",
+                    "Adjust the minimum and maximum distances for POI fading based on camera distance.",
+                    "Reset to default values.",
+                    SettingsManager.CurrentSettings.POIMinFadeDistance,
+                    SettingsManager.CurrentSettings.POIMaxFadeDistance,
+                    0f,
+                    1000f,
+                    1f,
+                    new Vector2(SettingsManager.POI_MIN_FADE_DISTANCE_DEFAULT_VALUE, SettingsManager.POI_MAX_FADE_DISTANCE_DEFAULT_VALUE),
+                    "%.0f m",
+                    (min, max) =>
+                    {
+                        SettingsManager.SavePOIMinFadeDistance(min);
+                        SettingsManager.SavePOIMaxFadeDistance(max);
+                    },
+                    () =>
+                    {
+                        SettingsManager.ResetPOIMinFadeDistance();
+                        SettingsManager.ResetPOIMaxFadeDistance();
+                    });
             }
         }
         #endregion

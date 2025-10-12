@@ -26,9 +26,12 @@ namespace FlightReLive.Core.Settings
         internal static bool POI_DISPLAY_STATE_DEFAULT_VALUE = true;
         internal static float POI_SCALE_DEFAULT_VALUE = 0.5f;
         internal static float POI_HEIGHT_DEFAULT_VALUE = 1.5f;
+        internal static float POI_MIN_FADE_DISTANCE_DEFAULT_VALUE = 100f;
+        internal static float POI_MAX_FADE_DISTANCE_DEFAULT_VALUE = 250f;
         internal static float VIGNETTING_DEFAULT_VALUE = 0.3f;
         internal static float CONTRAST_OFFSET_DEFAULT_VALUE = 0f;
         internal static float SATURATION_OFFSET_DEFAULT_VALUE = 0f;
+        internal static float EXPOSURE_OFFSET_DEFAULT_VALUE = 0f;
         internal static CloudsPreset CLOUD_PRESET_DEFAULT_VALUE = CloudsPreset.Sparse;
         internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
         internal static float CLOUD_SHADOW_OPACITY_DEFAULT_STATE = 0.5f;
@@ -87,9 +90,12 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnPOIVisibilityChanged;
         public static event Action<float> OnPOIScaleChanged;
         public static event Action<float> OnPOIHeightChanged;
+        public static event Action<float> OnPOIMinFadeDistanceChanged;
+        public static event Action<float> OnPOIMaxFadeDistanceChanged;
         public static event Action<float> OnVignettingIntensityChanged;
         public static event Action<float> OnContrastOffsetChanged;
         public static event Action<float> OnSaturationOffsetChanged;
+        public static event Action<float> OnExposureOffsetChanged;
         public static event Action<CloudsPreset> OnCloudsPresetChanged;
         public static event Action<bool> OnCloudShadowsEnabledChanged;
         public static event Action<float> OnCloudShadowsOpacityChanged;
@@ -317,6 +323,22 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
+        /// Load the POI min fade distance setting from PlayerPrefs, defaulting to POI_MIN_FADE_DISTANCE_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPOIMinFadeDistance()
+        {
+            CurrentSettings.POIMinFadeDistance = PlayerPrefs.GetFloat(nameof(Settings.POIMinFadeDistance), POI_MIN_FADE_DISTANCE_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the POI max fade distance setting from PlayerPrefs, defaulting to POI_MAX_FADE_DISTANCE_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadPOIMaxFadeDistance()
+        {
+            CurrentSettings.POIMaxFadeDistance = PlayerPrefs.GetFloat(nameof(Settings.POIMaxFadeDistance), POI_MAX_FADE_DISTANCE_DEFAULT_VALUE);
+        }
+
+        /// <summary>
         /// Load the current version setting from PlayerPrefs, defaulting to the application version if not set.
         /// </summary>
         internal static void LoadCurrentVersion()
@@ -346,6 +368,14 @@ namespace FlightReLive.Core.Settings
         internal static void LoadSaturationOffset()
         {
             CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.SaturationOffset), SATURATION_OFFSET_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the exposure offset setting from PlayerPrefs, defaulting to EXPOSURE_OFFSET_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadExposureOffset()
+        {
+            CurrentSettings.SaturationOffset = PlayerPrefs.GetFloat(nameof(Settings.ExposureOffset), EXPOSURE_OFFSET_DEFAULT_VALUE);
         }
 
         /// <summary>
@@ -670,6 +700,30 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
+        /// Save the POI max fade distance setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SavePOIMinFadeDistance(float value)
+        {
+            CurrentSettings.POIMinFadeDistance = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIMinFadeDistance), value);
+            PlayerPrefs.Save();
+            OnPOIMinFadeDistanceChanged?.Invoke(value);
+        }
+
+        /// <summary>
+        /// Save the POI max fade distance setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SavePOIMaxFadeDistance(float value)
+        {
+            CurrentSettings.POIMaxFadeDistance = value;
+            PlayerPrefs.SetFloat(nameof(Settings.POIMaxFadeDistance), value);
+            PlayerPrefs.Save();
+            OnPOIMaxFadeDistanceChanged?.Invoke(value);
+        }
+
+        /// <summary>
         /// Save the contrast offset setting to PlayerPrefs.
         /// </summary>
         /// <param name="value"></param>
@@ -691,6 +745,18 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetFloat(nameof(Settings.SaturationOffset), value);
             PlayerPrefs.Save();
             OnSaturationOffsetChanged?.Invoke(value);
+        }
+
+        /// <summary>
+        /// Save the exposure offset setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveExposureOffset(float value)
+        {
+            CurrentSettings.ExposureOffset = value;
+            PlayerPrefs.SetFloat(nameof(Settings.ExposureOffset), value);
+            PlayerPrefs.Save();
+            OnExposureOffsetChanged?.Invoke(value);
         }
 
         /// <summary>
@@ -787,9 +853,12 @@ namespace FlightReLive.Core.Settings
             LoadPOIScale();
             LoadPOIVisibility();
             LoadPOIHeight();
+            LoadPOIMinFadeDistance();
+            LoadPOIMaxFadeDistance();
             LoadVignettingIntensity();
             LoadContrastOffset();
             LoadSaturationOffset();
+            LoadExposureOffset();
             LoadCloudsPreset();
             LoadCloudShadowsEnabled();
             LoadCloudShadowsOpacity();
@@ -828,8 +897,11 @@ namespace FlightReLive.Core.Settings
             SavePOIVisibility(POI_DISPLAY_STATE_DEFAULT_VALUE);
             SavePOIScale(POI_SCALE_DEFAULT_VALUE);
             SavePOIHeight(POI_HEIGHT_DEFAULT_VALUE);
+            SavePOIMinFadeDistance(POI_MIN_FADE_DISTANCE_DEFAULT_VALUE);
+            SavePOIMaxFadeDistance(POI_MAX_FADE_DISTANCE_DEFAULT_VALUE);
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
+            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
             SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
             SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
@@ -1174,6 +1246,41 @@ namespace FlightReLive.Core.Settings
             }
             Fugui.PopFont();
         }
+
+        internal static void DisplaySettingsRangeWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float valueMin, float valueMax, float minValue, float maxValue, float step, Vector2 defaultValues, string format, Action<float, float> onChange, Action onReset)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            float tempMin = valueMin;
+            float tempMax = valueMax;
+
+            if (grid.Range(text, ref tempMin, ref tempMax, minValue, maxValue, step, format: format))
+            {
+                onChange?.Invoke(tempMin, tempMax);
+            }
+
+            bool isAtDefault = AreApproximatelyEqual(valueMin, defaultValues.x) && AreApproximatelyEqual(valueMax, defaultValues.y);
+            if (isAtDefault)
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+            Fugui.PopFont();
+        }
+
 
         internal static void DisplaySettingsRangeWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float value1, float value2, float minValue, float maxValue, float step, float defaultValue1, float defaultValue2, Action<float, float> onChange, Action onReset)
         {
@@ -1558,6 +1665,18 @@ namespace FlightReLive.Core.Settings
             LoadPOIHeight();
         }
 
+        internal static void ResetPOIMinFadeDistance()
+        {
+            SavePOIMinFadeDistance(POI_MIN_FADE_DISTANCE_DEFAULT_VALUE);
+            LoadPOIMinFadeDistance();
+        }
+
+        internal static void ResetPOIMaxFadeDistance()
+        {
+            SavePOIMaxFadeDistance(POI_MAX_FADE_DISTANCE_DEFAULT_VALUE);
+            LoadPOIMaxFadeDistance();
+        }
+
         internal static void ResetContrastOffset()
         {
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
@@ -1568,6 +1687,12 @@ namespace FlightReLive.Core.Settings
         {
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
             LoadSaturationOffset();
+        }
+
+        internal static void ResetExposureOffset()
+        {
+            SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
+            LoadExposureOffset();
         }
 
         internal static void ResetVignettingIntensity()

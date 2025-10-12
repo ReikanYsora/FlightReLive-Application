@@ -9,8 +9,6 @@ namespace FlightReLive.Core.POI
     public class POIEntity : MonoBehaviour
     {
         #region CONSTANTS
-        private const float START_FADING_DISTANCE = 100f;
-        private const float STOP_FADING_DISTANCE = 250f;
         private const float MAX_BACKGROUND_ALPHA = 0.8f;
         #endregion
 
@@ -59,6 +57,10 @@ namespace FlightReLive.Core.POI
         }
 
         internal float ElevationFactor { get; set; }
+
+        internal float MinFadeDistance { get; set; }
+
+        internal float MaxFadeDistance { get; set; }
 
         internal bool IsVisible
         {
@@ -271,7 +273,7 @@ namespace FlightReLive.Core.POI
             if (!IgnoreDistanceFade)
             {
                 float distance = Vector3.Distance(transform.position, _targetCamera.transform.position);
-                alpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(START_FADING_DISTANCE, STOP_FADING_DISTANCE, distance));
+                alpha = 1f - Mathf.Clamp01(Mathf.InverseLerp(MinFadeDistance, MaxFadeDistance, distance));
             }
 
             SetAlpha(alpha);

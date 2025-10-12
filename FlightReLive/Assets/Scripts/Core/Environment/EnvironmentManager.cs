@@ -23,7 +23,10 @@ namespace FlightReLive.Core.Environment
         #endregion
 
         #region ATTRIBUTES
+
+        [Header("Lights")]
         [SerializeField] private Light _mainLight;
+        [SerializeField] private Light _moonLight;
 
         [Header("Camera")]
         [SerializeField] private Camera _reliveCamera;
@@ -52,6 +55,7 @@ namespace FlightReLive.Core.Environment
         //Baseline values
         private float _baseContrast;
         private float _baseSaturation;
+        private float _baseExposure;
 
         //Location
         private double _latitude;
@@ -111,6 +115,7 @@ namespace FlightReLive.Core.Environment
         {
             SettingsManager.OnContrastOffsetChanged += OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged += OnSaturationOffsetChanged;
+            SettingsManager.OnExposureOffsetChanged += OnExposureOffsetChanged;
             SettingsManager.OnVignettingIntensityChanged += OnVignettingIntensityChanged;
             SettingsManager.OnCloudsPresetChanged += OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged += OnCloudShadowsEnabledChanged;
@@ -126,6 +131,7 @@ namespace FlightReLive.Core.Environment
 
             SettingsManager.OnContrastOffsetChanged -= OnContrastOffsetChanged;
             SettingsManager.OnSaturationOffsetChanged -= OnSaturationOffsetChanged;
+            SettingsManager.OnExposureOffsetChanged -= OnExposureOffsetChanged;
             SettingsManager.OnVignettingIntensityChanged -= OnVignettingIntensityChanged;
             SettingsManager.OnCloudsPresetChanged -= OnCloudsPresetChanged;
             SettingsManager.OnCloudShadowsEnabledChanged -= OnCloudShadowsEnabledChanged;
@@ -202,12 +208,20 @@ namespace FlightReLive.Core.Environment
                 _volumetricClouds.earthCurvature.overrideState = false;
                 _volumetricClouds.verticalErosionWindSpeed.overrideState = false;
                 _volumetricClouds.verticalShapeWindSpeed.overrideState = false;
-                _volumetricClouds.ambientLightProbeDimmer.overrideState = false;
-                _volumetricClouds.sunLightDimmer.overrideState = false;
                 _volumetricClouds.scatteringTint.overrideState = false;
                 _volumetricClouds.perceptualBlending.overrideState = false;
                 _volumetricClouds.numLightSteps.overrideState = false;
                 _volumetricClouds.fadeInMode.overrideState = false;
+            }
+
+            if (_reliveCamera != null)
+            {
+                _reliveCamera.allowHDR = true;
+            }
+
+            if (_povCamera != null)
+            {
+                _povCamera.allowHDR = true;
             }
         }
 
@@ -279,11 +293,12 @@ namespace FlightReLive.Core.Environment
             Vector3 direction = new Vector3(Mathf.Cos(elevationRad) * Mathf.Sin(azimuthRad), Mathf.Sin(elevationRad), Mathf.Cos(elevationRad) * Mathf.Cos(azimuthRad));
 
             //Perceptual daylight factor
-            //-6° = dawn/dusk, 0° = sunrise/sunset, 60° = full daylight
             float daylight = Mathf.InverseLerp(-6f, 60f, sun.Elevation);
             daylight = Mathf.Clamp01(Mathf.Pow(daylight, 0.9f));
+            bool isDay = sun.Elevation > 0.0f;
+            bool isNight = sun.Elevation < -2.0f;
 
-            //Main light intensity
+            //Main light (Sun) base intensity
             float softDay = Mathf.SmoothStep(0f, 1f, daylight);
             float unityIntensity = Mathf.Lerp(0.02f, 6f, softDay);
             float middayFlatten = Mathf.SmoothStep(0.55f, 0.85f, daylight) * 0.5f;
@@ -314,41 +329,30 @@ namespace FlightReLive.Core.Environment
             _physicallyBasedSky.spaceRotation.Override(new Vector3(0f, lstDeg, 0f));
             _physicallyBasedSky.spaceEmissionTexture.Override(_spaceBackground);
 
-            //Star visibility - stars visible below -1° and fade out completely by +4°
+            //Stars
             float starFade = Mathf.InverseLerp(4f, -1f, sun.Elevation);
-            float spaceEmission = Mathf.Lerp(0f, 5f, starFade); // étoiles un peu plus visibles
+            float spaceEmission = Mathf.Lerp(0f, 5f, starFade);
             _physicallyBasedSky.spaceEmissionMultiplier.Override(spaceEmission);
 
             //Exposure
-            //Global exposure much flatter, capped around 0.9 to prevent overexposure
             float exposure;
-
             if (daylight < 0.15f)
             {
-                exposure = Mathf.Lerp(0.8f, 0.95f, daylight / 0.15f);
+                exposure = Mathf.Lerp(0.82f, 0.95f, daylight / 0.15f);
             }
             else if (daylight > 0.8f)
             {
                 float mid = Mathf.InverseLerp(0.8f, 1f, daylight);
-                exposure = Mathf.Lerp(0.95f, 0.8f, mid);
+                exposure = Mathf.Lerp(0.95f, 0.85f, mid);
             }
             else
             {
                 exposure = 0.95f;
             }
-
-            RenderSettings.ambientIntensity = Mathf.Lerp(0.4f, 1f, daylight);
+            exposure = Mathf.Max(exposure, 0.82f);
             Shader.SetGlobalFloat("_GlobalExposureMultiplier", exposure);
-            _physicallyBasedSky.exposure.Override(exposure);
+            _baseExposure = exposure;
 
-            //Athmospheric scattering
-            _physicallyBasedSky.aerosolDensity.Override(0.03f);
-            _physicallyBasedSky.aerosolTint.Override(Color.white);
-            _physicallyBasedSky.aerosolAnisotropy.Override(0.85f);
-            _physicallyBasedSky.aerosolMaximumAltitude.Override(2000f);
-            _physicallyBasedSky.horizonZenithShift.Override(0f);
-
-            //Sky tint
             Color nightSkyTint = new Color(0.03f, 0.04f, 0.07f);
             Color daySkyTint = new Color(0.9f, 0.95f, 1f);
             Color sunsetTint = new Color(1f, 0.78f, 0.55f);
@@ -368,7 +372,32 @@ namespace FlightReLive.Core.Environment
             _physicallyBasedSky.zenithTint.Override(skyTint);
             _physicallyBasedSky.skyIntensityMode.Override(PhysicallyBasedSky.SkyIntensityMode.Exposure);
 
-            //Fog
+            // Ambient correction: stronger night twilight blend
+            float twilightFactor = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-12f, 0f, sun.Elevation));
+            float ambStrength = Mathf.Lerp(0.4f, 1f, daylight + twilightFactor * 0.5f); // min 0.4 la nuit
+
+            if (isNight || daylight < 0.4f)
+            {
+                RenderSettings.ambientMode = AmbientMode.Trilight;
+                Color skyA = Color.Lerp(new Color(0.1f, 0.12f, 0.20f), skyTint, 0.6f);
+                Color eqA = Color.Lerp(new Color(0.08f, 0.10f, 0.15f), skyTint, 0.5f);
+                Color grdA = new Color(0.04f, 0.04f, 0.05f);
+                RenderSettings.ambientSkyColor = skyA * ambStrength;
+                RenderSettings.ambientEquatorColor = eqA * ambStrength;
+                RenderSettings.ambientGroundColor = grdA * ambStrength;
+            }
+            else
+            {
+                RenderSettings.ambientMode = AmbientMode.Skybox;
+                RenderSettings.ambientIntensity = Mathf.Clamp(ambStrength, 0.4f, 1.0f);
+            }
+
+            _physicallyBasedSky.aerosolDensity.Override(0.03f);
+            _physicallyBasedSky.aerosolTint.Override(Color.white);
+            _physicallyBasedSky.aerosolAnisotropy.Override(0.85f);
+            _physicallyBasedSky.aerosolMaximumAltitude.Override(2000f);
+            _physicallyBasedSky.horizonZenithShift.Override(0f);
+
             _fog.meanFreePath.Override(Mathf.Lerp(700f, 2200f, daylight));
             _fog.baseHeight.Override(0f);
             _fog.maximumHeight.Override(60f);
@@ -376,16 +405,18 @@ namespace FlightReLive.Core.Environment
             _fog.colorMode.Override(Fog.FogColorMode.SkyColor);
             _fog.tint.Override(skyTint);
 
-            //Visual environment
             _visualEnvironment.skyType.Override((int)VisualEnvironment.SkyType.PhysicallyBased);
             _visualEnvironment.skyAmbientMode.Override(VisualEnvironment.SkyAmbientMode.Dynamic);
             _visualEnvironment.renderingSpace.Override(VisualEnvironment.RenderingSpace.Camera);
 
-            //Clouds
             _volumetricClouds.temporalAccumulationFactor.Override(1);
             _volumetricClouds.numPrimarySteps.Override(100);
+            float lowLight = 1f - Mathf.SmoothStep(0.05f, 0.2f, daylight);
+            float sunDimmer = Mathf.Lerp(0.6f, 1f, 1f - lowLight);
+            float ambientProbeDimmer = Mathf.Lerp(0.7f, 1f, 1f - lowLight);
+            _volumetricClouds.sunLightDimmer.Override(sunDimmer);
+            _volumetricClouds.ambientLightProbeDimmer.Override(ambientProbeDimmer);
 
-            //Sun color
             Color sunColor;
             if (sun.Elevation < 8f)
             {
@@ -397,22 +428,41 @@ namespace FlightReLive.Core.Environment
                 sunColor = Color.white;
             }
 
-            //Main light
-            if (_mainLight != null)
-            {
-                _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
-                _mainLight.intensity = unityIntensity;
-                _mainLight.color = sunColor;
+            float sunBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-10f, 4f, sun.Elevation));
+            float moonBlend = 1f - sunBlend;
 
-                RenderSettings.sun = _mainLight;
-                RenderSettings.ambientMode = AmbientMode.Skybox;
-                RenderSettings.ambientIntensity = Mathf.Lerp(0.25f, 0.8f, daylight);
-                RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-                RenderSettings.reflectionIntensity = Mathf.Lerp(0.5f, 0.9f, daylight);
-                Shader.SetGlobalVector("_MainLightPosition", -_mainLight.transform.forward);
-                Shader.SetGlobalVector("_MainLightDirection", -_mainLight.transform.forward);
-                Shader.SetGlobalColor("_MainLightColor", _mainLight.color * _mainLight.intensity);
+            //Sun setup
+            _mainLight.transform.rotation = Quaternion.LookRotation(-direction, Vector3.up);
+            _mainLight.color = sunColor;
+            _mainLight.intensity = Mathf.Lerp(0.2f, unityIntensity, sunBlend);
+
+            //Moon setup
+            if (_moonLight != null)
+            {
+                _moonLight.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+                float moonIntensity = Mathf.Lerp(0.15f, 0.35f, Mathf.Pow(moonBlend, 1.2f));
+                _moonLight.intensity = moonIntensity;
+                _moonLight.color = new Color(0.80f, 0.88f, 1.00f);
+                _moonLight.shadows = LightShadows.Soft;
             }
+
+            //Main light switch
+            Light pipelineMain = (_mainLight.intensity >= (_moonLight != null ? _moonLight.intensity : 0f)) ? _mainLight : _moonLight;
+            if (RenderSettings.sun != pipelineMain)
+            {
+                RenderSettings.sun = pipelineMain;
+            }
+
+            if (pipelineMain != null)
+            {
+                Shader.SetGlobalVector("_MainLightPosition", -pipelineMain.transform.forward);
+                Shader.SetGlobalVector("_MainLightDirection", -pipelineMain.transform.forward);
+                Shader.SetGlobalColor("_MainLightColor", pipelineMain.color * pipelineMain.intensity);
+            }
+
+            //Reflections
+            RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+            RenderSettings.reflectionIntensity = Mathf.Lerp(0.8f, 1.0f, daylight);
 
             //Lens flare
             if (_lensFlare != null)
@@ -427,11 +477,13 @@ namespace FlightReLive.Core.Environment
             ApplyVignettingIntensity();
             ApplyContrast();
             ApplySaturation();
+            ApplyExposure();
             ApplyCloudsPreset();
             ApplyCloudShadowsEnabled();
             ApplyCloudShadowsOpacity();
             ApplyWindType();
         }
+
 
         /// <summary>
         /// Add all post-processing components on the serialized VolumeProfile, initialize camera and light properties
@@ -486,6 +538,16 @@ namespace FlightReLive.Core.Environment
             if (_povCamera != null)
             {
                 _povCamera.clearFlags = CameraClearFlags.Skybox;
+            }
+
+            //Initialize lights
+            if (_moonLight != null)
+            {
+                _moonLight.gameObject.hideFlags = HideFlags.DontSave;
+                _moonLight.type = LightType.Directional;
+                _moonLight.color = new Color(0.8f, 0.85f, 1f);
+                _moonLight.intensity = 0f;
+                _moonLight.shadows = LightShadows.None;
             }
 
             _environmentLoaded = true;
@@ -610,6 +672,12 @@ namespace FlightReLive.Core.Environment
                 _mainLight.color = Color.white;
             }
 
+            if (_moonLight != null)
+            {
+                _moonLight.intensity = 0f;
+                _moonLight.color = Color.white;
+            }
+
             if (_lensFlare != null)
             {
                 _lensFlare.enabled = false;
@@ -709,6 +777,18 @@ namespace FlightReLive.Core.Environment
             {
                 float saturation = _baseSaturation + (30f * SettingsManager.CurrentSettings.SaturationOffset);
                 _colorAdjustments.saturation.Override(saturation);
+            }
+        }
+
+        /// <summary>
+        /// Apply exposure custom settings (URP)
+        /// </summary>
+        private void ApplyExposure()
+        {
+            if (_physicallyBasedSky != null)
+            {
+                float exposure = _baseExposure + (2f * SettingsManager.CurrentSettings.ExposureOffset);
+                _physicallyBasedSky.exposure.Override(exposure);
             }
         }
 
@@ -827,6 +907,15 @@ namespace FlightReLive.Core.Environment
         private void OnSaturationOffsetChanged(float offset)
         {
             ApplySaturation();
+        }
+
+        /// <summary>
+        /// Apply exposure custom settings (URP)
+        /// </summary>
+        /// <param name="offset"></param>
+        private void OnExposureOffsetChanged(float offset)
+        {
+            ApplyExposure();
         }
 
         /// <summary>
@@ -981,6 +1070,20 @@ namespace FlightReLive.Core.Environment
                     "%.2f",
                      (x) => SettingsManager.SaveSaturationOffset(x),
                      () => SettingsManager.ResetSaturationOffset());
+
+                //Display exposure custom settings
+                SettingsManager.DisplaySettingsSliderWithReset(grid,
+                    "Exposure",
+                    "Define a custom exposure offset for the scene.",
+                    $"Reset exposure offset to default value ({SettingsManager.EXPOSURE_OFFSET_DEFAULT_VALUE}).",
+                    SettingsManager.CurrentSettings.ExposureOffset,
+                    -1.0f,
+                    1.0f,
+                    0.01f,
+                    SettingsManager.EXPOSURE_OFFSET_DEFAULT_VALUE,
+                    "%.2f",
+                     (x) => SettingsManager.SaveExposureOffset(x),
+                     () => SettingsManager.ResetExposureOffset());
             }
         }
 

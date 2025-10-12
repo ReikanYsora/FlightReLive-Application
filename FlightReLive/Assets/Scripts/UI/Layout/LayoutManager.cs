@@ -247,6 +247,8 @@ namespace FlightReLive.UI.Layout
                     creditGrid.TextURL("Fugui", "https://github.com/Keksls/fugui");
                     creditGrid.TextURL("MapTiler", "https://www.maptiler.com/");
                     creditGrid.TextURL("FFmpeg", "https://ffmpeg.org/");
+                    creditGrid.TextURL("UnityPhysicallyBasedSkyURP", "https://github.com/jiaozi158/UnityPhysicallyBasedSkyURP");
+                    creditGrid.TextURL("UnityVolumetricCloudsURP", "https://github.com/jiaozi158/UnityVolumetricCloudsURP");
                     creditGrid.TextURL("Clipper2Lib", "https://github.com/AngusJohnson/Clipper2");
                     creditGrid.TextURL("LibTessDotNet", "https://github.com/speps/LibTessDotNet");
                     creditGrid.TextURL("Vector-tile-cs", "https://github.com/mapbox/vector-tile-cs");

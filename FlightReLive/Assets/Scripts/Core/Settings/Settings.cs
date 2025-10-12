@@ -29,9 +29,12 @@ namespace FlightReLive.Core.Settings
         public float POIScale;
         public float POIHeight;
         public bool POIVisibility;
+        public float POIMinFadeDistance;
+        public float POIMaxFadeDistance;
         public float VignettingIntensity;
         public float ContrastOffset;
         public float SaturationOffset;
+        public float ExposureOffset;
         public CloudsPreset CloudsPreset;
         public bool CloudShadowsEnabled;
         public float CloudShadowsOpacity;

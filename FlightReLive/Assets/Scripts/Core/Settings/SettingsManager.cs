@@ -15,9 +15,9 @@ namespace FlightReLive.Core.Settings
     public static class SettingsManager
     {
         #region ATTRIBUTES
-        internal static float CAMERA_ROTATION_SPEED_DEFAULT_VALUE = 1f;
+        internal static float CAMERA_ROTATION_SPEED_DEFAULT_VALUE = 0.25f;
         internal static float CAMERA_ZOOM_SPEED_DEFAULT_VALUE = 1f;
-        internal static float PAN_SPEED_DEFAULT_VALUE = 1f;
+        internal static float PAN_SPEED_DEFAULT_VALUE = 0.25f;
         internal static float PATH_3D_THICKNESS_DEFAULT_VALUE = 0.4f;
         internal static Color PATH_3D_REMAINING_COLOR_DEFAULT_VALUE = Color.white;
         internal static bool BUILDING_DISPLAY_STATE_DEFAULT_VALUE = true;

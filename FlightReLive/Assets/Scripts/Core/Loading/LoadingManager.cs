@@ -190,7 +190,6 @@ namespace FlightReLive.Core.Loading
                     if (priority == 0)
                     {
                         flightData.BuildTileLookup();
-                        flightData.InitializeAltitude();
                     }
 
                     //We need to call this method only when BuildTileLookup and InitializeAltitude has been executed
@@ -200,6 +199,7 @@ namespace FlightReLive.Core.Loading
                     }
                 }
 
+                flightData.InitializeAltitude();
                 POIManager.Instance.Load(flightData);
                 ProceduralTerrainManager.Instance.Load(flightData);
                 BuildingManager.Instance.Load(flightData);

@@ -18,6 +18,11 @@ namespace FlightReLive.Core.FFmpeg
         #endregion
 
         #region CONSTRUCTOR
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="ffmpegPath"></param>
+        /// <param name="videoPath"></param>
         protected TemplateSRT(string ffmpegPath, string videoPath)
         {
             FFmpegPath = ffmpegPath;
@@ -78,10 +83,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns>TRUE or FALSE either</returns>
         protected bool IsFlightDataValid()
         {
-            if (DataContainer == null ||
-                DataContainer.DataPoints == null ||
-                DataContainer.DataPoints.Count == 0 ||
-                DataContainer.DataPoints.Where(x => x.Latitude == 0 || x.Longitude == 0).Any())
+            if (DataContainer == null || DataContainer.DataPoints == null || DataContainer.DataPoints.Count == 0 || DataContainer.DataPoints.Where(x => x.Latitude == 0 || x.Longitude == 0).Any())
             {
                 UnityEngine.Debug.LogWarning($"{DataContainer.Name} : Flight data invalid: Missing or zero GPS coordinates.");
                 return false;
@@ -111,12 +113,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns></returns>
         protected bool TakeOffPositionAvailable()
         {
-            if (DataContainer.FlightGPSCoordinates == null ||
-                DataContainer.FlightGPSCoordinates.x == 0 ||
-                DataContainer.FlightGPSCoordinates.y == 0 ||
-                DataContainer.EstimateTakeOffPosition.Latitude == 0 ||
-                DataContainer.EstimateTakeOffPosition.Longitude == 0 ||
-                DataContainer.EstimateTakeOffPosition == null)
+            if (DataContainer.FlightGPSCoordinates == null || DataContainer.FlightGPSCoordinates.x == 0 || DataContainer.FlightGPSCoordinates.y == 0 || DataContainer.EstimateTakeOffPosition.Latitude == 0 || DataContainer.EstimateTakeOffPosition.Longitude == 0 || DataContainer.EstimateTakeOffPosition == null)
             {
                 return false;
             }
@@ -138,6 +135,10 @@ namespace FlightReLive.Core.FFmpeg
             return new TimeSpan(0, h, m, s, ms);
         }
 
+        /// <summary>
+        /// Estimate flight start position from GPS data
+        /// </summary>
+        /// <returns></returns>
         protected FlightGPSData EstimateFlightStartFromGPS()
         {
             List<FlightDataPoint> points = DataContainer.DataPoints.Where(p => p.Latitude != 0 && p.Longitude != 0 && p.Distance > 0).ToList();
@@ -164,13 +165,19 @@ namespace FlightReLive.Core.FFmpeg
             return estimatedGPS;
         }
 
+        /// <summary>
+        /// Estimate GPS position using an adaptive grid search algorithm
+        /// </summary>
+        /// <param name="gpsPoints"></param>
+        /// <param name="distances"></param>
+        /// <returns></returns>
         private FlightGPSData EstimateGPSAdaptive(List<FlightGPSData> gpsPoints, List<double> distances)
         {
             double latCenter = gpsPoints[0].Latitude;
             double lonCenter = gpsPoints[0].Longitude;
 
-            double step = 0.0001; // ~11 m
-            int range = 50;       // ±0.005 = ±550 m
+            double step = 0.0001;
+            int range = 50;
             int zoomLevels = 4;
 
             FlightGPSData bestPoint = null;
@@ -200,19 +207,27 @@ namespace FlightReLive.Core.FFmpeg
                     }
                 }
 
-                // Zoom in
+                //Zoom in
                 latCenter = bestPoint.Latitude;
                 lonCenter = bestPoint.Longitude;
                 step /= 2;
-                range = 20; // Réduit pour accélérer
+                range = 20;
             }
 
             return bestPoint;
         }
 
+        /// <summary>
+        /// Calculates the Haversine distance between two GPS coordinates in meters.
+        /// </summary>
+        /// <param name="lat1"></param>
+        /// <param name="lon1"></param>
+        /// <param name="lat2"></param>
+        /// <param name="lon2"></param>
+        /// <returns></returns>
         private static double Haversine(double lat1, double lon1, double lat2, double lon2)
         {
-            double R = 6371000; // Rayon terrestre en mètres
+            double R = 6371000;
             double dLat = DegreesToRadians(lat2 - lat1);
             double dLon = DegreesToRadians(lon2 - lon1);
             double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
@@ -222,6 +237,11 @@ namespace FlightReLive.Core.FFmpeg
             return R * c;
         }
 
+        /// <summary>
+        /// Converts degrees to radians.
+        /// </summary>
+        /// <param name="deg"></param>
+        /// <returns></returns>
         private static double DegreesToRadians(double deg)
         {
             return deg * Math.PI / 180;

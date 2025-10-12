@@ -202,9 +202,7 @@ namespace FlightReLive.Core.FFmpeg
             Regex regex = new Regex(@"\[rel_alt:\s*([\d\.]+)\s+abs_alt:\s*([\d\.]+)\]");
             Match match = regex.Match(input);
 
-            if (match.Success &&
-                double.TryParse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double relAlt) &&
-                double.TryParse(match.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double absAlt))
+            if (match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double relAlt) && double.TryParse(match.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double absAlt))
             {
                 return (relAlt, absAlt);
             }

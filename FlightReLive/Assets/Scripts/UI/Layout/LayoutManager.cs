@@ -29,7 +29,6 @@ namespace FlightReLive.UI.Layout
         #endregion
 
         #region METHODS
-
         /// <summary>
         /// Register main menu items
         /// </summary>
@@ -66,7 +65,7 @@ namespace FlightReLive.UI.Layout
 
             MacOsMainMenuManager.AddMenuEntry("Import", "Import from SharedHash", () =>
             {
-                ShareViewManager.DisplaySharedHashModel();
+                ShareViewManager.DisplaySharedHashModal();
             }, "S");
 
 #if UNITY_EDITOR
@@ -166,7 +165,7 @@ namespace FlightReLive.UI.Layout
 
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import from SharedHash", () =>
             {
-                ShareViewManager.DisplaySharedHashModel();
+                ShareViewManager.DisplaySharedHashModal();
             }, flightReLiveImport);
 
             //Settings menu

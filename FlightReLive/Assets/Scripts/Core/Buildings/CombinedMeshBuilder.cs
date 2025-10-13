@@ -18,6 +18,11 @@ namespace FlightReLive.Core.OpenVectorTile
         #endregion
 
         #region METHODS
+        /// <summary>
+        /// Add a Unity mesh to the combined mesh, applying a world offset to its vertices.
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="worldOffset"></param>
         internal void AddUnityMesh(Mesh src, Vector3 worldOffset)
         {
             int baseIndex = Vertices.Count;
@@ -40,6 +45,10 @@ namespace FlightReLive.Core.OpenVectorTile
             }
         }
 
+        /// <summary>
+        /// Build a Unity mesh from the combined data.
+        /// </summary>
+        /// <returns></returns>
         internal Mesh ToMesh()
         {
             Mesh m = new Mesh { indexFormat = IndexFormat.UInt32 };
@@ -52,6 +61,9 @@ namespace FlightReLive.Core.OpenVectorTile
             return m;
         }
 
+        /// <summary>
+        /// Clear all combined data.
+        /// </summary>
         internal void Clear()
         {
             Vertices.Clear();

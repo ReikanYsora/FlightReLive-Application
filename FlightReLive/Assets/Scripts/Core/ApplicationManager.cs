@@ -125,6 +125,10 @@ namespace FlightReLive.Core
         #endregion
 
         #region METHODS
+        /// <summary>
+        /// Check if the welcome panel need to be displayed
+        /// </summary>
+        /// <returns></returns>
         private bool CheckIfDisplayWelcomePanelNeedToBeDisplayed()
         {
             bool displayWelcome = false;
@@ -142,6 +146,9 @@ namespace FlightReLive.Core
             return displayWelcome;
         }
 
+        /// <summary>
+        /// Check the latest version available and notify the user if a newer version is available.
+        /// </summary>
         private async void CheckLastVersion()
         {
             AppVersionDTO latestVersion = await VersionService.GetLatestVersionAsync();
@@ -161,6 +168,12 @@ namespace FlightReLive.Core
             }
         }
 
+        /// <summary>
+        /// Check if the remote version is newer than the local version.
+        /// </summary>
+        /// <param name="localVersion"></param>
+        /// <param name="remoteVersion"></param>
+        /// <returns></returns>
         private bool IsRemoteVersionNewer(string localVersion, string remoteVersion)
         {
             System.Version local = new System.Version(localVersion);
@@ -169,6 +182,9 @@ namespace FlightReLive.Core
             return remote > local;
         }
 
+        /// <summary>
+        /// Quit the application.
+        /// </summary>
         internal void QuitApplication()
         {
 #if UNITY_EDITOR
@@ -178,6 +194,9 @@ namespace FlightReLive.Core
 #endif
         }
 
+        /// <summary>
+        /// Set the native screen resolution in windowed mode, excluding taskbar (Windows only).
+        /// </summary>
         private static void SetNativeResolutionSafe()
         {
             int width = 0;
@@ -221,6 +240,9 @@ namespace FlightReLive.Core
             Screen.SetResolution(width, height, false);
         }
 
+        /// <summary>
+        /// Apply the saved global scale to the Fugui context.
+        /// </summary>
         private void ApplySavedGlobalScale()
         {
             float scale = SettingsManager.CurrentSettings.GlobalScale;
@@ -229,6 +251,9 @@ namespace FlightReLive.Core
         #endregion
 
         #region UI
+        /// <summary>
+        /// Display the UI scale settings wizard (first start).
+        /// </summary>
         private void DisplayUIScaleSettings()
         {
             float paddingX = 10f;
@@ -387,6 +412,9 @@ namespace FlightReLive.Core
 
         }
 
+        /// <summary>
+        /// Display the welcome panel.
+        /// </summary>
         private void DisplayWelcomePanel()
         {
             Fugui.ShowModal(" ", (layout) =>
@@ -443,11 +471,19 @@ namespace FlightReLive.Core
         #endregion
 
         #region CALLBACKS
+        /// <summary>
+        /// Apply the new global scale to the Fugui context.
+        /// </summary>
+        /// <param name="scale"></param>
         private void OnGlobalScaleChanged(float scale)
         {
             ApplySavedGlobalScale();
         }
 
+        /// <summary>
+        /// Apply the new target FPS to the application.
+        /// </summary>
+        /// <param name="value"></param>
         private void OnApplicationTargetFPSChanged(int value)
         {
             Application.targetFrameRate = SettingsManager.CurrentSettings.ApplicationTargetFPS;

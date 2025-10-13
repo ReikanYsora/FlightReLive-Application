@@ -64,6 +64,11 @@ namespace FlightReLive.Core.OpenVectorTile
         #endregion
 
         #region METHODS
+        /// <summary>
+        /// Load buildings from a tile definition.
+        /// </summary>
+        /// <param name="tile"></param>
+        /// <param name="flight"></param>
         internal void LoadTile(TileDefinition tile, FlightData flight)
         {
             if (tile.Buildings != null)
@@ -78,6 +83,10 @@ namespace FlightReLive.Core.OpenVectorTile
             }
         }
 
+        /// <summary>
+        /// Load buildings for a flight (bake combined mesh if not already done).
+        /// </summary>
+        /// <param name="flight"></param>
         internal void Load(FlightData flight)
         {
             bool displayBuilding = SettingsManager.CurrentSettings.BuildingVisibility;
@@ -117,6 +126,10 @@ namespace FlightReLive.Core.OpenVectorTile
             }
         }
 
+        /// <summary>
+        /// Unload buildings (clear combined mesh and destroy combined GameObject).
+        /// </summary>
+        /// <returns></returns>
         internal async Task Unload()
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
@@ -131,6 +144,12 @@ namespace FlightReLive.Core.OpenVectorTile
             });
         }
 
+        /// <summary>
+        /// Generate a building from its feature data.
+        /// </summary>
+        /// <param name="building"></param>
+        /// <param name="tile"></param>
+        /// <param name="flight"></param>
         private void GenerateBuilding(BuildingFeature building, TileDefinition tile, FlightData flight)
         {
             foreach (List<SerializablePoint2D> ringRaw in building.Geometry)
@@ -178,6 +197,16 @@ namespace FlightReLive.Core.OpenVectorTile
             }
         }
 
+        /// <summary>
+        /// Triangulate and extrude a building footprint to create a 3D mesh.
+        /// </summary>
+        /// <param name="flight"></param>
+        /// <param name="contour"></param>
+        /// <param name="topY"></param>
+        /// <returns></returns>
+        /// <summary>
+        /// Triangulates footprint, builds walls, adds a top bevel ring, and caps with a roof that shares the bevel inner ring.
+        /// </summary>
         private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float topY)
         {
             float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
@@ -194,6 +223,7 @@ namespace FlightReLive.Core.OpenVectorTile
 
             int roofVertexCount = tess.Vertices.Length;
             int roofTriangleCount = tess.ElementCount * 3;
+
             int wallVertexCount = contour.Count * 4;
             int wallTriangleCount = contour.Count * 6;
             int totalVertexCount = roofVertexCount + wallVertexCount;
@@ -231,6 +261,7 @@ namespace FlightReLive.Core.OpenVectorTile
             for (int i = 0; i < contour.Count; i++)
             {
                 Vector2 p0 = contour[i], p1 = contour[(i + 1) % contour.Count];
+
                 int baseIndex = v;
 
                 Vector3 v0p = new Vector3(p0.x, baseY, p0.y);
@@ -269,6 +300,15 @@ namespace FlightReLive.Core.OpenVectorTile
             return meshData;
         }
 
+        /// <summary>
+        /// Convert a geometry ring in tile space to a world space contour.
+        /// </summary>
+        /// <param name="flight"></param>
+        /// <param name="ring"></param>
+        /// <param name="tileX"></param>
+        /// <param name="tileY"></param>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
         private List<Vector2> ConvertGeometryToContour(FlightData flight, List<Point2d<int>> ring, int tileX, int tileY, int zoom)
         {
             ComputeTileWorldCorners(flight, tileX, tileY, zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE);
@@ -293,6 +333,17 @@ namespace FlightReLive.Core.OpenVectorTile
             return contour;
         }
 
+        /// <summary>
+        /// Compute the world space corners of a tile.
+        /// </summary>
+        /// <param name="flight"></param>
+        /// <param name="tileX"></param>
+        /// <param name="tileY"></param>
+        /// <param name="zoom"></param>
+        /// <param name="worldNW"></param>
+        /// <param name="worldNE"></param>
+        /// <param name="worldSW"></param>
+        /// <param name="worldSE"></param>
         private void ComputeTileWorldCorners(FlightData flight, int tileX, int tileY, int zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE)
         {
             double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
@@ -306,6 +357,15 @@ namespace FlightReLive.Core.OpenVectorTile
             worldSE = flight.ConvertGPSPositionToWorld(new Vector3((float)latS, 0f, (float)lonE));
         }
 
+        /// <summary>
+        /// Compute the barycenter of a geometry ring in world space.
+        /// </summary>
+        /// <param name="ring"></param>
+        /// <param name="flight"></param>
+        /// <param name="tileX"></param>
+        /// <param name="tileY"></param>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
         private Vector2 ComputeRingBarycenterWorld(List<Point2d<int>> ring, FlightData flight, int tileX, int tileY, int zoom)
         {
             ComputeTileWorldCorners(flight, tileX, tileY, zoom, out Vector3 worldNW, out Vector3 worldNE, out Vector3 worldSW, out Vector3 worldSE);
@@ -336,6 +396,14 @@ namespace FlightReLive.Core.OpenVectorTile
             return count == 0 ? new Vector2(float.NaN, float.NaN) : new Vector2(sumX / count, sumZ / count);
         }
 
+        /// <summary>
+        /// Compute the barycenter of a geometry ring in GPS coordinates.
+        /// </summary>
+        /// <param name="ring"></param>
+        /// <param name="tileX"></param>
+        /// <param name="tileY"></param>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
         private FlightGPSData ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY, int zoom)
         {
             double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
@@ -367,6 +435,11 @@ namespace FlightReLive.Core.OpenVectorTile
             return count == 0 ? new FlightGPSData(0.0, 0.0) : new FlightGPSData(sumLat / count, sumLon / count);
         }
 
+        /// <summary>
+        /// Clip a geometry ring to the valid extent of OpenMapTiles (0,0) - (4096,4096).
+        /// </summary>
+        /// <param name="ring"></param>
+        /// <returns></returns>
         private static List<Point2d<int>> ClipRingToExtent(List<Point2d<int>> ring)
         {
             List<Vector2> input = new List<Vector2>(ring.Count);
@@ -444,6 +517,12 @@ namespace FlightReLive.Core.OpenVectorTile
             return clipped;
         }
 
+        /// <summary>
+        /// Convert tile Y coordinate to latitude.
+        /// </summary>
+        /// <param name="tileY"></param>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
         private double TileYToLat(int tileY, int zoom)
         {
             double n = Math.PI - 2.0 * Math.PI * tileY / (1 << zoom);
@@ -451,6 +530,12 @@ namespace FlightReLive.Core.OpenVectorTile
             return Math.Atan(Math.Sinh(n)) * (180.0 / Math.PI);
         }
 
+        /// <summary>
+        /// Estimate building height from its footprint area.
+        /// </summary>
+        /// <param name="contour"></param>
+        /// <param name="flight"></param>
+        /// <returns></returns>
         private float EstimateHeightFromFootprint(List<Vector2> contour, FlightData flight)
         {
             if (contour == null || contour.Count < 3)
@@ -492,6 +577,9 @@ namespace FlightReLive.Core.OpenVectorTile
 
 
         #region CALLBACKS
+        /// <summary>
+        /// Display or hide buildings according to settings.
+        /// </summary>
         private void DisplayBuildingsFromSettings()
         {
             bool enabled = SettingsManager.CurrentSettings.BuildingVisibility;
@@ -503,17 +591,29 @@ namespace FlightReLive.Core.OpenVectorTile
             }
         }
 
+        /// <summary>
+        /// Callback when building visibility setting is changed.
+        /// </summary>
+        /// <param name="buildingVisible"></param>
         private void OnBuildingVisibilityChanged(bool buildingVisible)
         {
             DisplayBuildingsFromSettings();
         }
 
+        /// <summary>
+        /// Callback when building ambient occlusion setting is changed.
+        /// </summary>
+        /// <param name="ao"></param>
         private void OnBuildingAOChanged(float ao)
         {
             float ambientOcclusion = SettingsManager.CurrentSettings.BuildingAO;
             _buildingMaterialInstance.SetFloat("_AmbientOcclusion", ambientOcclusion);
         }
 
+        /// <summary>
+        /// Callback when building color setting is changed.
+        /// </summary>
+        /// <param name="color"></param>
         private void OnBuildingColorChanged(Color color)
         {
             Color buildingColor = SettingsManager.CurrentSettings.BuildingColor;
@@ -522,6 +622,9 @@ namespace FlightReLive.Core.OpenVectorTile
         #endregion
 
         #region UI
+        /// <summary>
+        /// Display buildings settings in the settings panel.
+        /// </summary>
         internal void DisplayBuildingsSettings()
         {
             using (FuGrid grid = new FuGrid("gridBuildingsSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))

@@ -402,8 +402,24 @@ namespace FlightReLive.Core.POI
             _lineRenderer.SetPosition(0, start);
             _lineRenderer.SetPosition(1, end);
 
+            // --- Nouveau calcul de largeur adaptative ---
             float distance = Vector3.Distance(_targetCamera.transform.position, start);
-            float worldLineWidth = 1.2f * distance * Mathf.Tan(_targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height * 2f;
+
+            // Taille monde correspondant à 1 pixel à cette distance (perspective)
+            float pixelSize = 2f * distance * Mathf.Tan(_targetCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Screen.height;
+
+            // On veut que la ligne garde ~3 pixels de large à l'écran
+            float targetPixelWidth = 3f;
+
+            // Donc on calcule la largeur monde correspondante
+            float worldLineWidth = pixelSize * targetPixelWidth;
+
+            // On peut aussi légèrement amplifier à longue distance
+            // pour contrer les artefacts de z-buffer (facultatif)
+            worldLineWidth *= Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(distance / 1000f));
+
+            // Clamp de sécurité pour éviter les épaisseurs absurdes
+            worldLineWidth = Mathf.Clamp(worldLineWidth, 0.005f, 0.3f);
 
             _lineRenderer.startWidth = worldLineWidth;
             _lineRenderer.endWidth = worldLineWidth;

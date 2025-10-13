@@ -27,10 +27,11 @@ namespace FlightReLive.UI.Share
         private static string _downloadError = "";
         private static string _sharedHash = "";
         private static int _nbDaysValidity = 365;
+        private static bool _focusGiven = false;
         #endregion
 
         #region METHODS
-        internal static void DisplaySharedHashModel()
+        internal static void DisplaySharedHashModal()
         {
             float uiScale = Fugui.DefaultContext.Scale;
 
@@ -62,12 +63,24 @@ namespace FlightReLive.UI.Share
                     {
                         float available = sharedHashOpenGrid.GetAvailableWidth();
                         float width = (available / uiScale / 2f) - (PADDING / 2f);
-                        sharedHashOpenGrid.TextInput("Paste the sharedhash you want to load", "", ref _sharedHash);
+
+                        if (!_focusGiven)
+                        {
+                            ImGui.SetKeyboardFocusHere();
+                            _focusGiven = true;
+                        }
+
+                        sharedHashOpenGrid.TextInput("Paste the sharedhash you want to load", ref _sharedHash, flags: FuInputTextFlags.EnterReturnsTrue);
                         sharedHashOpenGrid.NextColumn();
 
                         if (string.IsNullOrEmpty(_sharedHash.Trim()))
                         {
                             sharedHashOpenGrid.DisableNextElement();
+                        }
+
+                        if (Fugui.GetKeyPressed(FuKeysCode.Enter))
+                        {
+                            StartDownloadAsync(_sharedHash);
                         }
 
                         if (sharedHashOpenGrid.Button("Load flight from sharedhash", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
@@ -88,7 +101,7 @@ namespace FlightReLive.UI.Share
                     layout.Spacing();
                     Fugui.PushFont(14, FontType.Bold);
                     layout.CenterNextItemH(_downloadError);
-                    ImGui.PushStyleColor(ImGuiCol.Text, Fugui.Themes.GetColor(FuColors.TextDanger)); 
+                    ImGui.PushStyleColor(ImGuiCol.Text, Fugui.Themes.GetColor(FuColors.TextDanger));
                     layout.Text(_downloadError);
                     ImGui.PopStyleColor();
 
@@ -214,7 +227,7 @@ namespace FlightReLive.UI.Share
                             });
                         }
                     }
-                }, FuButtonStyle.Collapsable, defaultOpen: true);               
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
             }, new FuModalSize(new Vector2(600, 600)), new FuModalButton("Close", () => { ResetUpload(); }, FuButtonStyle.Default));
         }
 
@@ -226,11 +239,12 @@ namespace FlightReLive.UI.Share
         }
 
         private static void ResetDownload()
-        { 
+        {
             _isDownloading = false;
             _dowloadSuccess = false;
             _downloadError = "";
             _sharedHash = "";
+            _focusGiven = false;
         }
 
         private static async void StartShareAsync(FlightFile fileToShare, int daysValidity)
@@ -322,7 +336,7 @@ namespace FlightReLive.UI.Share
             });
 
             ResetDownload();
-            Fugui.CloseModal();            
+            Fugui.CloseModal();
         }
         #endregion
     }

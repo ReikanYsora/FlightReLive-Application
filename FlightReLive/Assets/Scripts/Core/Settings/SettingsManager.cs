@@ -1152,6 +1152,17 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region UI
+        /// <summary>
+        /// Display a color picker with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="value"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsColorPickerWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, Color value, Color defaultValue, Action<Color> onChange, Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1184,6 +1195,17 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
+        /// <summary>
+        /// Display a toggle with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="value"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsToggleWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, bool value, bool defaultValue, Action<bool> onChange, Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1216,6 +1238,21 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
+        /// <summary>
+        /// Display a slider with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="value"></param>
+        /// <param name="minValue"></param>
+        /// <param name="maxValue"></param>
+        /// <param name="step"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="format"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsSliderWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float value, float minValue, float maxValue, float step, float defaultValue, string format, Action<float> onChange, Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1247,6 +1284,22 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
+        /// <summary>
+        /// Display a range slider with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="valueMin"></param>
+        /// <param name="valueMax"></param>
+        /// <param name="minValue"></param>
+        /// <param name="maxValue"></param>
+        /// <param name="step"></param>
+        /// <param name="defaultValues"></param>
+        /// <param name="format"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsRangeWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float valueMin, float valueMax, float minValue, float maxValue, float step, Vector2 defaultValues, string format, Action<float, float> onChange, Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1281,7 +1334,22 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
-
+        /// <summary>
+        /// Display a range slider with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="value1"></param>
+        /// <param name="value2"></param>
+        /// <param name="minValue"></param>
+        /// <param name="maxValue"></param>
+        /// <param name="step"></param>
+        /// <param name="defaultValue1"></param>
+        /// <param name="defaultValue2"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsRangeWithReset(FuGrid grid, string text, string tooltipText, string tooltipReset, float value1, float value2, float minValue, float maxValue, float step, float defaultValue1, float defaultValue2, Action<float, float> onChange, Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1314,6 +1382,20 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
+        /// <summary>
+        /// Display a combobox with a reset button in the settings UI.
+        /// </summary>
+        /// <typeparam name="TEnum"></typeparam>
+        /// <param name="grid"></param>
+        /// <param name="text"></param>
+        /// <param name="tooltipText"></param>
+        /// <param name="tooltipReset"></param>
+        /// <param name="value"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="getLabel"></param>
+        /// <param name="allowedValues"></param>
+        /// <param name="onChange"></param>
+        /// <param name="onReset"></param>
         internal static void DisplaySettingsComboboxWithReset<TEnum>(FuGrid grid, string text, string tooltipText, string tooltipReset, TEnum value, TEnum defaultValue, Func<TEnum, string> getLabel, IEnumerable<TEnum> allowedValues, Action<TEnum> onChange, Action onReset) where TEnum : struct, Enum
         {
             if (!string.IsNullOrEmpty(tooltipText))
@@ -1355,11 +1437,21 @@ namespace FlightReLive.Core.Settings
             Fugui.PopFont();
         }
 
+        /// <summary>
+        /// Check if two float values are approximately equal within a small epsilon.
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="epsilon"></param>
+        /// <returns></returns>
         private static bool AreApproximatelyEqual(float a, float b, float epsilon = 0.0001f)
         {
             return Mathf.Abs(a - b) < epsilon;
         }
 
+        /// <summary>
+        /// Show the preferences modal dialog.
+        /// </summary>
         internal static void ShowPreferencesModal()
         {
             if (_settingsOpened)
@@ -1617,108 +1709,162 @@ namespace FlightReLive.Core.Settings
             }, FuModalSize.Medium, new FuModalButton("Close preferences", () => { _settingsOpened = false; }, FuButtonStyle.Default, FuKeysCode.Enter));
         }
 
+        /// <summary>
+        /// Reset the path 3D thickness to its default value.
+        /// </summary>
         internal static void ResetPath3DThickness()
         {
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
             LoadPath3DThickness();
         }
 
+        /// <summary>
+        /// Reset the path 3D remaining color to its default value.
+        /// </summary>
         internal static void ResetPath3DRemainingColor()
         {
             SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
             LoadPath3DRemainingColor();
         }
 
+        /// <summary>
+        /// Reset the building visibility to its default value.
+        /// </summary>
         internal static void ResetBuildingVisibility()
         {
             SaveBuildingVisibility(BUILDING_DISPLAY_STATE_DEFAULT_VALUE);
             LoadBuildingVisibility();
         }
 
+        /// <summary>
+        /// Reset the building color to its default value.
+        /// </summary>
         internal static void ResetBuildingColor()
         {
             SaveBuildingColor(BUILDING_COLOR_DEFAULT_VALUE);
             LoadBuildingColor();
         }
 
+        /// <summary>
+        /// Reset the building ambient occlusion to its default value.
+        /// </summary>
         internal static void ResetBuildingAO()
         {
             SaveBuildingAO(BUILDING_AMBIENT_OCCLUSION_DEFAULT_VALUE);
             LoadBuildingAO();
         }
 
+        /// <summary>
+        /// Reset the POI visibility to its default value.
+        /// </summary>
         internal static void ResetPOIVisibility()
         {
             SavePOIVisibility(POI_DISPLAY_STATE_DEFAULT_VALUE);
             LoadPOIVisibility();
         }
 
+        /// <summary>
+        /// Reset the POI scale to its default value.
+        /// </summary>
         internal static void ResetPOIScale()
         {
             SavePOIScale(POI_SCALE_DEFAULT_VALUE);
             LoadPOIScale();
         }
 
+        /// <summary>
+        /// Reset the POI height to its default value.
+        /// </summary>
         internal static void ResetPOIHeight()
         {
             SavePOIHeight(POI_HEIGHT_DEFAULT_VALUE);
             LoadPOIHeight();
         }
 
+        /// <summary>
+        /// Reset the POI minimum fade distance to its default value.
+        /// </summary>
         internal static void ResetPOIMinFadeDistance()
         {
             SavePOIMinFadeDistance(POI_MIN_FADE_DISTANCE_DEFAULT_VALUE);
             LoadPOIMinFadeDistance();
         }
 
+        /// <summary>
+        /// Reset the POI maximum fade distance to its default value.
+        /// </summary>
         internal static void ResetPOIMaxFadeDistance()
         {
             SavePOIMaxFadeDistance(POI_MAX_FADE_DISTANCE_DEFAULT_VALUE);
             LoadPOIMaxFadeDistance();
         }
 
+        /// <summary>
+        /// Reset the contrast offset to its default value.
+        /// </summary>
         internal static void ResetContrastOffset()
         {
             SaveContrastOffset(CONTRAST_OFFSET_DEFAULT_VALUE);
             LoadContrastOffset();
         }
 
+        /// <summary>
+        /// Reset the saturation offset to its default value.
+        /// </summary>
         internal static void ResetSaturationOffset()
         {
             SaveSaturationOffset(SATURATION_OFFSET_DEFAULT_VALUE);
             LoadSaturationOffset();
         }
 
+        /// <summary>
+        /// Reset the exposure offset to its default value.
+        /// </summary>
         internal static void ResetExposureOffset()
         {
             SaveExposureOffset(EXPOSURE_OFFSET_DEFAULT_VALUE);
             LoadExposureOffset();
         }
 
+        /// <summary>
+        /// Reset the vignetting intensity to its default value.
+        /// </summary>
         internal static void ResetVignettingIntensity()
         {
             SaveVignettingIntensity(VIGNETTING_DEFAULT_VALUE);
             LoadVignettingIntensity();
         }
 
+        /// <summary>
+        /// Reset the clouds preset to its default value.
+        /// </summary>
         internal static void ResetCloudsPreset()
         {
             SaveCloudsPreset(CLOUD_PRESET_DEFAULT_VALUE);
             LoadCloudsPreset();
         }
 
+        /// <summary>
+        /// Reset the cloud shadows enabled state to its default value.
+        /// </summary>
         internal static void ResetCloudShadowsEnabled()
         {
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
             LoadCloudShadowsEnabled();
         }
 
+        /// <summary>
+        /// Reset the cloud shadows opacity to its default value.
+        /// </summary>
         internal static void ResetCloudShadowsOpacity()
         {
             SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
             LoadCloudShadowsOpacity();
         }
 
+        /// <summary>
+        /// Reset the wind type to its default value.
+        /// </summary>
         internal static void ResetWindType()
         {
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);

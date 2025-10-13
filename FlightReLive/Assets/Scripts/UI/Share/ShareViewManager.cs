@@ -26,7 +26,6 @@ namespace FlightReLive.UI.Share
         private static bool _dowloadSuccess = false;
         private static string _downloadError = "";
         private static string _sharedHash = "";
-        private static int _nbDaysValidity = 365;
         private static bool _focusGiven = false;
         #endregion
 
@@ -124,13 +123,12 @@ namespace FlightReLive.UI.Share
                 Fugui.PopFont();
 
                 layout.Spacing();
-                layout.Collapsable("Online mode", () =>
+                layout.Collapsable("Online - SharedHash", () =>
                 {
                     Fugui.PushFont(14, FontType.Regular);
                     layout.Text("Share your flight with a simple hashcode.", FuTextWrapping.Wrap);
                     layout.Spacing();
                     layout.Text("Send it to users, and anyone with this code will be able to view your flight (the video will not be included, only the flight data needed to reconstruct the scene in Flight ReLive).", FuTextWrapping.Wrap);
-                    layout.Text("You can choose a sharing period. This code will be accessible to everyone during this period and will be automatically deleted afterwards.", FuTextWrapping.Wrap);
                     Fugui.PopFont();
                     layout.Spacing();
                     Fugui.PushFont(14, FontType.Bold);
@@ -147,15 +145,14 @@ namespace FlightReLive.UI.Share
                                 onlineGrid.DisableNextElements();
                             }
 
-                            onlineGrid.Slider("Validity (days)", ref _nbDaysValidity, 1, 365);
                             onlineGrid.NextColumn();
 
                             float available = onlineGrid.GetAvailableWidth();
                             float width = (available / uiScale) - (PADDING / 2f);
 
-                            if (onlineGrid.Button("Get a sharing hashcode", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
+                            if (onlineGrid.Button("Get a Flight ReLive SharedHash", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
                             {
-                                StartShareAsync(fileToShare, _nbDaysValidity);
+                                StartShareAsync(fileToShare);
                             }
                         }
                     }
@@ -198,12 +195,12 @@ namespace FlightReLive.UI.Share
 
                 layout.Spacing();
 
-                layout.Collapsable("Offline mode", () =>
+                layout.Collapsable("Offline - Local file", () =>
                 {
                     Fugui.PushFont(14, FontType.Regular);
                     layout.Text("Generates a file allowing other users to relive your flight from their Flight ReLive application.", FuTextWrapping.Wrap);
                     layout.Spacing();
-                    layout.Text("The video will not be included, only the data needed to relive the flight. Anyone with this file will be able to view your flight, but no data will be sent to the Flight ReLive API.", FuTextWrapping.Wrap);
+                    layout.Text("Anyone with this file will be able to view your flight, but no data will be sent to the Flight ReLive API.", FuTextWrapping.Wrap);
                     Fugui.PopFont();
                     layout.Spacing();
 
@@ -235,7 +232,6 @@ namespace FlightReLive.UI.Share
         {
             _shareHash = string.Empty;
             _isSharing = false;
-            _nbDaysValidity = 365;
         }
 
         private static void ResetDownload()
@@ -247,7 +243,7 @@ namespace FlightReLive.UI.Share
             _focusGiven = false;
         }
 
-        private static async void StartShareAsync(FlightFile fileToShare, int daysValidity)
+        private static async void StartShareAsync(FlightFile fileToShare)
         {
             if (_isSharing || fileToShare == null)
             {
@@ -259,7 +255,7 @@ namespace FlightReLive.UI.Share
 
             try
             {
-                FlightFileShareResponse response = await FlightShareService.ShareFlightFileExAsync(fileToShare, daysValidity).ConfigureAwait(false);
+                FlightFileShareResponse response = await FlightShareService.ShareFlightFileExAsync(fileToShare).ConfigureAwait(false);
 
                 if (response == null)
                 {
@@ -287,7 +283,7 @@ namespace FlightReLive.UI.Share
             _isSharing = false;
         }
 
-        private static async void StartDownloadAsync(string sharedHash)
+        internal static async void StartDownloadAsync(string sharedHash)
         {
             if (_isDownloading || _dowloadSuccess)
             {

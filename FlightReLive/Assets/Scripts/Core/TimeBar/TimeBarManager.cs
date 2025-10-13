@@ -180,6 +180,10 @@ namespace FlightReLive.Core.TimeBar
         #endregion
 
         #region METHODS
+        /// <summary>
+        /// Load flight data into the TimeBarManager.
+        /// </summary>
+        /// <param name="flightData"></param>
         internal void Load(FlightData flightData)
         {
             if (flightData == null || flightData.Points == null || flightData.Points.Count == 0)
@@ -196,10 +200,12 @@ namespace FlightReLive.Core.TimeBar
             _totalFrameCount = (Duration > 0 && Frequency > 0) ? (long)Math.Round(Duration * Frequency) : 0;
             TotalFrameCount = _totalFrameCount;
             CurrentTime = 0;
-
-            Play();
         }
 
+        /// <summary>
+        /// Unload the current flight data and reset the TimeBarManager state.
+        /// </summary>
+        /// <returns></returns>
         internal async Task Unload()
         {
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
@@ -219,6 +225,10 @@ namespace FlightReLive.Core.TimeBar
             });
         }
 
+        /// <summary>
+        /// Register a window name to be refreshed on seek.
+        /// </summary>
+        /// <param name="windowName"></param>
         internal void RegisterWindowName(FuWindowName windowName)
         {
             if (_registeredWindows.Contains(windowName))
@@ -229,6 +239,10 @@ namespace FlightReLive.Core.TimeBar
             _registeredWindows.Add(windowName);
         }
 
+        /// <summary>
+        /// Unregister a window name from being refreshed on seek.
+        /// </summary>
+        /// <param name="windowName"></param>
         internal void UnregisterWindowName(FuWindowName windowName)
         {
             if (!_registeredWindows.Contains(windowName))
@@ -237,6 +251,11 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
+        /// <summary>
+        /// Set hover state from a source (e.g., Path3D).
+        /// </summary>
+        /// <param name="sourceID"></param>
+        /// <param name="ratio"></param>
         internal void SetHover(string sourceID, float ratio)
         {
             if (_hoverSourceID == sourceID && Mathf.Approximately(_hoverRatio, ratio))
@@ -250,6 +269,10 @@ namespace FlightReLive.Core.TimeBar
             OnHoverChanged?.Invoke(_hoverRatio);
         }
 
+        /// <summary>
+        /// Clear hover state if the sourceID matches.
+        /// </summary>
+        /// <param name="sourceID"></param>
         internal void ClearHover(string sourceID)
         {
             if (_hoverSourceID != sourceID)
@@ -263,6 +286,9 @@ namespace FlightReLive.Core.TimeBar
             OnHoverCleared?.Invoke();
         }
 
+        /// <summary>
+        /// Refresh all registered windows to reflect the current state.
+        /// </summary>
         private void RefreshRegiteredWindows()
         {
             foreach (FuWindowName window in _registeredWindows)
@@ -271,11 +297,17 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
+        /// <summary>
+        /// Seek to the beginning of the flight data.
+        /// </summary>
         internal void BackwardStep()
         {
             Seek(0);
         }
 
+        /// <summary>
+        /// Seek to the previous data point in the flight data.
+        /// </summary>
         internal void BackwardPoint()
         {
             if (_currentFlightData == null || _lastPointIndex <= 0)
@@ -288,16 +320,25 @@ namespace FlightReLive.Core.TimeBar
             Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
         }
 
+        /// <summary>
+        /// Start playback from the current position.
+        /// </summary>
         internal void Play()
         {
             IsPlaying = true;
         }
 
+        /// <summary>
+        /// Pause playback.
+        /// </summary>
         internal void Pause()
         {
             IsPlaying = false;
         }
 
+        /// <summary>
+        /// Seek to the next data point in the flight data.
+        /// </summary>
         internal void ForwardPoint()
         {
             if (_currentFlightData == null || _lastPointIndex < 0)
@@ -310,11 +351,18 @@ namespace FlightReLive.Core.TimeBar
             Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
         }
 
+        /// <summary>
+        /// Seek to the end of the flight data.
+        /// </summary>
         internal void ForwardStep()
         {
             Seek(Duration);
         }
 
+        /// <summary>
+        /// Seek to a specific time in seconds within the flight data.
+        /// </summary>
+        /// <param name="timeInSeconds"></param>
         internal void Seek(double timeInSeconds)
         {
             if (_currentFlightData == null)
@@ -326,6 +374,11 @@ namespace FlightReLive.Core.TimeBar
             float ratio01 = (Duration > 0) ? (float)(CurrentTime / Duration) : 0f;
         }
 
+        /// <summary>
+        /// Seek to a specific frame in the flight data, optionally pausing playback.
+        /// </summary>
+        /// <param name="frame"></param>
+        /// <param name="pause"></param>
         internal void SetFrame(long frame, bool pause)
         {
             if (_currentFlightData == null || Frequency <= 0)
@@ -343,6 +396,9 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
+        /// <summary>
+        /// Cycle through playback speeds and notify listeners of the change.
+        /// </summary>
         internal void ChangeSpeed()
         {
             int next = ((int)_playbackSpeed + 1) % Enum.GetValues(typeof(PlaybackSpeed)).Length;
@@ -369,6 +425,12 @@ namespace FlightReLive.Core.TimeBar
             }
         }
 
+        /// <summary>
+        /// Find the index of the closest FlightDataPoint to the specified TimeSpan using binary search.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="currentSpan"></param>
+        /// <returns></returns>
         private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)
         {
             int low = 0;

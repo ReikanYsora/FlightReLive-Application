@@ -7,6 +7,8 @@ using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEngine;
@@ -52,20 +54,34 @@ namespace FlightReLive.UI.Layout
 
             MacOsMainMenuManager.AddMenuEntry("Import", "Import local file", () =>
             {
-                string safePath = Path.Combine(Application.persistentDataPath);
-                FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
-                async (x) =>
+                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
                 {
-                    if (x.Length > 0)
+                    string safePath = Path.Combine(Application.persistentDataPath);
+                    FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
+                    async (x) =>
                     {
-                        await FlightShareManager.ImportAsync(x[0]);
-                    }
-                });
+                        if (x.Length > 0)
+                        {
+                            await FlightShareManager.ImportAsync(x[0]);
+                        }
+                    });
+                }
+                else
+                {
+                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning);
+                }
             }, "I");
 
             MacOsMainMenuManager.AddMenuEntry("Import", "Import from SharedHash", () =>
             {
-                ShareViewManager.DisplaySharedHashModal();
+                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
+                {
+                    ShareViewManager.DisplaySharedHashModal();
+                }
+                else
+                {
+                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning);
+                }
             }, "S");
 
 #if UNITY_EDITOR
@@ -152,8 +168,10 @@ namespace FlightReLive.UI.Layout
             Fugui.RegisterMainMenuItem(flightReLiveImport, null);
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import local file", () =>
             {
-                string safePath = Path.Combine(Application.persistentDataPath);
-                FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
+                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
+                {
+                    string safePath = Path.Combine(Application.persistentDataPath);
+                    FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
                     async (x) =>
                     {
                         if (x.Length > 0)
@@ -161,11 +179,23 @@ namespace FlightReLive.UI.Layout
                             await FlightShareManager.ImportAsync(x[0]);
                         }
                     });
+                }
+                else
+                {
+                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning);
+                }
             }, flightReLiveImport);
 
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import from SharedHash", () =>
             {
-                ShareViewManager.DisplaySharedHashModal();
+                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
+                {
+                    ShareViewManager.DisplaySharedHashModal();
+                }
+                else
+                {
+                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning);
+                }
             }, flightReLiveImport);
 
             //Settings menu

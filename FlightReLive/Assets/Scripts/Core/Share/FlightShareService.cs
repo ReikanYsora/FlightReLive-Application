@@ -27,7 +27,7 @@ namespace FlightReLive.Core.Share
         #endregion
 
         #region METHODS
-        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(FlightFile flightFile, int daysToLive)
+        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(FlightFile flightFile)
         {
             if (flightFile == null)
             {
@@ -40,11 +40,10 @@ namespace FlightReLive.Core.Share
                 flightFile.EncodeTextures();
 
                 FlightFileUpload upload = ToUploadRequest(flightFile);
-                int days = Mathf.Clamp(daysToLive, MIN_DAYS, MAX_DAYS);
                 string json = JsonConvert.SerializeObject(upload, _jsonSettings);
 
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
-                string url = $"{BASE_API_URL}/share?daysValid={days}";
+                string url = $"{BASE_API_URL}/share?daysValid={365}";
 
                 using HttpResponseMessage response = await _httpClient.PostAsync(url, content);
                 string body = await response.Content.ReadAsStringAsync();

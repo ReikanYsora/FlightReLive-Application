@@ -75,9 +75,6 @@ and/or create a **GitHub Issue** directly on this repository.
 Behind Flight ReLive’s immersive experience are these outstanding third-party libraries and tools.
 The incredible work of their developers enables the features and performance that make this project possible — without them, Flight ReLive could not exist.
 
-creditGrid.TextURL("UnityPhysicallyBasedSkyURP", "https://github.com/jiaozi158/UnityPhysicallyBasedSkyURP");
-                    creditGrid.TextURL("UnityVolumetricCloudsURP", "https://github.com/jiaozi158/UnityVolumetricCloudsURP");
-
 <div align="center">
   
 | Name              | Description |

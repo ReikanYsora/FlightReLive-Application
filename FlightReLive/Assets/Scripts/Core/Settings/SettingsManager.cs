@@ -100,6 +100,9 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnCloudShadowsEnabledChanged;
         public static event Action<float> OnCloudShadowsOpacityChanged;
         public static event Action<WindType> OnWindTypeChanged;
+        internal static Action<int> OnCaptureResolutionChanged;
+        internal static Action<int> OnCaptureEncoderChanged;
+        internal static Action<int> OnCaptureFramerateChanged;
         #endregion
 
         #region METHODS
@@ -817,6 +820,31 @@ namespace FlightReLive.Core.Settings
             PlayerPrefs.SetInt(nameof(Settings.WindType), (int)value);
             PlayerPrefs.Save();
             OnWindTypeChanged?.Invoke(value);
+        }
+
+        internal static void SaveCaptureResolution(int id)
+        {
+
+        }
+
+        internal static void SaveCaptureFramerate(int id)
+        {
+
+        }
+
+        internal static void SaveCaptureEncoder(int id)
+        {
+
+        }
+
+        internal static void SaveCaptureOutputPath(string path)
+        {
+
+        }
+
+        internal static void SaveCaptureEncodedLogo(bool encodedLogo)
+        {
+
         }
 
         /// <summary>

@@ -13,7 +13,6 @@ namespace FlightReLive.UI.CameraViews
         private TimeBarOverlay _timeBarOverlay;
         private CameraModeOverlay _cameraModeOverlay;
         private CompassOverlay _compassOverlay;
-        private DayCycleOverlay _dayCycleOverlay;
         #endregion
 
         #region PROPERTIES
@@ -61,9 +60,6 @@ namespace FlightReLive.UI.CameraViews
 
             _compassOverlay = new CompassOverlay();
             _compassOverlay.DisplayCompassOverlay(windowDefinition, Camera);
-
-            _dayCycleOverlay = new DayCycleOverlay();
-            _dayCycleOverlay.DisplayDayCycleOverlay(windowDefinition);
         }
         #endregion
     }

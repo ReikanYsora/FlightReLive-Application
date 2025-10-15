@@ -7,6 +7,7 @@ using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
@@ -36,6 +37,11 @@ namespace FlightReLive.Core.Settings
         internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
         internal static float CLOUD_SHADOW_OPACITY_DEFAULT_STATE = 0.5f;
         internal static WindType WIND_TYPE_DEFAULT_VALUE = WindType.Slow;
+        internal static int CAPTURE_RESOLUTION_DEFAULT_VALUE = 1;
+        internal static int CAPTURE_ENCODER_DEFAULT_VALUE = 0;
+        internal static int CAPTURE_FRAMERATE_DEFAULT_VALUDE = 1;
+        internal static bool CAPTURE_ENCODED_LOGO_DEFAULT_VALUE = true;
+        internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
 
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
@@ -100,9 +106,11 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnCloudShadowsEnabledChanged;
         public static event Action<float> OnCloudShadowsOpacityChanged;
         public static event Action<WindType> OnWindTypeChanged;
-        internal static Action<int> OnCaptureResolutionChanged;
-        internal static Action<int> OnCaptureEncoderChanged;
-        internal static Action<int> OnCaptureFramerateChanged;
+        public static event Action<int> OnCaptureResolutionChanged;
+        public static event Action<int> OnCaptureEncoderChanged;
+        public static event Action<int> OnCaptureFramerateChanged;
+        public static event Action<bool> OnCaptureEncodedLogoChanged;
+        public static event Action<string> OnCaptureOutputPathChanged;
         #endregion
 
         #region METHODS
@@ -412,6 +420,47 @@ namespace FlightReLive.Core.Settings
         internal static void LoadWindType()
         {
             CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the capture resolution setting from PlayerPrefs, defaulting to CAPTURE_RESOLUTION_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCaptureResolution()
+        {
+            CurrentSettings.CaptureResolution = PlayerPrefs.GetInt(nameof(Settings.CaptureResolution), CAPTURE_RESOLUTION_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the capture encoder setting from PlayerPrefs, defaulting to CAPTURE_ENCODER_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCaptureEncoder()
+        {
+            CurrentSettings.CaptureEncoder = PlayerPrefs.GetInt(nameof(Settings.CaptureEncoder), CAPTURE_ENCODER_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the capture framerate setting from PlayerPrefs, defaulting to CAPTURE_FRAMERATE_DEFAULT_VALUDE if not set.
+        /// </summary>
+        internal static void LoadCaptureFramerate()
+        {
+            CurrentSettings.CaptureFramerate = PlayerPrefs.GetInt(nameof(Settings.CaptureFramerate), CAPTURE_FRAMERATE_DEFAULT_VALUDE);
+        }
+
+        /// <summary>
+        /// Load the capture output path setting from PlayerPrefs, defaulting to CAPTURE_OUTPUT_PATH_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCaptureOutputPath()
+        {
+            CurrentSettings.CaptureOutputPath = PlayerPrefs.GetString(nameof(Settings.CaptureOutputPath), CAPTURE_OUTPUT_PATH_DEFAULT_VALUE);
+        }
+
+        /// <summary>
+        /// Load the capture encoded logo state setting from PlayerPrefs, defaulting to CAPTURE_ENCODED_LOGO_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCaptureEncodedLogo()
+        {
+            int intBool = CAPTURE_ENCODED_LOGO_DEFAULT_VALUE ? 1 : 0;
+            CurrentSettings.CaptureEncodedLogo = PlayerPrefs.GetInt(nameof(Settings.CaptureEncodedLogo), intBool) == 1;
         }
 
         /// <summary>
@@ -822,29 +871,64 @@ namespace FlightReLive.Core.Settings
             OnWindTypeChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureResolution(int id)
+        /// <summary>
+        /// Save the capture resolution setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureResolution(int value)
         {
-
+            CurrentSettings.CaptureResolution = value;
+            PlayerPrefs.SetInt(nameof(Settings.CaptureResolution), value);
+            PlayerPrefs.Save();
+            OnCaptureResolutionChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureFramerate(int id)
+        /// <summary>
+        /// Save the capture encoder setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureEncoder(int value)
         {
-
+            CurrentSettings.CaptureEncoder = value;
+            PlayerPrefs.SetInt(nameof(Settings.CaptureEncoder), value);
+            PlayerPrefs.Save();
+            OnCaptureEncoderChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureEncoder(int id)
+        /// <summary>
+        /// Save the capture framerate setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureFramerate(int value)
         {
-
+            CurrentSettings.CaptureFramerate = value;
+            PlayerPrefs.SetInt(nameof(Settings.CaptureFramerate), value);
+            PlayerPrefs.Save();
+            OnCaptureFramerateChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureOutputPath(string path)
+        /// <summary>
+        /// Save the capture output path setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureOutputPath(string value)
         {
-
+            CurrentSettings.CaptureOutputPath = value;
+            PlayerPrefs.SetString(nameof(Settings.CaptureOutputPath), value);
+            PlayerPrefs.Save();
+            OnCaptureOutputPathChanged?.Invoke(value);
         }
 
-        internal static void SaveCaptureEncodedLogo(bool encodedLogo)
+        /// <summary>
+        /// Save the capture encoded logo state setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureEncodedLogo(bool value)
         {
-
+            CurrentSettings.CaptureEncodedLogo = value;
+            PlayerPrefs.SetInt(nameof(Settings.CaptureEncodedLogo), value ? 1 : 0);
+            PlayerPrefs.Save();
+            OnCaptureEncodedLogoChanged?.Invoke(value);
         }
 
         /// <summary>
@@ -891,6 +975,11 @@ namespace FlightReLive.Core.Settings
             LoadCloudShadowsEnabled();
             LoadCloudShadowsOpacity();
             LoadWindType();
+            LoadCaptureResolution();
+            LoadCaptureEncoder();
+            LoadCaptureFramerate();
+            LoadCaptureOutputPath();
+            LoadCaptureEncodedLogo();
         }
 
         /// <summary>
@@ -934,6 +1023,11 @@ namespace FlightReLive.Core.Settings
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
             SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);
+            SaveCaptureResolution(1);
+            SaveCaptureEncoder(0);
+            SaveCaptureFramerate(1);
+            SaveCaptureOutputPath(Path.Combine(Application.persistentDataPath, "Captures"));
+            SaveCaptureEncodedLogo(true);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -1411,33 +1505,44 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Display a combobox with a reset button in the settings UI.
+        /// Display a combobox with a reset button in the settings UI.  
+        /// Works for Enums, ints or any type with string labels.
         /// </summary>
-        /// <typeparam name="TEnum"></typeparam>
-        /// <param name="grid"></param>
-        /// <param name="text"></param>
-        /// <param name="tooltipText"></param>
-        /// <param name="tooltipReset"></param>
-        /// <param name="value"></param>
-        /// <param name="defaultValue"></param>
-        /// <param name="getLabel"></param>
-        /// <param name="allowedValues"></param>
-        /// <param name="onChange"></param>
-        /// <param name="onReset"></param>
-        internal static void DisplaySettingsComboboxWithReset<TEnum>(FuGrid grid, string text, string tooltipText, string tooltipReset, TEnum value, TEnum defaultValue, Func<TEnum, string> getLabel, IEnumerable<TEnum> allowedValues, Action<TEnum> onChange, Action onReset) where TEnum : struct, Enum
+        /// <typeparam name="T">Type of the stored value (int, enum, string, etc.).</typeparam>
+        /// <param name="grid">The Fugui grid layout.</param>
+        /// <param name="text">The label of the combobox.</param>
+        /// <param name="tooltipText">Tooltip for the combobox.</param>
+        /// <param name="tooltipReset">Tooltip for the reset button.</param>
+        /// <param name="value">Current value.</param>
+        /// <param name="defaultValue">Default value.</param>
+        /// <param name="getLabel">Function to get display text for each value.</param>
+        /// <param name="allowedValues">List of allowed values.</param>
+        /// <param name="onChange">Callback when a new value is selected.</param>
+        /// <param name="onReset">Callback when reset is clicked.</param>
+        internal static void DisplaySettingsComboboxWithReset<T>(
+            FuGrid grid,
+            string text,
+            string tooltipText,
+            string tooltipReset,
+            T value,
+            T defaultValue,
+            Func<T, string> getLabel,
+            IEnumerable<T> allowedValues,
+            Action<T> onChange,
+            Action onReset)
         {
             if (!string.IsNullOrEmpty(tooltipText))
             {
                 grid.SetNextElementToolTip(tooltipText);
             }
 
-            string currentLabel = getLabel(value);
+            string currentLabel = getLabel != null ? getLabel(value) : value?.ToString() ?? "Unknown";
 
             grid.Combobox($"{text}##Combobox", currentLabel, () =>
             {
-                foreach (TEnum option in allowedValues)
+                foreach (T option in allowedValues)
                 {
-                    bool isSelected = EqualityComparer<TEnum>.Default.Equals(option, value);
+                    bool isSelected = EqualityComparer<T>.Default.Equals(option, value);
                     string label = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {getLabel(option)}";
 
                     if (ImGui.Selectable(label))
@@ -1447,7 +1552,7 @@ namespace FlightReLive.Core.Settings
                 }
             });
 
-            if (EqualityComparer<TEnum>.Default.Equals(value, defaultValue))
+            if (EqualityComparer<T>.Default.Equals(value, defaultValue))
             {
                 grid.DisableNextElement();
             }
@@ -1462,6 +1567,69 @@ namespace FlightReLive.Core.Settings
             {
                 onReset?.Invoke();
             }
+            Fugui.PopFont();
+        }
+
+        /// <summary>
+        /// Display a folder input with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid">The Fugui grid layout.</param>
+        /// <param name="text">The label of the input field.</param>
+        /// <param name="tooltipText">Tooltip for the folder input.</param>
+        /// <param name="tooltipReset">Tooltip for the reset button.</param>
+        /// <param name="value">Current folder path.</param>
+        /// <param name="defaultValue">Default folder path.</param>
+        /// <param name="onChange">Callback when a new folder is selected.</param>
+        /// <param name="onReset">Callback when reset is clicked.</param>
+        /// <param name="filters">Optional file filters for the folder picker (can be empty).</param>
+        internal static void DisplaySettingsFolderInputWithReset(
+            FuGrid grid,
+            string text,
+            string tooltipText,
+            string tooltipReset,
+            string value,
+            string defaultValue,
+            Action<string> onChange,
+            Action onReset,
+            ExtensionFilter[] filters = null)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            string currentValue = value ?? string.Empty;
+
+            grid.InputFolder(text, (selectedPath) =>
+            {
+                if (!string.Equals(selectedPath, currentValue, StringComparison.Ordinal))
+                {
+                    onChange?.Invoke(selectedPath);
+                }
+            }, currentValue, filters ?? Array.Empty<ExtensionFilter>());
+
+            if (onReset == null)
+            {
+                grid.NextColumn();
+                return;
+            }
+
+            if (string.Equals(value, defaultValue, StringComparison.Ordinal))
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+
             Fugui.PopFont();
         }
 
@@ -1897,6 +2065,42 @@ namespace FlightReLive.Core.Settings
         {
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);
             LoadWindType();
+        }
+
+        /// <summary>
+        /// Reset the capture resolution to its default value.
+        /// </summary>
+        internal static void ResetCaptureResolution()
+        {
+            SaveCaptureResolution(CAPTURE_RESOLUTION_DEFAULT_VALUE);
+            LoadCaptureResolution();
+        }
+
+        /// <summary>
+        /// Reset the capture encoder to its default value.
+        /// </summary>
+        internal static void ResetCaptureEncoder()
+        {
+            SaveCaptureEncoder(CAPTURE_ENCODER_DEFAULT_VALUE);
+            LoadCaptureEncoder();
+        }
+
+        /// <summary>
+        /// Reset the capture framerate to its default value.
+        /// </summary>
+        internal static void ResetCaptureFramerate()
+        {
+            SaveCaptureFramerate(CAPTURE_FRAMERATE_DEFAULT_VALUDE);
+            LoadCaptureFramerate();
+        }
+
+        /// <summary>
+        /// Reset the capture encoded logo state path to its default value.
+        /// </summary>
+        internal static void ResetCaptureEncodedLogo()
+        {
+            SaveCaptureEncodedLogo(CAPTURE_ENCODED_LOGO_DEFAULT_VALUE);
+            LoadCaptureEncodedLogo();
         }
         #endregion
     }

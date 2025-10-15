@@ -70,10 +70,10 @@ namespace FlightReLive.UI.Overlays
             uint seakBgColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
             uint progressColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Highlight));
             uint hoverColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
-            uint cursorColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
-            uint textZoneBg = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.FrameBg));
-            uint textZoneBorder = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Border));
             uint offsetTextCol = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
+            uint textBg = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Tab));
+            uint textBorder = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.TabSelectedOverline));
+            uint cursorColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.Text));
 
             //Global background
             float totalBarHeight = SEAK_BAR_HEIGHT * scale + 20f * scale + MEDIA_BUTTON_HEIGHT * scale + 15f * scale;
@@ -203,8 +203,8 @@ namespace FlightReLive.UI.Overlays
             Vector2 leftRectMax = new Vector2(buttonsStartX - padding, rowY + MEDIA_BUTTON_HEIGHT * scale);
             if (leftRectMax.x > leftRectMin.x)
             {
-                drawList.AddRectFilled(leftRectMin, leftRectMax, textZoneBg, radius);
-                drawList.AddRect(leftRectMin, leftRectMax, textZoneBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
+                drawList.AddRectFilled(leftRectMin, leftRectMax, textBg, radius);
+                drawList.AddRect(leftRectMin, leftRectMax, textBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
             }
 
             //Right zone (TotalTime + Unload)
@@ -213,8 +213,8 @@ namespace FlightReLive.UI.Overlays
 
             if (rightRectMax.x > rightRectMin.x)
             {
-                drawList.AddRectFilled(rightRectMin, rightRectMax, textZoneBg, radius);
-                drawList.AddRect(rightRectMin, rightRectMax, textZoneBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
+                drawList.AddRectFilled(rightRectMin, rightRectMax, textBg, radius);
+                drawList.AddRect(rightRectMin, rightRectMax, textBorder, radius, ImDrawFlags.RoundCornersAll, 1f);
             }
 
             //Custom button style (hover = progress color)
@@ -392,18 +392,21 @@ namespace FlightReLive.UI.Overlays
             }
             Fugui.PopFont();
 
-            //Draw cursor
+            //Draw cursor (same as camera footer style)
             float midY = (barPos.y + barEnd.y) * 0.5f;
-            float cursorExtend = barHeight * 0.5f + 4f * scale;
 
-            //Progress cursor
-            drawList.AddLine(new Vector2(progressX, midY - cursorExtend), new Vector2(progressX, midY + cursorExtend), cursorColor, 2f * scale);
+            //Primary cursor lines (border + fill)
+            drawList.AddLine(new Vector2(progressX, barPos.y - 4f * scale), new Vector2(progressX, barEnd.y + 4f * scale), textBg, 5f * scale);
+            drawList.AddLine(new Vector2(progressX, barPos.y - 2f * scale), new Vector2(progressX, barEnd.y + 2f * scale), cursorColor, 3f * scale);
+            drawList.AddLine(new Vector2(progressX, barPos.y * scale), new Vector2(progressX, barEnd.y * scale), textBorder, 1f * scale);
 
             //Hover cursor (SeekBar or Path3D)
             if (timeBar.IsHovering && timeBar.HoverRatio >= 0f)
             {
                 float hoverX = barPos.x + barSize.x * timeBar.HoverRatio;
-                drawList.AddLine(new Vector2(hoverX, midY - cursorExtend), new Vector2(hoverX, midY + cursorExtend), ImGui.ColorConvertFloat4ToU32(Color.white), 2f * scale);
+                drawList.AddLine(new Vector2(hoverX, barPos.y - 4f * scale), new Vector2(hoverX, barEnd.y + 4f * scale), textBg, 5f * scale);
+                drawList.AddLine(new Vector2(hoverX, barPos.y - 2f * scale), new Vector2(hoverX, barEnd.y + 2f * scale), cursorColor, 3f * scale);
+                drawList.AddLine(new Vector2(hoverX, barPos.y * scale), new Vector2(hoverX, barEnd.y * scale), textBorder, 1f * scale);
             }
         }
         #endregion

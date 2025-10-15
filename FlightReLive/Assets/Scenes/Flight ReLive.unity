@@ -163,9 +163,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b565d6cc4d3ebb24fb2b59b53ab49ae1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Capture.CaptureManager
-  _cameraToDuplicate: {fileID: 0}
-  _captureFlipVerticalMaterial: {fileID: 0}
-  _filePrefix: video_
+  _cameraToDuplicate: {fileID: 796242730}
+  _captureFlipVerticalMaterial: {fileID: 2100000, guid: 4c6c150b757ae4b6086011892b0b9790, type: 2}
+  _filePrefix: FlightReLive_
   _logoFileName: logo.png
 --- !u!1 &137108791
 GameObject:

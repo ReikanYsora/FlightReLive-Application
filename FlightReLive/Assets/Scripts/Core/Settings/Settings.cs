@@ -40,11 +40,11 @@ namespace FlightReLive.Core.Settings
         public float CloudShadowsOpacity;
         public WindType WindType;
         public string CurrentVersion;
-        internal int CaptureResolution;
-        internal string CaptureOutputPath;
-        internal bool CaptureEncodedLogo;
-        internal int CaptureEncoder;
-        internal int CaptureFramerate;
+        public int CaptureResolution;
+        public int CaptureEncoder;
+        public int CaptureFramerate;
+        public bool CaptureEncodedLogo;
+        public string CaptureOutputPath;
         #endregion
     }
 }

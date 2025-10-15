@@ -1,8 +1,6 @@
 ﻿using FlightReLive.Core.Settings;
-using FlightReLive.UI;
 using Fu;
 using Fu.Framework;
-using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +14,10 @@ namespace FlightReLive.Core.Capture
 {
     public class CaptureManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const int MAX_PENDING_FRAMES = 3;
+        #endregion
+
         #region ATTRIBUTES
         [Header("Capture Settings")]
         [SerializeField] private Camera _cameraToDuplicate;
@@ -28,21 +30,18 @@ namespace FlightReLive.Core.Capture
             { 3, "4K (3840x2160)" }
         };
 
-        internal static Dictionary<int, string> _encoders = new Dictionary<int, string>()
-        {
-            { 0, "X264 (Default)" },
-            { 1, "NVENC (NVidia)" },
-            { 2, "AV1 (NVidia)" }
-        };
+        internal static Dictionary<int, string> _encoders;
 
         internal static Dictionary<int, string> _framerates = new Dictionary<int, string>()
         {
             { 0, "30 FPS" },
-            { 1, "60 FPS" }
+            { 1, "60 FPS" },
+            { 2, "90 FPS" },
+            { 3, "120 FPS" }
         };
 
         [Header("Output Settings")]
-        [SerializeField] private string _filePrefix = "video_";
+        [SerializeField] private string _filePrefix;
 
         [Header("Logo Overlay")]
         [SerializeField] private string _logoFileName = "logo.png";
@@ -62,6 +61,7 @@ namespace FlightReLive.Core.Capture
         private int _framerate;
         private DateTime _captureStartTime;
         private string _captureElapsedTime;
+        private AutoResetEvent _frameAvailable = new AutoResetEvent(false);
         #endregion
 
         #region PROPERTIES
@@ -85,6 +85,7 @@ namespace FlightReLive.Core.Capture
             }
 
             Instance = this;
+            DetectAvailableEncoders();
         }
 
         private void Start()
@@ -129,7 +130,87 @@ namespace FlightReLive.Core.Capture
         #endregion
 
         #region METHODS
-        internal void StartCapture()
+        /// <summary>
+        /// Detect available video encoders on this system by querying FFmpeg.
+        /// Updates the internal _encoders dictionary accordingly.
+        /// </summary>
+        private void DetectAvailableEncoders()
+        {
+            string ffmpegPath = GetPlatformFFmpegPath();
+
+            if (!File.Exists(ffmpegPath))
+            {
+                _encoders = new Dictionary<int, string> { { 0, "X264 (Default)" } };
+                return;
+            }
+
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = ffmpegPath,
+                    Arguments = "-hide_banner -encoders",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (Process proc = Process.Start(psi))
+                {
+                    string output = proc.StandardOutput.ReadToEnd() + proc.StandardError.ReadToEnd();
+                    proc.WaitForExit();
+
+                    bool hasNvenc = output.Contains("h264_nvenc", StringComparison.OrdinalIgnoreCase);
+                    bool hasAv1Nvenc = output.Contains("av1_nvenc", StringComparison.OrdinalIgnoreCase);
+                    bool hasAmf = output.Contains("h264_amf", StringComparison.OrdinalIgnoreCase);
+                    bool hasQsv = output.Contains("h264_qsv", StringComparison.OrdinalIgnoreCase);
+                    bool hasVtb = output.Contains("h264_videotoolbox", StringComparison.OrdinalIgnoreCase);
+
+                    _encoders = new Dictionary<int, string> { { 0, "X264 (Default)" } };
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+                    if (hasNvenc)
+                    { 
+                        _encoders.Add(1, "NVENC (NVIDIA)");
+                    }
+
+                    if (hasAv1Nvenc)
+                    {
+                        _encoders.Add(2, "AV1 (NVIDIA)");
+                    } 
+
+                    if (hasAmf)
+                    {
+                        _encoders.Add(3, "AMF (AMD)");
+                    }
+
+                    if (hasQsv)
+                    {
+                        _encoders.Add(4, "QuickSync (Intel)");
+                    }
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+                    if (hasVtb)
+                    {
+                        _encoders.Add(1, "VideoToolbox (Apple)");
+                    }
+#endif
+                }
+
+                // alidate the user's saved encoder index
+                int savedEncoder = SettingsManager.CurrentSettings.CaptureEncoder;
+                if (!_encoders.ContainsKey(savedEncoder))
+                {
+                    SettingsManager.SaveCaptureEncoder(0);
+                }
+            }
+            catch (Exception)
+            {
+                _encoders = new Dictionary<int, string> { { 0, "X264 (Default)" } };
+            }
+        }
+
+        private void StartCapture()
         {
             //Duplicate current camera
             _captureCameraObjectInstance = new GameObject("CaptureCamera");
@@ -172,6 +253,28 @@ namespace FlightReLive.Core.Capture
                 }
 
                 _captureCameraInstance.clearFlags = CameraClearFlags.Skybox;
+
+                if (additionalData != null)
+                {
+                    additionalData.renderPostProcessing = true;
+                    additionalData.requiresColorOption = CameraOverrideOption.On;
+                    additionalData.requiresDepthOption = CameraOverrideOption.On;
+
+                    if (_cameraToDuplicate != null)
+                    {
+                        UniversalAdditionalCameraData srcData = _cameraToDuplicate.GetComponent<UniversalAdditionalCameraData>();
+                        if (srcData != null)
+                        {
+                            additionalData.volumeLayerMask = srcData.volumeLayerMask;
+                            additionalData.volumeTrigger = srcData.volumeTrigger != null
+                                ? srcData.volumeTrigger
+                                : _cameraToDuplicate.transform;
+                        }
+                    }
+
+                    VolumeStack stack = VolumeManager.instance.stack;
+                    VolumeManager.instance.Update(stack, _captureCameraInstance.transform, additionalData.volumeLayerMask);
+                }
             }
 
             SetupRenderTexture();
@@ -191,9 +294,33 @@ namespace FlightReLive.Core.Capture
                 return;
             }
 
-            string ffmpegInput = $"-y -fflags +genpts -use_wallclock_as_timestamps 1 -f rawvideo -pixel_format rgb24 -video_size {_width}x{_height} -i -";
+            int framerateValue;
+
+            switch (_framerate)
+            {
+                default:
+                case 0:
+                    framerateValue = 30;
+                    break;
+                case 1:
+                    framerateValue = 60;
+                    break;
+                case 2:
+                    framerateValue = 90;
+                    break;
+                case 3:
+                    framerateValue = 120;
+                    break;
+            }
+
+            string ffmpegInput =
+                $"-y -fflags +genpts -use_wallclock_as_timestamps 1 " +
+                $"-f rawvideo -pixel_format rgba -video_size {_width}x{_height} -framerate {framerateValue} -i -";
+
+
             string ffmpegFilter = "";
             string encoderArgs;
+
 
             switch (_encoder)
             {
@@ -201,15 +328,23 @@ namespace FlightReLive.Core.Capture
                 case 0:
                     encoderArgs = "-c:v libx264 -preset ultrafast -b:v 10M";
                     break;
+
+#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+                case 1:
+                    encoderArgs = "-c:v h264_videotoolbox -b:v 10M -pix_fmt yuv420p -allow_sw 1";
+                    break;
+#endif
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
                 case 1:
                     encoderArgs = "-c:v h264_nvenc -preset p1 -b:v 10M";
                     break;
                 case 2:
                     encoderArgs = "-c:v av1_nvenc -preset p5 -cq 30";
                     break;
+#endif
             }
 
-            int framerateValue = _framerate == 0 ? 30 : 60;
             string ffmpegOutput = $"-r {framerateValue} -an {encoderArgs} -pix_fmt yuv420p -movflags +faststart \"{_outputPath}\"";
 
             if (File.Exists(logoPath) && SettingsManager.CurrentSettings.CaptureEncodedLogo)
@@ -231,12 +366,31 @@ namespace FlightReLive.Core.Capture
             _ffmpegProcess.Start();
 
             _writerRunning = true;
-            _writerThread = new Thread(() =>
+            _writerThread = new Thread(WriterLoop)
+            {
+                Name = "FFmpegWriterThread",
+                IsBackground = true
+            };
+            _writerThread.Start();
+            IsCapturing = true;
+            _captureStartTime = DateTime.Now;
+
+            Fugui.Notify("Capture started", $"Capture started ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info);
+        }
+
+        /// <summary>
+        /// Thread loop that writes captured frames to FFmpeg input stream.
+        /// Includes safety checks for FFmpeg process death and clean shutdown.
+        /// </summary>
+        private void WriterLoop()
+        {
+            try
             {
                 while (_writerRunning)
                 {
                     byte[] frame = null;
 
+                    //Dequeue frame
                     lock (_frameQueue)
                     {
                         if (_frameQueue.Count > 0)
@@ -245,34 +399,55 @@ namespace FlightReLive.Core.Capture
                         }
                     }
 
+                    //If FFmpeg has exited, stop immediately
+                    if (_ffmpegProcess == null || _ffmpegProcess.HasExited)
+                    {
+                        _writerRunning = false;
+                        break;
+                    }
+
+                    //If frame available, write to stdin
                     if (frame != null)
                     {
                         try
                         {
-                            if (_ffmpegProcess != null && !_ffmpegProcess.HasExited)
-                            {
-                                _ffmpegProcess.StandardInput.BaseStream.Write(frame, 0, frame.Length);
-                                _ffmpegProcess.StandardInput.BaseStream.Flush();
-                            }
+                            _ffmpegProcess.StandardInput.BaseStream.Write(frame, 0, frame.Length);
+                            _ffmpegProcess.StandardInput.BaseStream.Flush();
                         }
                         catch (Exception e)
                         {
-                            Fugui.Notify("Critical capture error", "Writing error during capture recording :\n" + e.GetBaseException().Message, StateType.Danger);
+                            // top on write failure (pipe closed or FFmpeg dead)
+                            UnityEngine.Debug.LogWarning($"[CaptureManager] FFmpeg write error: {e.Message}");
+                            _writerRunning = false;
+                            break;
                         }
                     }
                     else
                     {
-                        Thread.Sleep(1);
+                        _frameAvailable.WaitOne(5);
                     }
                 }
-            });
-            _writerThread.Start();
-            IsCapturing = true;
-            _captureStartTime = DateTime.Now;
-
-            Fugui.Notify("Capture started", $"Capture started ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info);
+            }
+            catch (ThreadAbortException) { }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogError($"[CaptureManager] Writer thread crashed: {e.Message}");
+            }
+            finally
+            {
+                try
+                {
+                    _ffmpegProcess?.StandardInput?.Flush();
+                    _ffmpegProcess?.StandardInput?.Close();
+                }
+                catch { }
+            }
         }
 
+
+        /// <summary>
+        /// Configure and create render textures for frame capture.
+        /// </summary>
         private void SetupRenderTexture()
         {
             int captureResolution = SettingsManager.CurrentSettings.CaptureResolution;
@@ -298,11 +473,19 @@ namespace FlightReLive.Core.Capture
                     break;
             }
 
-            _renderTexture = new RenderTexture(_width, _height, 24, RenderTextureFormat.ARGB32);
+            RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
+
+            //Main render target
+            _renderTexture = new RenderTexture(_width, _height, 24, rtFormat);
             _renderTexture.enableRandomWrite = true;
             _renderTexture.Create();
+
+            _captureCameraInstance.allowHDR = true;
+            _captureCameraInstance.forceIntoRenderTexture = true;
             _captureCameraInstance.targetTexture = _renderTexture;
-            _flippedTexture = new RenderTexture(_width, _height, 0, RenderTextureFormat.ARGB32);
+
+            //Flipped texture for GPU readback
+            _flippedTexture = new RenderTexture(_width, _height, 0, rtFormat);
             _flippedTexture.Create();
         }
 
@@ -322,8 +505,16 @@ namespace FlightReLive.Core.Capture
         }
         private void CaptureFrame()
         {
-            Graphics.Blit(_renderTexture, _flippedTexture, _captureFlipVerticalMaterial);
-            AsyncGPUReadback.Request(_flippedTexture, 0, TextureFormat.RGB24, OnFrameReadback);
+            if (!IsCapturing || _ffmpegProcess == null || _ffmpegProcess.HasExited)
+            {
+                return;
+            }
+
+            if (_frameQueue.Count < MAX_PENDING_FRAMES)
+            {
+                Graphics.Blit(_renderTexture, _flippedTexture, _captureFlipVerticalMaterial);
+                AsyncGPUReadback.Request(_flippedTexture, 0, TextureFormat.RGBA32, OnFrameReadback);
+            }
         }
 
         private void OnFrameReadback(AsyncGPUReadbackRequest request)
@@ -338,10 +529,11 @@ namespace FlightReLive.Core.Capture
             lock (_frameQueue)
             {
                 _frameQueue.Enqueue(frameBytes);
+                _frameAvailable.Set();
             }
         }
 
-        internal void StopCapture()
+        private void StopCapture()
         {
             IsCapturing = false;
             _captureElapsedTime = "";
@@ -351,14 +543,26 @@ namespace FlightReLive.Core.Capture
             {
                 _writerRunning = false;
 
+                //Syop writer thread
                 if (_writerThread != null && _writerThread.IsAlive)
                 {
                     _writerThread.Join(500);
                     _writerThread = null;
                 }
 
+                //Close FFmpeg input
                 _ffmpegProcess?.StandardInput?.Close();
-                _ffmpegProcess?.WaitForExit(1000);
+
+                //Wait for FFmpeg exiting
+                if (_ffmpegProcess != null && !_ffmpegProcess.HasExited)
+                {
+                    if (!_ffmpegProcess.WaitForExit(1000))
+                    {
+                        UnityEngine.Debug.LogWarning("[CaptureManager] FFmpeg did not exit in time, killing process...");
+                        _ffmpegProcess.Kill();
+                    }
+                }
+
                 _ffmpegProcess?.Dispose();
             }
             catch (Exception e)
@@ -366,6 +570,7 @@ namespace FlightReLive.Core.Capture
                 UnityEngine.Debug.LogError($"Erreur à la fermeture de FFmpeg : {e.Message}");
             }
 
+            //Release GPU resources
             if (_renderTexture != null)
             {
                 _renderTexture.Release();
@@ -378,6 +583,7 @@ namespace FlightReLive.Core.Capture
                 _flippedTexture = null;
             }
 
+            //Clean temp camera
             if (_captureCameraObjectInstance != null)
             {
                 Destroy(_captureCameraObjectInstance);
@@ -385,12 +591,29 @@ namespace FlightReLive.Core.Capture
                 _captureCameraInstance = null;
             }
 
+            //Flush waiting queue
             lock (_frameQueue)
             {
                 _frameQueue.Clear();
             }
 
+            //Rest frame available signal
+            _frameAvailable?.Dispose();
+            _frameAvailable = new AutoResetEvent(false);
+
             Fugui.Notify("Capture stopped", $"Capture stopped ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info);
+        }
+
+        internal void ToggleCapture()
+        {
+            if (!IsCapturing)
+            {
+                StartCapture();
+            }
+            else
+            {
+                StopCapture();
+            }
         }
 
         string GetPlatformFFmpegPath()
@@ -408,93 +631,80 @@ namespace FlightReLive.Core.Capture
         #region UI
         internal void DrawCaptureModeSettings(FuLayout layout)
         {
-            using (FuGrid grid = new FuGrid("gridCaptureSettings", new FuGridDefinition(2, new float[2] { 0.3f, 0.7f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 3f, outterPadding: 10))
+            layout.FramedText("Capture");
+            layout.Separator();
+
+            using (FuGrid grid = new FuGrid("grdCaptureSettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
                 if (IsCapturing)
                 {
                     grid.DisableNextElements();
                 }
 
-                grid.SetMinimumLineHeight(22f);
-                grid.SetNextElementToolTipWithLabel("Capture output native resolution");
+                SettingsManager.DisplaySettingsComboboxWithReset(
+                    grid,
+                    "Capture resolution",
+                    "Capture output native resolution",
+                    "Reset to default resolution",
+                    SettingsManager.CurrentSettings.CaptureResolution,
+                    SettingsManager.CAPTURE_RESOLUTION_DEFAULT_VALUE,
+                    (id) => _resolutions.ContainsKey(id) ? _resolutions[id] : "Unknown",
+                    _resolutions.Keys,
+                    (newId) => SettingsManager.SaveCaptureResolution(newId),
+                    () => SettingsManager.ResetCaptureResolution()
+                );
 
-                int currentResolutionId = SettingsManager.CurrentSettings.CaptureResolution;
-                string currentLabel = _resolutions.ContainsKey(currentResolutionId) ? _resolutions[currentResolutionId] : "Unknown";
+                SettingsManager.DisplaySettingsComboboxWithReset(
+                    grid,
+                    "Capture framerate",
+                    "Capture output native framerate",
+                    "Reset to default framerate",
+                    SettingsManager.CurrentSettings.CaptureFramerate,
+                    SettingsManager.CAPTURE_FRAMERATE_DEFAULT_VALUDE,
+                    (id) => _framerates.ContainsKey(id) ? _framerates[id] : "Unknown",
+                    _framerates.Keys,
+                    (newId) => SettingsManager.SaveCaptureFramerate(newId),
+                    () => SettingsManager.ResetCaptureFramerate()
+                );
 
-                grid.Combobox("CaptureResolution##CaptureResolutionCombobox", currentLabel, () =>
-                {
-                    foreach (KeyValuePair<int, string> resolution in _resolutions)
-                    {
-                        int id = resolution.Key;
-                        string label = resolution.Value;
-                        bool isSelected = id == currentResolutionId;
+                SettingsManager.DisplaySettingsComboboxWithReset(
+                    grid,
+                    "Capture encoder",
+                    "Capture encoder",
+                    "Reset to default encoder",
+                    SettingsManager.CurrentSettings.CaptureEncoder,
+                    SettingsManager.CAPTURE_ENCODER_DEFAULT_VALUE,
+                    (id) => _encoders.ContainsKey(id) ? _encoders[id] : "Unknown",
+                    _encoders.Keys,
+                    (newId) => SettingsManager.SaveCaptureEncoder(newId),
+                    () => SettingsManager.ResetCaptureEncoder()
+                );
 
-                        string display = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {label}";
-
-                        if (ImGui.Selectable(display))
-                        {
-                            SettingsManager.SaveCaptureResolution(id);
-                        }
-                    }
-                });
-
-                int currentFramerateId = SettingsManager.CurrentSettings.CaptureFramerate;
-                string currentFramerateLabel = _framerates.ContainsKey(currentFramerateId) ? _framerates[currentFramerateId] : "Unknown";
-
-                grid.Combobox("CaptureFramerate##CaptureEncoderCombobox", currentFramerateLabel, () =>
-                {
-                    foreach (KeyValuePair<int, string> framerate in _framerates)
-                    {
-                        int id = framerate.Key;
-                        string label = framerate.Value;
-                        bool isSelected = id == currentFramerateId;
-
-                        string display = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {label}";
-
-                        if (ImGui.Selectable(display))
-                        {
-                            SettingsManager.SaveCaptureFramerate(id);
-                        }
-                    }
-                });
-
-                int currentEncoderId = SettingsManager.CurrentSettings.CaptureEncoder;
-                string currentEncoderLabel = _encoders.ContainsKey(currentEncoderId) ? _encoders[currentEncoderId] : "Unknown";
-
-                grid.Combobox("CaptureEncoder##CaptureEncoderCombobox", currentEncoderLabel, () =>
-                {
-                    foreach (KeyValuePair<int, string> encoder in _encoders)
-                    {
-                        int id = encoder.Key;
-                        string label = encoder.Value;
-                        bool isSelected = id == currentEncoderId;
-
-                        string display = $"{(isSelected ? FlightReLiveIcons.Check : " ")} {label}";
-
-                        if (ImGui.Selectable(display))
-                        {
-                            SettingsManager.SaveCaptureEncoder(id);
-                        }
-                    }
-                });
-
-                grid.SetNextElementToolTipWithLabel("Capture output path");
-                string captureOutputPath = SettingsManager.CurrentSettings.CaptureOutputPath;
-
-                grid.InputFolder("Capture output path", (path) =>
-                {
-                    SettingsManager.SaveCaptureOutputPath(path);
-                }, captureOutputPath, new ExtensionFilter[0]);
+                SettingsManager.DisplaySettingsFolderInputWithReset(
+                    grid,
+                    "Capture output path",
+                    "Capture output folder path",
+                    "Reset to default capture output path",
+                    SettingsManager.CurrentSettings.CaptureOutputPath,
+                    SettingsManager.CAPTURE_OUTPUT_PATH_DEFAULT_VALUE,
+                    (newPath) => SettingsManager.SaveCaptureOutputPath(newPath),
+                    null
+                );
 
                 bool encodedLogo = SettingsManager.CurrentSettings.CaptureEncodedLogo;
-
-                grid.SetNextElementToolTipWithLabel("If enabled, this option inserts the Flight ReLive logo at the bottom-left corner of the exported video.");
-                if (grid.Toggle("App Logo", ref encodedLogo))
-                {
-                    SettingsManager.SaveCaptureEncodedLogo(encodedLogo);
-                }
+                SettingsManager.DisplaySettingsToggleWithReset(
+                    grid,
+                    "App logo",
+                    "If enabled, this option inserts the Flight ReLive logo at the bottom-left corner of the exported video.",
+                    "Reset logo displayed state to default value",
+                    SettingsManager.CurrentSettings.CaptureEncodedLogo,
+                    SettingsManager.CAPTURE_ENCODED_LOGO_DEFAULT_VALUE,
+                    (x) => SettingsManager.SaveCaptureEncodedLogo(x),
+                    () => SettingsManager.ResetCaptureEncodedLogo()
+                );
             }
         }
+
         #endregion
 
         #region CALLBACKS

@@ -7,8 +7,6 @@ using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEngine;
@@ -36,7 +34,7 @@ namespace FlightReLive.UI.Layout
         /// </summary>
         private void RegisterMainMenuItems()
         {
-#if UNITY_STANDALONE_OSX
+#if UNITY_STANDALONE_OSX && !UNITY_EDITOR
             RegisterMainMenuItemsMacOs();
 #else
             RegisterMainMenuItemsWindows();
@@ -84,13 +82,6 @@ namespace FlightReLive.UI.Layout
                 }
             }, "S");
 
-#if UNITY_EDITOR
-            //Fugui Settings menu (only in editor)
-            MacOsMainMenuManager.AddMenuEntry("Settings", "Fugui Settings", () =>
-            {
-                Fugui.CreateWindowAsync(FuSystemWindowsNames.FuguiSettings, null);
-            }, "F");
-#endif
             //Settings menu
             MacOsMainMenuManager.AddMenuEntry("Settings", "Preferences", () =>
             {
@@ -242,10 +233,9 @@ namespace FlightReLive.UI.Layout
             }
 
             _aboutOpened = true;
-            Fugui.ShowModal("About Flight ReLive", (aboutLayout) =>
+            Fugui.ShowModal(FlightReLiveIcons.About + "  About Flight ReLive", (aboutLayout) =>
             {
                 ImGui.Indent(10f);
-                Fugui.PushFont(20, FontType.Bold);
                 using (FuGrid appGrid = new FuGrid("appGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default))
                 {
                     Fugui.PushFont(14, FontType.Regular);
@@ -257,8 +247,8 @@ namespace FlightReLive.UI.Layout
                     appGrid.Text("Jérôme CREMOUX");
                     appGrid.Text("Website");
                     appGrid.TextURL("https://www.flight-relive.org", "https://www.flight-relive.org");
+                    Fugui.PopFont();
                 }
-                Fugui.PopFont();
                 ImGui.Unindent(10f);
                 aboutLayout.Separator();
 

@@ -224,12 +224,12 @@ namespace FlightReLive.UI.Overlays
                 Fugui.Themes.GetColor(FuColors.ButtonActive),
                 Fugui.Themes.GetColor(FuColors.Button) * 0.5f,
                 FuTextStyle.Default,
-                new Vector2(8f, 4f)
+                new Vector2(8f * scale, 4f * scale)
             );
 
             //Speed button
             ImGui.SetCursorScreenPos(new Vector2(cursorPos.x + padding, rowY));
-            Fugui.PushFont(20, FontType.Regular);
+            Fugui.PushFont(18, FontType.Regular);
             using (FuLayout layoutSpeed = new FuLayout())
             {
                 string speedIcon;
@@ -296,7 +296,7 @@ namespace FlightReLive.UI.Overlays
 
             //Media buttons
             Fugui.Push(ImGuiStyleVar.FrameRounding, radius * 0.5f);
-            Fugui.PushFont(20, FontType.Regular);
+            Fugui.PushFont(18, FontType.Regular);
             ImGui.SetCursorScreenPos(new Vector2(buttonsStartX, rowY));
 
             using (FuLayout layout = new FuLayout())
@@ -371,13 +371,13 @@ namespace FlightReLive.UI.Overlays
 
             //Unload button
             ImGui.SetCursorScreenPos(new Vector2(cursorPos.x + availWidth - padding - btnW, rowY));
-            Fugui.PushFont(20, FontType.Regular);
+            Fugui.PushFont(18, FontType.Regular);
             using (FuLayout layoutUnload = new FuLayout())
             {
                 layoutUnload.SetNextElementToolTip("Unload current flight");
                 if (layoutUnload.Button(FlightReLiveIcons.Unload, buttonSize, customButton))
                 {
-                    Fugui.ShowModal("  ", (layout) =>
+                    Fugui.ShowModal("Unload current flight", (layout) =>
                     {
                         Fugui.PushFont(14, FontType.Regular);
                         string displayText = "The current flight will be completely unloaded. Do you want to continue?";
@@ -409,6 +409,8 @@ namespace FlightReLive.UI.Overlays
                 drawList.AddLine(new Vector2(hoverX, barPos.y * scale), new Vector2(hoverX, barEnd.y * scale), textBorder, 1f * scale);
             }
         }
+
+
         #endregion
     }
 }

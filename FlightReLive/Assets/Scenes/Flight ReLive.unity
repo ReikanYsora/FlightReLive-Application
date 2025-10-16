@@ -621,6 +621,59 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Cameras.CameraManager
   ReLiveCamera: {fileID: 796242730}
   POVCamera: {fileID: 137108794}
+--- !u!1 &309872744
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 309872745}
+  - component: {fileID: 309872746}
+  m_Layer: 0
+  m_Name: MapView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &309872745
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 309872744}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1595949482}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &309872746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 309872744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2288073681a694d6193829a44a75127a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.UI.MapView.MapViewManager
+  _windowName:
+    _id: 16
+    _name: "\uE067  Map View"
+    _autoInstantiateWindowOnlayoutSet: 1
+    _idleFPS: -1
+  _windowFlags: 0
+  _size: {x: 0, y: 0}
+  _position: {x: 0, y: 0}
+  _forceCreateAloneOnAwake: 0
 --- !u!1 &311396843
 GameObject:
   m_ObjectHideFlags: 0
@@ -1985,6 +2038,7 @@ Transform:
   - {fileID: 1774870477}
   - {fileID: 468566123}
   - {fileID: 445681718}
+  - {fileID: 309872745}
   m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1595949483

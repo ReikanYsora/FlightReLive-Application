@@ -25,6 +25,10 @@ public class FlightReLiveWindowsNames : FuSystemWindowsNames
     private static FuWindowName _POVView = new FuWindowName(15, FlightReLiveIcons.POV + "  POV View", true, -1);
 
     public static FuWindowName POVView { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _POVView; }
+
+    private static FuWindowName _MapView = new FuWindowName(16, FlightReLiveIcons.Maps + "  Map View", true, -1);
+
+    public static FuWindowName MapView { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _MapView; }
     #endregion
 
     #region METHODS
@@ -36,7 +40,8 @@ public class FlightReLiveWindowsNames : FuSystemWindowsNames
             _Workspace,
             _Inspector,
             _FlightCharts,
-            _POVView
+            _POVView,
+            _MapView
         };
     }
     #endregion

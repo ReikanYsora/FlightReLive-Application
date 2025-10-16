@@ -16,7 +16,7 @@
       "dependencies": {
         "com.unity.postprocessing": "3.2.2"
       },
-      "hash": "bb835ed8b859250c5920a6033b2768d89a8fd2c5"
+      "hash": "fd2c4b62f7cc64e201b49d82c43ad7d039eb5e73"
     },
     "com.tnd.upscaler.fsr3": {
       "version": "file:com.tnd.upscaler.fsr3",

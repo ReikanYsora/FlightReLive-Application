@@ -19,6 +19,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using ImGuiNET;
+using FlightReLive.UI.Helpers;
 
 namespace FlightReLive.Core.Loading
 {
@@ -428,23 +430,48 @@ namespace FlightReLive.Core.Loading
         {
             float scale = Fugui.CurrentContext.Scale;
 
-            Fugui.ShowModal("  ", (layout) =>
+            Fugui.ShowModal($"Loading resources for {_fileName}", (layout) =>
             {
-                Fugui.PushFont(14, FontType.Bold);
                 float paddingX = 10f;
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
-                float availableX = (layout.GetAvailableWidth() / scale) - (paddingX * scale * 2);
-                string loading = $"Loading resources for {_fileName}";
-                layout.CenterNextItemH(loading);
-                layout.Text(loading);
-                Fugui.PopFont();
                 layout.Spacing();
-                Fugui.MoveX((availableX - _thumbnail.width) / 2f);
-                layout.Image("thumbnailLoading", _thumbnail, new FuElementSize(_thumbnail.width, _thumbnail.height), true, false);
+
+                // Compute available width (logical, unscaled)
+                float availableX = layout.GetAvailableWidth() / scale - (paddingX * 2f);
+                float contentWidth = _thumbnail.width;
+                float offsetX = Mathf.Floor((availableX - contentWidth) * 0.5f);
+                Fugui.MoveX(offsetX);
+
+                // Compute orange area (scaled drawing zone)
+                float targetWidth = Mathf.Floor(_thumbnail.width * scale);
+                float targetHeight = Mathf.Floor(_thumbnail.height * scale * 0.85f);
+                float cornerRadius = 6f * scale;
+                ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+                uint frameColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
+
+                // Orange rounded background zone
+                Vector2 zonePos = ImGui.GetCursorScreenPos();
+                zonePos.x = Mathf.Floor(zonePos.x);
+                zonePos.y = Mathf.Floor(zonePos.y);
+                Vector2 zoneSize = new Vector2(targetWidth, targetHeight);
+                drawList.AddRectFilled(zonePos, zonePos + zoneSize, frameColor, cornerRadius, ImDrawFlags.RoundCornersAll);
+
+                // Compute thumbnail placement (centered inside zone with very thin uniform padding)
+                float thumbPadding = 2f * scale;
+                Vector2 thumbPos = zonePos + new Vector2(thumbPadding, thumbPadding);
+                Vector2 thumbSize = new Vector2(zoneSize.x - thumbPadding * 2f, zoneSize.y - thumbPadding * 2f);
+
+                // Clip to rounded corners before drawing image
+                ImGui.PushClipRect(zonePos, zonePos + zoneSize, true);
+                ImGui.SetCursorScreenPos(thumbPos);
+                layout.Image("thumbnailLoading", _thumbnail, new FuElementSize(thumbSize.x / scale, thumbSize.y / scale), true, false);
+                ImGui.PopClipRect();
+
+                // Progress bar aligned below
                 layout.Spacing();
-                Vector2 progressBarSize = new Vector2(_thumbnail.width, 20f);
-                Fugui.MoveX((availableX - _thumbnail.width) / 2f);
-                layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.Inside);
+                Vector2 progressBarSize = new Vector2(_thumbnail.width, 6f);
+                Fugui.MoveX(offsetX);
+                layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.None);
                 layout.Spacing();
 
                 layout.Collapsable("Loading details##collapsable", () =>

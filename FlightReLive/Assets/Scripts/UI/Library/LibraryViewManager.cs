@@ -13,6 +13,7 @@ using UnityEditor;
 using UnityEngine;
 using FlightReLive.Core.Database;
 using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace FlightReLive.UI.Library
 {
@@ -205,6 +206,48 @@ namespace FlightReLive.UI.Library
             }
         }
 
+        private void DrawContextualMenu(FuWindow window, RealmFlightItem flight)
+        {
+            if (window.Mouse.IsDown(FuMouseButton.Right))
+            {
+                FuContextMenuBuilder contextMenuBuilder = FuContextMenuBuilder.Start();
+
+                contextMenuBuilder.AddItem($"Load", () =>
+                {
+                    LibraryManager.Instance.SelectFlight(flight);
+                });
+
+                contextMenuBuilder.AddItem($"{FlightReLiveIcons.Maps}  Display in OpenStreetMap", () =>
+                {
+                    OpenStreetMapHelper.OpenOpenStreetMapBrowser(flight.DataPoints.Select(p => new Vector2((float)p.Latitude, (float)p.Longitude)).ToList());
+                });
+
+                contextMenuBuilder.AddItem($"{FlightReLiveIcons.Share}  Share", () =>
+                {
+                    ShareViewManager.DisplayShareModal(flight);
+                });
+
+                contextMenuBuilder.AddSeparator();
+
+                contextMenuBuilder.AddItem("Remove from library", () =>
+                {
+
+                });
+
+                contextMenuBuilder.AddSeparator();
+
+                contextMenuBuilder.AddItem($"{FlightReLiveIcons.Inspector}  Properties", () =>
+                {
+
+                });
+
+                List<FuContextMenuItem> contextMenuItems = contextMenuBuilder.Build();
+                Fugui.PushContextMenuItems(contextMenuItems);
+                Fugui.TryOpenContextMenu();
+                Fugui.PopContextMenuItems();
+            }
+        }
+
         /// <summary>
         /// Called each frame to draw the UI of this window
         /// </summary>
@@ -218,10 +261,8 @@ namespace FlightReLive.UI.Library
             using (FuPanel panel = new FuPanel("libraryUIPanel", false, contentRegion.y, contentRegion.x, flags: FuPanelFlags.Default))
             {
                 Fugui.Push(ImGuiStyleVar.ItemSpacing, Vector2.zero);
-
                 Vector2 itemBaseSize = new Vector2(160, 95);
                 Vector2 itemSize = itemBaseSize * scale * thumbnailScale;
-
                 float paddingX = 16f * scale * thumbnailScale;
                 float paddingY = 16f * scale * thumbnailScale;
                 Vector2 cursorPos = ImGui.GetCursorScreenPos();
@@ -254,60 +295,15 @@ namespace FlightReLive.UI.Library
                         Vector2 windowSize = ImGui.GetWindowSize();
                         float workspaceTop = windowPos.y + HEADER_BAR_HEIGHT;
                         float workspaceBottom = windowPos.y + windowSize.y - FOOTER_BAR_HEIGHT;
-
-                        bool isHovered = ImGui.IsMouseHoveringRect(itemPos, itemEnd) &&
-                                         window.IsHovered &&
-                                         mousePos.y > workspaceTop &&
-                                         mousePos.y < workspaceBottom;
-
+                        bool isHovered = ImGui.IsMouseHoveringRect(itemPos, itemEnd) && window.IsHovered && mousePos.y > workspaceTop && mousePos.y < workspaceBottom;
                         bool isSelected = LoadingManager.Instance.CurrentFlightData?.Name == file.Name;
                         uint bgColor = ImGui.GetColorU32(isSelected ? Fugui.Themes.GetColor(FuColors.Highlight) : isHovered ? Fugui.Themes.GetColor(FuColors.HoveredWindowTab) : Fugui.Themes.GetColor(FuColors.Button));
-
                         float cornerRadius = 4f * scale * thumbnailScale;
                         FuguiDrawListHelper.DrawRoundedRect(drawListItem, itemPos, itemSize, bgColor, cornerRadius, 5);
 
                         if (isHovered)
                         {
-                            string tooltipText = $"{file.Name}\n\n";
-                            tooltipText += $"{SettingsManager.FormatDateTime(file.CreationDate)}\n\n";
-                            tooltipText += $"Double click to load this video file.\nThis file contains {file.DataPoints.Count} recorded flight points.\n\nClick on  {FlightReLiveIcons.Maps}  to display waypoints on OpenStreetMap.\n\nClick on  {FlightReLiveIcons.Share}  to share your flight.";
-                            Vector2 tooltipPadding = new Vector2(12f, 8f) * scale * thumbnailScale;
-                            float tooltipMinWidth = 300f * scale * thumbnailScale;
-                            float tooltipCornerRadius = 8f * scale * thumbnailScale;
-                            Vector2 offset = new Vector2(16f, 16f) * scale * thumbnailScale;
-                            float screenMargin = 4f * scale * thumbnailScale;
-                            Vector2 textSize = ImGui.CalcTextSize(tooltipText);
-                            Vector2 tooltipSize = new Vector2(Mathf.Max(textSize.x + tooltipPadding.x * 2, tooltipMinWidth), textSize.y + tooltipPadding.y * 2);
-                            Vector2 screenSize = ImGui.GetIO().DisplaySize;
-                            Vector2 tooltipPos = mousePos + offset;
-
-                            if (tooltipPos.x + tooltipSize.x > screenSize.x - screenMargin)
-                            {
-                                tooltipPos.x = mousePos.x - tooltipSize.x - offset.x;
-                            }
-
-                            if (tooltipPos.y + tooltipSize.y > screenSize.y - screenMargin)
-                            {
-                                tooltipPos.y = mousePos.y - tooltipSize.y - offset.y;
-                            }
-
-                            tooltipPos.x = Mathf.Clamp(tooltipPos.x, screenMargin, screenSize.x - tooltipSize.x - screenMargin);
-                            tooltipPos.y = Mathf.Clamp(tooltipPos.y, screenMargin, screenSize.y - tooltipSize.y - screenMargin);
-
-                            Fugui.Push(ImGuiCol.WindowBg, new Vector4(0f, 0f, 0f, 0.95f));
-                            Fugui.Push(ImGuiStyleVar.WindowRounding, tooltipCornerRadius);
-
-                            ImGui.SetNextWindowPos(tooltipPos);
-                            ImGui.SetNextWindowSize(tooltipSize);
-                            ImGui.BeginTooltip();
-                            ImGui.SetCursorScreenPos(tooltipPos + tooltipPadding);
-
-                            Fugui.PushFont(14, FontType.Regular);
-                            layout.Text(tooltipText);
-                            Fugui.PopFont();
-
-                            ImGui.EndTooltip();
-                            Fugui.PopStyle(2);
+                            DrawContextualMenu(window, file);
                         }
 
                         if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && isHovered)
@@ -324,6 +320,7 @@ namespace FlightReLive.UI.Library
                         float thumbPadding = 5f * scale * thumbnailScale;
                         Vector2 thumbPosition = itemPos + new Vector2((itemSize.x - thumbSize.x) / 2f, thumbPadding);
 
+                        //Thumbnail
                         if (file.Thumbnail != null)
                         {
                             IntPtr textureID = FuWindow.CurrentDrawingWindow.Container.GetTextureID(file.Thumbnail);
@@ -353,38 +350,6 @@ namespace FlightReLive.UI.Library
                             layout.Text(duration, FuTextStyle.Default);
                             Fugui.PopFont();
                         }
-
-                        //Top-left icon (OpenStreetMap)
-                        Fugui.PushFont(12, FontType.Regular);
-                        Vector2 iconSizeLeft = ImGui.CalcTextSize(FlightReLiveIcons.Maps);
-                        Vector2 iconPaddingLeft = new Vector2(4f, 2f) * scale * thumbnailScale;
-                        Vector2 iconBgSizeLeft = iconSizeLeft + iconPaddingLeft * 2;
-                        Vector2 iconPosLeft = thumbPosition + new Vector2(4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
-                        Vector2 iconFinalPositionLeft = iconPosLeft + new Vector2((iconBgSizeLeft.x - iconSizeLeft.x) / 2f, iconPaddingLeft.y);
-                        drawListItem.AddRectFilled(iconPosLeft, iconPosLeft + iconBgSizeLeft, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
-                        ImGui.SetCursorScreenPos(iconFinalPositionLeft);
-
-                        if (layout.ClickableText(FlightReLiveIcons.Maps, FuTextStyle.Default))
-                        {
-                            OpenStreetMapHelper.OpenOpenStreetMapBrowser(file.DataPoints.Select(p => new Vector2((float)p.Latitude, (float)p.Longitude)).ToList());
-                        }
-                        Fugui.PopFont();
-
-                        //Top-right icon (Share)
-                        Fugui.PushFont(12, FontType.Regular);
-                        Vector2 shareIconSize = ImGui.CalcTextSize(FlightReLiveIcons.Share);
-                        Vector2 shareIconPadding = new Vector2(4f, 2f) * scale * thumbnailScale;
-                        Vector2 shareIconBgSize = shareIconSize + shareIconPadding * 2;
-                        Vector2 shareIconPos = thumbPosition + new Vector2(thumbSize.x - shareIconBgSize.x - 4f * scale * thumbnailScale, 4f * scale * thumbnailScale);
-                        Vector2 shareIconFinalPosition = shareIconPos + new Vector2((shareIconBgSize.x - shareIconSize.x) / 2f, shareIconPadding.y);
-                        drawListItem.AddRectFilled(shareIconPos, shareIconPos + shareIconBgSize, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f)));
-                        ImGui.SetCursorScreenPos(shareIconFinalPosition);
-
-                        if (layout.ClickableText(FlightReLiveIcons.Share, FuTextStyle.Default))
-                        {
-                            ShareViewManager.DisplayShareModal(file);
-                        }
-                        Fugui.PopFont();
 
                         x += itemSize.x + paddingX;
                         maxY = Mathf.Max(maxY, itemEnd.y);

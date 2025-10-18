@@ -161,10 +161,31 @@ namespace FlightReLive.UI
         protected static string _SunClouds = "\uE098";
         public static string SunClouds { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _SunClouds; }
 
-	protected static string _Sunrise = "\uE099";
-	public static string Sunrise { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunrise; }
+	    protected static string _Sunrise = "\uE099";
+	    public static string Sunrise { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunrise; }
 
-	protected static string _Sunset = "\uE09A";
-	public static string Sunset { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunset; }
+	    protected static string _Sunset = "\uE09A";
+	    public static string Sunset { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Sunset; }
+
+        protected static string _Globe = "\uE09B";
+        public static string Globe { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Globe; }
+
+        protected static string _Property = "\uE09C";
+        public static string Property { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Property; }
+
+        protected static string _Delete = "\uE09D";
+        public static string Delete { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Delete; }
+
+        protected static string _Capture = "\uE09E";
+        public static string Capture { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Capture; }
+
+        protected static string _Library = "\uE09F";
+        public static string Library { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Library; }
+
+        protected static string _Favorite = "\uE0A0";
+        public static string Favorite { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Favorite; }
+
+        protected static string _Save = "\uE0A1";
+        public static string Save { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Save; }
     }
 }

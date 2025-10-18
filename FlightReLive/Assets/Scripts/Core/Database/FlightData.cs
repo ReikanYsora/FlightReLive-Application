@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace FlightReLive.Core.FlightDefinition
+namespace FlightReLive.Core.Database
 {
     /// <summary>
     /// Holds all flight-related data including GPS path, tiles, altitude, and metadata.
@@ -26,8 +26,6 @@ namespace FlightReLive.Core.FlightDefinition
         #region PROPERTIES
         internal string Name { set; get; }
 
-        internal string VideoPath { set; get; }
-
         internal DateTime Date { set; get; }
 
         internal int Width { set; get; }
@@ -36,11 +34,9 @@ namespace FlightReLive.Core.FlightDefinition
 
         internal double Frequency { set; get; }
 
-        internal List<FlightDataPoint> Points { set; get; }
+        internal List<RealmFlightPointItem> Points { set; get; }
 
         internal MapTilesDefinition MapDefinition { set; get; }
-
-        internal Texture2D Thumbnail { set; get; }
 
         /// <summary>
         /// Reference GPS point used as world origin.
@@ -50,21 +46,21 @@ namespace FlightReLive.Core.FlightDefinition
 
         internal bool HasTakeOffPosition { get; set; }
 
-        internal bool HasExtractionError { get; set; }
-
-        internal bool IsValid { get; set; }
-
-        internal FlightGPSData EstimateTakeOffPosition { set; get; }
+        internal RealmDoubleVector2 EstimateTakeOffPosition { set; get; }
 
         internal float TakeOffAltitude { get; set; }
 
-        internal FlightGPSData GPSOrigin { get; set; }
+        internal RealmDoubleVector2 GPSOrigin { get; set; }
 
         internal TimeSpan Length { get; set; }
 
-        internal float GlobalScale => GLOBAL_SCALE;
-
-        internal static float StaticGlobalScale => GLOBAL_SCALE;
+        internal float WorldScale
+        {
+            get
+            {
+                return GLOBAL_SCALE;
+            }
+        }
         #endregion
 
         #region METHODS
@@ -74,7 +70,7 @@ namespace FlightReLive.Core.FlightDefinition
         /// </summary>
         internal void InitializeMapDefinition()
         {
-            MapDefinition = new MapTilesDefinition(GPSOrigin.Latitude, GPSOrigin.Longitude);
+            MapDefinition = new MapTilesDefinition(GPSOrigin.X, GPSOrigin.Y);
         }
 
         /// <summary>
@@ -98,7 +94,7 @@ namespace FlightReLive.Core.FlightDefinition
 
             if (MapDefinition == null)
             {
-                MapDefinition = new MapTilesDefinition(GPSOrigin.Latitude, GPSOrigin.Longitude);
+                MapDefinition = new MapTilesDefinition(GPSOrigin.X, GPSOrigin.Y);
             }
 
             if (_tileLookup == null)
@@ -146,7 +142,7 @@ namespace FlightReLive.Core.FlightDefinition
         /// <summary>
         /// Returns interpolated altitude at the given GPS position.
         /// </summary>
-        internal float GetAltitudeAtPosition(FlightGPSData gps)
+        internal float GetAltitudeAtPosition(RealmDoubleVector2 gps)
         {
             if (_tileLookup == null || _tileLookup.Count == 0)
             {
@@ -157,7 +153,7 @@ namespace FlightReLive.Core.FlightDefinition
                 }
             }
 
-            (int tx, int ty) = MapTools.GPSToTileXY(gps.Latitude, gps.Longitude);
+            (int tx, int ty) = MapTools.GPSToTileXY(gps.X, gps.Y);
 
             if (_tileLookup.TryGetValue((tx, ty), out TileDefinition tile) && tile.HeightMap != null)
             {
@@ -166,7 +162,7 @@ namespace FlightReLive.Core.FlightDefinition
 
             foreach (TileDefinition t in _tileLookup.Values)
             {
-                if (IsInsideBoundingBox(t.BoundingBox, gps.Latitude, gps.Longitude) && t.HeightMap != null)
+                if (IsInsideBoundingBox(t.BoundingBox, gps.X, gps.Y) && t.HeightMap != null)
                 {
                     return GetAltitudeAtPosition(t, gps);
                 }
@@ -178,15 +174,15 @@ namespace FlightReLive.Core.FlightDefinition
         /// <summary>
         /// Returns altitude from a specific tile using bilinear interpolation.
         /// </summary>
-        internal float GetAltitudeAtPosition(TileDefinition tile, FlightGPSData gps)
+        internal float GetAltitudeAtPosition(TileDefinition tile, RealmDoubleVector2 gps)
         {
             GPSBoundingBox bbox = tile.BoundingBox;
             float[,] heightmap = tile.HeightMap;
             int width = heightmap.GetLength(0);
             int height = heightmap.GetLength(1);
 
-            float nx = Mathf.InverseLerp((float)bbox.MinLongitude, (float)bbox.MaxLongitude, (float)gps.Longitude);
-            float ny = Mathf.InverseLerp((float)bbox.MinLatitude, (float)bbox.MaxLatitude, (float)gps.Latitude);
+            float nx = Mathf.InverseLerp((float)bbox.MinLongitude, (float)bbox.MaxLongitude, (float)gps.Y);
+            float ny = Mathf.InverseLerp((float)bbox.MinLatitude, (float)bbox.MaxLatitude, (float)gps.X);
 
             float fx = nx * (width - 1);
             float fy = (1f - ny) * (height - 1);
@@ -228,10 +224,10 @@ namespace FlightReLive.Core.FlightDefinition
         /// <summary>
         /// Converts a world position into GPS position (lat, lon).
         /// </summary>
-        internal FlightGPSData ConvertWorldToGPSPosition(Vector3 worldPos)
+        internal RealmDoubleVector2 ConvertWorldToGPSPosition(Vector3 worldPos)
         {
-            float xMeters = worldPos.x / GlobalScale;
-            float zMeters = worldPos.z / GlobalScale;
+            float xMeters = worldPos.x / WorldScale;
+            float zMeters = worldPos.z / WorldScale;
 
             double lat0 = SceneCenterGPS.x;
             double lon0 = SceneCenterGPS.y;
@@ -242,7 +238,7 @@ namespace FlightReLive.Core.FlightDefinition
             double dLat = zMeters / metersPerDegLat;
             double dLon = (metersPerDegLon != 0.0) ? xMeters / metersPerDegLon : 0.0;
 
-            return new FlightGPSData(lat0 + dLat, lon0 + dLon);
+            return new RealmDoubleVector2(lat0 + dLat, lon0 + dLon);
         }
 
         /// <summary>

@@ -1,4 +1,6 @@
 ﻿using FlightReLive.Core.Cache;
+using FlightReLive.Core.Database;
+using FlightReLive.Core.Library;
 using FlightReLive.Core.Loading;
 using FlightReLive.UI;
 using Fu;
@@ -84,8 +86,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<DateFormatStyle> OnDateFormatStyleChanged;
         public static event Action<TimeFormatStyle> OnTimeFormatStyleChanged;
         public static event Action<UnitSystemType> OnUnitSystemTypeChanged;
-        public static event Action<string> OnWorkspacePathChanged;
-        public static event Action<float> OnWorkspaceZoomChanged;
+        public static event Action<float> OnLibraryZoomChanged;
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<float> OnGlobalScaleChanged;
         public static event Action<float> OnPath3DWidthChanged;
@@ -204,19 +205,11 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Load the workspace path setting from PlayerPrefs, defaulting to Application.persistentDataPath if not set.
-        /// </summary>
-        internal static void LoadWorkspacePath()
-        {
-            CurrentSettings.WorkspacePath = PlayerPrefs.GetString(nameof(Settings.WorkspacePath), Application.persistentDataPath);
-        }
-
-        /// <summary>
         /// Load the workspace zoom setting from PlayerPrefs, defaulting to 1.0f if not set.    
         /// </summary>
-        internal static void LoadWorkspaceZoom()
+        internal static void LoadLibraryZoom()
         {
-            CurrentSettings.WorkspaceZoom = PlayerPrefs.GetFloat(nameof(Settings.WorkspaceZoom), 1.0f);
+            CurrentSettings.LibraryZoom = PlayerPrefs.GetFloat(nameof(Settings.LibraryZoom), 1.0f);
         }
 
         /// <summary>
@@ -595,27 +588,15 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Save the workspace path setting to PlayerPrefs.
+        /// Save the library zoom setting to PlayerPrefs.
         /// </summary>
         /// <param name="value"></param>
-        internal static void SaveWorkspacePath(string value)
+        internal static void SaveLibraryZoom(float value)
         {
-            CurrentSettings.WorkspacePath = value;
-            PlayerPrefs.SetString(nameof(Settings.WorkspacePath), value);
+            CurrentSettings.LibraryZoom = value;
+            PlayerPrefs.SetFloat(nameof(Settings.LibraryZoom), value);
             PlayerPrefs.Save();
-            OnWorkspacePathChanged?.Invoke(value);
-        }
-
-        /// <summary>
-        /// Save the workspace zoom setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveWorkspaceZoom(float value)
-        {
-            CurrentSettings.WorkspaceZoom = value;
-            PlayerPrefs.SetFloat(nameof(Settings.WorkspaceZoom), value);
-            PlayerPrefs.Save();
-            OnWorkspaceZoomChanged?.Invoke(value);
+            OnLibraryZoomChanged?.Invoke(value);
         }
 
         /// <summary>
@@ -954,8 +935,7 @@ namespace FlightReLive.Core.Settings
             LoadTimeFormatStyle();
             LoadUnitSystemType();
             LoadGlobalScale();
-            LoadWorkspacePath();
-            LoadWorkspaceZoom();
+            LoadLibraryZoom();
             LoadMapTilerApiKey();
             LoadPath3DThickness();
             LoadPath3DRemainingColor();
@@ -1003,8 +983,7 @@ namespace FlightReLive.Core.Settings
             SaveTimeFormatStyle(TimeFormatStyle.TwentyFourHour);
             SaveUnitSystemType(UnitSystemType.Metric);
             SaveGlobalScale(1f);
-            SaveWorkspacePath(Application.persistentDataPath);
-            SaveWorkspaceZoom(1f);
+            SaveLibraryZoom(1f);
             SaveMapTilerApiKey("");
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
             SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);
@@ -1883,9 +1862,9 @@ namespace FlightReLive.Core.Settings
 
                         uiGrid.SetNextElementToolTipWithLabel("Delete all saved flights stored on this computer.\nVideo files will not be deleted.");
 
-                        if (uiGrid.Button("Clear workspace", FuButtonStyle.Info))
+                        if (uiGrid.Button("Clear flights library", FuButtonStyle.Info))
                         {
-                            CacheManager.ClearWorkspaceCache();
+                            LibraryManager.Instance.ClearLibrary();
                         }
 
                         uiGrid.SetNextElementToolTipWithLabel("Restore the entire application configuration (including settings made from the application's global UI).\nVideo files will not be deleted.");

@@ -1,4 +1,5 @@
 ﻿using FlightReLive.Core.Cache;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Version;
 using FlightReLive.UI;
@@ -6,6 +7,7 @@ using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core
@@ -56,6 +58,9 @@ namespace FlightReLive.Core
 
             //Initialize application settings
             SettingsManager.LoadAll();
+
+            //Initialize database
+            DatabaseManager.Initialize();
         }
 
         private void Start()
@@ -64,10 +69,7 @@ namespace FlightReLive.Core
             SettingsManager.SaveCurrentVersion(Application.version);
 
             //Initialize cache
-            CacheManager.InitializeCache();
-
-            //Initialize workspace cache
-            CacheManager.InitializeWorkspaceCache();
+            CacheManager.Initialize();
 
             //Apply Fugui global scale
             ApplySavedGlobalScale();
@@ -121,6 +123,9 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
+
+            //Close database
+            DatabaseManager.Close();
         }
         #endregion
 

@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Database;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.ProceduralTerrain;
 using FlightReLive.Core.Settings;
@@ -186,9 +186,9 @@ namespace FlightReLive.Core.OpenVectorTile
                     continue;
                 }
 
-                FlightGPSData baryGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+                RealmDoubleVector2 baryGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
                 float terrainAltitude = flight.GetAltitudeAtPosition(tile, baryGPS);
-                Vector3 position = new(center.x, terrainAltitude * flight.GlobalScale, center.y);
+                Vector3 position = new(center.x, terrainAltitude * flight.WorldScale, center.y);
                 float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
                 MeshData meshData = TriangulateAndExtrude(flight, contour, estimatedHeight);
                 Mesh unityMesh = meshData.ConvertToUnityMesh();
@@ -209,7 +209,7 @@ namespace FlightReLive.Core.OpenVectorTile
         /// </summary>
         private MeshData TriangulateAndExtrude(FlightData flight, List<Vector2> contour, float topY)
         {
-            float baseY = -BOTTOM_EXTRUSION * flight.GlobalScale;
+            float baseY = -BOTTOM_EXTRUSION * flight.WorldScale;
             Tess tess = new Tess();
             ContourVertex[] tessContour = new ContourVertex[contour.Count];
 
@@ -404,7 +404,7 @@ namespace FlightReLive.Core.OpenVectorTile
         /// <param name="tileY"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        private FlightGPSData ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY, int zoom)
+        private RealmDoubleVector2 ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY, int zoom)
         {
             double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
             double lonE = (double)(tileX + 1) / (1 << zoom) * 360.0 - 180.0;
@@ -432,7 +432,7 @@ namespace FlightReLive.Core.OpenVectorTile
                 count++;
             }
 
-            return count == 0 ? new FlightGPSData(0.0, 0.0) : new FlightGPSData(sumLat / count, sumLon / count);
+            return count == 0 ? new RealmDoubleVector2(0.0, 0.0) : new RealmDoubleVector2(sumLat / count, sumLon / count);
         }
 
         /// <summary>
@@ -552,7 +552,7 @@ namespace FlightReLive.Core.OpenVectorTile
             }
             area = Math.Abs(area) * 0.5;
 
-            float metersPerUnit = flight.GlobalScale;
+            float metersPerUnit = flight.WorldScale;
             double areaMeters = area / (metersPerUnit * metersPerUnit);
 
             float baseHeight = 8f;
@@ -571,7 +571,7 @@ namespace FlightReLive.Core.OpenVectorTile
             }
 
             float variation = UnityEngine.Random.Range(0.85f, 1.15f);
-            return baseHeight * variation * flight.GlobalScale;
+            return baseHeight * variation * flight.WorldScale;
         }
         #endregion
 

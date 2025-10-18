@@ -17,8 +17,7 @@ namespace FlightReLive.Core.Settings
         public DateFormatStyle DateFormatStyle;
         public TimeFormatStyle TimeFormatStyle;
         public UnitSystemType UnitSystemType;
-        public string WorkspacePath;
-        public float WorkspaceZoom;
+        public float LibraryZoom;
         public string MapTilerAPIKey;
         public float GlobalScale;
         public float Path3DThickness;

@@ -1,21 +1,22 @@
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Workspace;
+using FlightReLive.Core.Library;
 using FlightReLive.UI.Helpers;
 using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
-using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using FlightReLive.Core.Database;
+using UnityEngine.Rendering;
 
-namespace FlightReLive.UI.Workspace
+namespace FlightReLive.UI.Library
 {
-    public class WorkspaceViewManager : FuWindowBehaviour
+    public class LibraryViewManager : FuWindowBehaviour
     {
         #region CONSTANTS
         private const float HEADER_BAR_HEIGHT = 26f;
@@ -30,30 +31,34 @@ namespace FlightReLive.UI.Workspace
 
         #region ATTIBUTES
         [Header("Thumbnail Settings")]
-        [SerializeField][Range(0f, 1f)] private float _thumbnailScale = 1f;
-
+        private float _thumbnailScale;
         private string _filterWord = "";
-        private bool _workspaceIsLoading = false;
+        private bool _libraryIsLoading = false;
         private float _loadingProgress = 0f;
         #endregion
 
         #region UNITY METHODS
         public void Start()
         {
-            WorkspaceManager.Instance.OnWorkspaceLoading += OnWorkspaceLoading;
-            WorkspaceManager.Instance.OnWorkspaceStartLoading += OnWorkspaceStartLoading;
-            WorkspaceManager.Instance.OnWorkspaceEndLoading += OnWorkspaceEndLoading;
+            LibraryManager.Instance.OnLibraryLoading += OnLibraryLoading;
+            LibraryManager.Instance.OnLibraryStartLoading += OnLibraryStartLoading;
+            SettingsManager.OnLibraryZoomChanged += OnLibraryZoomChanged;
+            LibraryManager.Instance.OnLibraryEndLoading += OnLibraryEndLoading;
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
-            LoadingManager.Instance.OnFlightUnloaded += OnFLightUnloaded;
+            LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
+            _thumbnailScale = SettingsManager.CurrentSettings.LibraryZoom;
+
+            LibraryManager.Instance.LoadFlightsFromDatabase();
         }
 
         private void OnDestroy()
         {
-            WorkspaceManager.Instance.OnWorkspaceLoading -= OnWorkspaceLoading;
-            WorkspaceManager.Instance.OnWorkspaceStartLoading -= OnWorkspaceStartLoading;
-            WorkspaceManager.Instance.OnWorkspaceEndLoading -= OnWorkspaceEndLoading;
+            LibraryManager.Instance.OnLibraryLoading -= OnLibraryLoading;
+            LibraryManager.Instance.OnLibraryStartLoading -= OnLibraryStartLoading;
+            SettingsManager.OnLibraryZoomChanged -= OnLibraryZoomChanged;
+            LibraryManager.Instance.OnLibraryEndLoading -= OnLibraryEndLoading;
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
-            LoadingManager.Instance.OnFlightUnloaded -= OnFLightUnloaded;
+            LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
         #endregion
 
@@ -65,63 +70,55 @@ namespace FlightReLive.UI.Workspace
         {
             window.HeaderHeight = HEADER_BAR_HEIGHT;
             window.FooterHeight = HEADER_BAR_HEIGHT;
-            window.HeaderUI = DrawWorkspaceHeader;
-            window.FooterUI = DrawWorkspaceFooter;
+            window.HeaderUI = DrawLibraryHeader;
+            window.FooterUI = DrawLibraryFooter;
             window.UI = OnUI;
-            _thumbnailScale = SettingsManager.CurrentSettings.WorkspaceZoom;
+            _thumbnailScale = SettingsManager.CurrentSettings.LibraryZoom;
         }
 
         #region CALLBACKS
-        private void ChangeWorkspace(string[] paths)
+        private void OnLibraryStartLoading()
         {
-            if (paths == null || paths.Length != 1 || !Directory.Exists(paths[0]))
-            {
-                return;
-            }
-
-            SettingsManager.SaveWorkspacePath(paths[0]);
+            _libraryIsLoading = true;
         }
 
-        private void OnWorkspaceStartLoading()
-        {
-            _workspaceIsLoading = true;
-        }
-
-        private void OnWorkspaceLoading(float progress)
+        private void OnLibraryLoading(float progress)
         {
             _loadingProgress = progress;
-            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Workspace);
+            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
         }
 
-        private void OnWorkspaceEndLoading()
+        private void OnLibraryEndLoading()
         {
             _loadingProgress = 1f;
-            _workspaceIsLoading = false;
+            _libraryIsLoading = false;
         }
 
         private void OnFlightEndLoading()
         {
-            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Workspace);
+            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
         }
 
-        private void OnFLightUnloaded()
+        private void OnFlightUnloaded()
         {
-            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Workspace);
+            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
+        }
+
+        private void OnLibraryZoomChanged(float zoom)
+        {
+            _thumbnailScale = SettingsManager.CurrentSettings.LibraryZoom;
         }
         #endregion
 
         #region UI
-        private void DrawWorkspaceHeader(FuWindow window, Vector2 size)
+        private void DrawLibraryHeader(FuWindow window, Vector2 size)
         {
             float scale = Fugui.CurrentContext.Scale;
             size.y = HEADER_BAR_HEIGHT * scale;
             float unscaledHeight = size.y / scale;
-            Fugui.PushFont(14, FontType.Regular);
-            Vector2 buttonSize = Fugui.CalcTextSize("Select Workspace", FuTextWrapping.Wrap);
-            Fugui.PopFont();
             FuStyle customStyle = new FuStyle(FuTextStyle.Default, FuFrameStyle.Default, new FuPanelStyle(Fugui.Themes.GetColor(FuColors.MenuBarBg), Fugui.Themes.GetColor(FuColors.Border)), FuStyle.Unpadded.FramePadding, FuStyle.Unpadded.WindowPadding);
 
-            using (FuPanel panel = new FuPanel("workspaceHeaderPanel", customStyle, false, HEADER_BAR_HEIGHT, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
+            using (FuPanel panel = new FuPanel("libraryHeaderPanel", customStyle, false, HEADER_BAR_HEIGHT, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
             {
                 using (FuLayout layout = new FuLayout())
                 {
@@ -130,25 +127,13 @@ namespace FlightReLive.UI.Workspace
                     ImGui.BeginGroup();
                     layout.Spacing();
                     layout.SameLine();
-                    layout.SetNextElementToolTip("Select a new workspace");
-                    Fugui.PushFont(14, FontType.Regular);
-
-                    if (layout.Button(FlightReLiveIcons.Workspace + " Select Workspace", new FuElementSize(buttonSize.x + 24f, unscaledHeight - 6f), Vector2.zero, Vector2.zero, Fugui.Themes.CurrentTheme.ButtonsGradientStrenght, FuButtonStyle.Info, false))
-                    {
-                        string safePath = Path.Combine(Application.persistentDataPath, "Captures");
-                        FileBrowser.OpenFolderPanelAsync("Select a FlightReLive Workspace", safePath, false, ChangeWorkspace);
-                    }
-
-                    Fugui.PopFont();
-                    layout.SameLine();
 
                     float panelWidth = window.WorkingAreaSize.x;
                     float spacing = Fugui.Themes.CurrentTheme.ItemSpacing.x * scale * 2;
-                    float offsetX = 2f;
                     float searchWidth = 200f * scale;
                     Vector2 iconSize = new Vector2(14f, 14f);
-                    float totalWidth = buttonSize.x + 24f + spacing + iconSize.x + spacing + searchWidth + offsetX + 5f;
-                    float searchX = panelWidth - totalWidth + buttonSize.x + 24f + spacing;
+                    float totalWidth = layout.GetAvailableWidth();
+                    float searchX = panelWidth - totalWidth;
 
                     if (panelWidth > totalWidth)
                     {
@@ -162,7 +147,7 @@ namespace FlightReLive.UI.Workspace
                         layout.SameLine();
                         Fugui.Push(ImGuiStyleVar.FramePadding, new Vector2(4f, 3));
                         Fugui.Push(ImGuiStyleVar.FrameRounding, 6f);
-                        layout.TextInput("##workspaceSearchPanel0", "", ref _filterWord, 128, width: searchWidth);
+                        layout.TextInput("##librarySearchPanel0", "", ref _filterWord, 128, width: searchWidth);
                         ImGui.Dummy(new Vector2(1, 1));
                         Fugui.PopStyle(2);
                     }
@@ -173,12 +158,12 @@ namespace FlightReLive.UI.Workspace
             }
         }
 
-        private void DrawWorkspaceFooter(FuWindow window, Vector2 size)
+        private void DrawLibraryFooter(FuWindow window, Vector2 size)
         {
             float scale = Fugui.CurrentContext.Scale;
             FuStyle footerStyle = new FuStyle(FuTextStyle.Default, FuFrameStyle.Default, new FuPanelStyle(Fugui.Themes.GetColor(FuColors.MenuBarBg), Fugui.Themes.GetColor(FuColors.Border)), FuStyle.Unpadded.FramePadding, FuStyle.Unpadded.WindowPadding);
 
-            using (FuPanel panel = new FuPanel("workspaceFooterPanel", footerStyle, false, FOOTER_BAR_HEIGHT, size.x, FuPanelFlags.NoScroll))
+            using (FuPanel panel = new FuPanel("libraryFooterPanel", footerStyle, false, FOOTER_BAR_HEIGHT, size.x, FuPanelFlags.NoScroll))
             {
                 using (FuLayout layout = new FuLayout())
                 {
@@ -187,13 +172,13 @@ namespace FlightReLive.UI.Workspace
                     float iconOffsetY = (frameHeight - 14f + 2) / 2f;
                     float baseY = ImGui.GetCursorPosY() + iconOffsetY;
 
-                    if (_workspaceIsLoading)
+                    if (_libraryIsLoading)
                     {
                         Vector2 barSize = new Vector2(PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT);
                         FuElementSize fuBarSize = new FuElementSize(barSize);
                         Fugui.MoveX(HORIZONTAL_PADDING);
                         layout.CenterNextItemV(PROGRESSBAR_HEIGHT);
-                        layout.ProgressBar("##workspaceFooterSLoadingBar", _loadingProgress, fuBarSize, ProgressBarTextPosition.None);
+                        layout.ProgressBar("##libraryFooterSLoadingBar", _loadingProgress, fuBarSize, ProgressBarTextPosition.None);
                         layout.SameLine();
                     }
 
@@ -206,8 +191,14 @@ namespace FlightReLive.UI.Workspace
                         float knobOffset = Fugui.Themes.NodeKnobRadius / 2 * scale;
                         float yCenter = (FOOTER_BAR_HEIGHT - SLIDER_HEIGHT) * 0.5f * scale + knobOffset;
                         ImGui.SetCursorPos(new Vector2(xRight, yCenter));
-                        ImGui.BeginChild("workspaceFooterSliderChild", new Vector2(sliderW, sliderH), ImGuiChildFlags.None, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground);
-                        layout.Slider("sliderWorkspaceScale", ref _thumbnailScale, 0f, 1f, 0.01f, FuSliderFlags.NoDrag);
+                        ImGui.BeginChild("libraryFooterSliderChild", new Vector2(sliderW, sliderH), ImGuiChildFlags.None, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground);
+                        float tempZoom = SettingsManager.CurrentSettings.LibraryZoom;
+
+                        if (layout.Slider("sliderLibraryScale", ref tempZoom, 0f, 1f, 0.01f, FuSliderFlags.NoDrag))
+                        {
+                            SettingsManager.SaveLibraryZoom(tempZoom);
+                        }
+
                         ImGui.EndChild();
                     }
                 }
@@ -224,7 +215,7 @@ namespace FlightReLive.UI.Workspace
             float thumbnailScale = Mathf.Lerp(0.5f, 1f, Mathf.Clamp01(_thumbnailScale));
             Vector2 contentRegion = new Vector2(windowLayout.GetAvailableWidth(), windowLayout.GetAvailableHeight() / scale - FOOTER_BAR_HEIGHT);
 
-            using (FuPanel panel = new FuPanel("workspacePanel", false, contentRegion.y, contentRegion.x, flags: FuPanelFlags.Default))
+            using (FuPanel panel = new FuPanel("libraryUIPanel", false, contentRegion.y, contentRegion.x, flags: FuPanelFlags.Default))
             {
                 Fugui.Push(ImGuiStyleVar.ItemSpacing, Vector2.zero);
 
@@ -238,13 +229,13 @@ namespace FlightReLive.UI.Workspace
                 float y = cursorPos.y;
                 float maxY = y;
 
-                foreach (FlightFile file in WorkspaceManager.Instance.LoadedFlights.Values
-                    .Where(f => string.IsNullOrEmpty(_filterWord) || f.Name.Contains(_filterWord, StringComparison.OrdinalIgnoreCase) && f.IsValid)
+                foreach (RealmFlightItem file in LibraryManager.Instance.LoadedFlights
+                    .Where(f => string.IsNullOrEmpty(_filterWord) || f.Name.Contains(_filterWord, StringComparison.OrdinalIgnoreCase))
                     .OrderBy(f => f.Name))
                 {
                     using (FuLayout layout = new FuLayout())
                     {
-                        if (LoadingManager.Instance.IsLoading || _workspaceIsLoading)
+                        if (LoadingManager.Instance.IsLoading || _libraryIsLoading)
                         {
                             layout.DisableNextElements();
                         }
@@ -321,7 +312,7 @@ namespace FlightReLive.UI.Workspace
 
                         if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && isHovered)
                         {
-                            WorkspaceManager.Instance.SelectFlight(file);
+                            LibraryManager.Instance.SelectFlight(file);
                         }
 
                         float thumbMaxWidth = 150f * scale * thumbnailScale;
@@ -365,7 +356,7 @@ namespace FlightReLive.UI.Workspace
 
                         //Top-left icon (OpenStreetMap)
                         Fugui.PushFont(12, FontType.Regular);
-                        Vector2 iconSizeLeft = file.IsValid ? ImGui.CalcTextSize(FlightReLiveIcons.Maps) : ImGui.CalcTextSize(FlightReLiveIcons.Warning);
+                        Vector2 iconSizeLeft = ImGui.CalcTextSize(FlightReLiveIcons.Maps);
                         Vector2 iconPaddingLeft = new Vector2(4f, 2f) * scale * thumbnailScale;
                         Vector2 iconBgSizeLeft = iconSizeLeft + iconPaddingLeft * 2;
                         Vector2 iconPosLeft = thumbPosition + new Vector2(4f * scale * thumbnailScale, 4f * scale * thumbnailScale);

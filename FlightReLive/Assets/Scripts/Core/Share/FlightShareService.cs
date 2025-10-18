@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.Workspace;
+﻿using FlightReLive.Core.Library;
+using FlightReLive.Core.Database;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,8 +14,6 @@ namespace FlightReLive.Core.Share
     {
         #region CONSTANTS
         private const string BASE_API_URL = "https://flightrelive-api-cqb8dsgtb6c6ebaq.canadacentral-01.azurewebsites.net/api/flight";
-        private const int MIN_DAYS = 1;
-        private const int MAX_DAYS = 365;
         #endregion
 
         #region ATTRIBUTES
@@ -27,7 +26,7 @@ namespace FlightReLive.Core.Share
         #endregion
 
         #region METHODS
-        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(FlightFile flightFile)
+        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(RealmFlightItem flightFile)
         {
             if (flightFile == null)
             {
@@ -64,7 +63,7 @@ namespace FlightReLive.Core.Share
             }
         }
 
-        public static async Task<FlightFile> GetFlightFileAsync(string shareHashOrDisplay)
+        public static async Task<RealmFlightItem> GetFlightFileAsync(string shareHashOrDisplay)
         {
             string hash = NormalizeHash(shareHashOrDisplay);
             if (!IsValidShareHash(hash))
@@ -97,7 +96,7 @@ namespace FlightReLive.Core.Share
                     return null;
                 }
 
-                FlightFile file = FromDownloadResponse(dto);
+                RealmFlightItem file = FromDownloadResponse(dto);
                 file.DecodeTextures();
                 return file;
             }
@@ -108,107 +107,91 @@ namespace FlightReLive.Core.Share
             }
         }
 
-        private static FlightFileUpload ToUploadRequest(FlightFile f)
+        private static FlightFileUpload ToUploadRequest(RealmFlightItem file)
         {
+            List<FlightDataPointUpload> dataPoints = new List<FlightDataPointUpload>();
+
+            foreach (RealmFlightPointItem point in file.DataPoints)
+            {
+                dataPoints.Add(new FlightDataPointUpload
+                {
+                    Time = ToUtcSafe(point.Time),
+                    TimeSpanTicks = point.TimeSpan.Ticks,
+                    Aperture = point.Aperture,
+                    ShutterSpeed = point.ShutterSpeed,
+                    ISO = point.ISO,
+                    Exposure = point.Exposure,
+                    DigitalZoom = point.DigitalZoom,
+                    FocalLength = point.FocalLength,
+                    ColorMode = point.ColorMode,
+                    Longitude = point.Longitude,
+                    Latitude = point.Latitude,
+                    Distance = point.Distance,
+                    RelativeAltitude = point.RelativeAltitude,
+                    AbsoluteAltitude = point.AbsoluteAltitude,
+                    HorizontalSpeed = point.HorizontalSpeed,
+                    VerticalSpeed = point.VerticalSpeed
+                });
+            }
+
             return new FlightFileUpload
             {
-                Name = f.Name,
-                Width = f.Width,
-                Height = f.Height,
-                Frequency = f.Frequency,
-                DurationTicks = f.Duration.Ticks,
-                CreationDate = ToUtcSafe(f.CreationDate),  // ✅ assure l’UTC
-
-                MapData = f.MapData,
-                ThumbnailData = f.ThumbnailData,
-
-                TakeOffLatitude = f.EstimateTakeOffPosition?.Latitude,
-                TakeOffLongitude = f.EstimateTakeOffPosition?.Longitude,
-                FlightGPSX = f.FlightGPSCoordinates?.x,
-                FlightGPSY = f.FlightGPSCoordinates?.y,
-                HasExtractionError = f.HasExtractionError,
-                HasTakeOffPosition = f.HasTakeOffPosition,
-                IsValid = f.IsValid,
-                ErrorMessagesJson = f.ErrorMessages != null ? JsonConvert.SerializeObject(f.ErrorMessages) : null,
-
-                DataPoints = f.DataPoints?.ConvertAll(p => new FlightDataPointUpload
-                {
-                    Time = ToUtcSafe(p.Time),                 // ✅ on envoie en UTC
-                    TimeSpanTicks = p.TimeSpan.Ticks,         // ✅ ticks
-
-                    Aperture = p.CameraSettings?.Aperture,
-                    ShutterSpeed = p.CameraSettings?.ShutterSpeed,
-                    ISO = p.CameraSettings?.ISO,
-                    Exposure = p.CameraSettings?.Exposure,
-                    DigitalZoom = p.CameraSettings?.DigitalZoom,
-                    FocalLength = p.CameraSettings?.FocalLength,
-                    ColorMode = p.CameraSettings?.ColorMode,
-
-                    Longitude = p.Longitude,
-                    Latitude = p.Latitude,
-                    Distance = p.Distance,
-                    RelativeAltitude = p.RelativeAltitude,
-                    AbsoluteAltitude = p.AbsoluteAltitude,
-                    HorizontalSpeed = p.HorizontalSpeed,
-                    VerticalSpeed = p.VerticalSpeed
-                }) ?? new List<FlightDataPointUpload>()
+                Name = file.Name,
+                Width = file.Width,
+                Height = file.Height,
+                Frequency = file.Frequency,
+                DurationTicks = file.Duration.Ticks,
+                CreationDate = ToUtcSafe(file.CreationDate),
+                ThumbnailData = file.ThumbnailData,
+                TakeOffLatitude = file.EstimateTakeOffPosition?.X,
+                TakeOffLongitude = file.EstimateTakeOffPosition?.Y,
+                FlightGPSX = file.FlightGPSCoordinates?.X,
+                FlightGPSY = file.FlightGPSCoordinates?.Y,
+                HasTakeOffPosition = file.HasTakeOffPosition,
+                DataPoints = dataPoints
             };
         }
 
-        private static FlightFile FromDownloadResponse(FlightFileDownloadResponse dto)
+        private static RealmFlightItem FromDownloadResponse(FlightFileDownloadResponse dto)
         {
-            FlightFile file = new FlightFile
+            RealmFlightItem file = new RealmFlightItem
             {
                 Name = dto.Name,
                 Width = dto.Width,
                 Height = dto.Height,
                 Frequency = dto.Frequency,
-
                 Duration = TimeSpan.FromTicks(dto.DurationTicks),
                 CreationDate = ToUtcSafe(dto.CreationDateUtc),
-
-                MapData = dto.MapData,
                 ThumbnailData = dto.ThumbnailData,
-
                 EstimateTakeOffPosition = (dto.TakeOffLatitude.HasValue && dto.TakeOffLongitude.HasValue)
-                    ? new FlightDefinition.FlightGPSData(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value)
+                    ? new RealmDoubleVector2(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value)
                     : null,
-
                 FlightGPSCoordinates = (dto.FlightGPSX.HasValue && dto.FlightGPSY.HasValue)
-                    ? new FFmpeg.SerializableVector2(new UnityEngine.Vector2(dto.FlightGPSX.Value, dto.FlightGPSY.Value))
+                    ? new RealmDoubleVector2(dto.FlightGPSX.Value, dto.FlightGPSY.Value)
                     : null,
-
-                HasExtractionError = dto.HasExtractionError,
-                HasTakeOffPosition = dto.HasTakeOffPosition,
-                IsValid = dto.IsValid,
-
-                ErrorMessages = !string.IsNullOrEmpty(dto.ErrorMessagesJson)
-                    ? JsonConvert.DeserializeObject<List<string>>(dto.ErrorMessagesJson)
-                    : new List<string>(),
-
-                DataPoints = new List<FlightDefinition.FlightDataPoint>()
+                HasTakeOffPosition = dto.HasTakeOffPosition
             };
+
+            foreach (FlightDataPointDownload tempPoint in dto.DataPoints)
+            {
+                throw new NotImplementedException();
+            }
 
             if (dto.DataPoints != null)
             {
                 foreach (var p in dto.DataPoints)
                 {
-                    file.DataPoints.Add(new FlightDefinition.FlightDataPoint
+                    file.DataPoints.Add(new RealmFlightPointItem
                     {
                         Time = ToUtcSafe(p.TimeUtc),
                         TimeSpan = TimeSpan.FromTicks(p.TimeSpanTicks),
-
-                        CameraSettings = new FlightDefinition.FlightDataPointCameraSettings
-                        {
-                            Aperture = p.Aperture ?? 0f,
-                            ShutterSpeed = p.ShutterSpeed ?? 0f,
-                            ISO = p.ISO ?? 0,
-                            Exposure = p.Exposure ?? 0f,
-                            DigitalZoom = p.DigitalZoom ?? 0f,
-                            FocalLength = p.FocalLength ?? 0f,
-                            ColorMode = p.ColorMode
-                        },
-
+                        Aperture = p.Aperture ?? 0f,
+                        ShutterSpeed = p.ShutterSpeed ?? 0f,
+                        ISO = p.ISO ?? 0,
+                        Exposure = p.Exposure ?? 0f,
+                        DigitalZoom = p.DigitalZoom ?? 0f,
+                        FocalLength = p.FocalLength ?? 0f,
+                        ColorMode = p.ColorMode,
                         Longitude = p.Longitude,
                         Latitude = p.Latitude,
                         Distance = p.Distance,

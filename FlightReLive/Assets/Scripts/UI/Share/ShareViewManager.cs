@@ -2,13 +2,14 @@
 using FlightReLive.Core.Cache;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Share;
-using FlightReLive.Core.Workspace;
+using FlightReLive.Core.Library;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
 using System.IO;
 using UnityEngine;
+using FlightReLive.Core.Database;
 
 namespace FlightReLive.UI.Share
 {
@@ -91,7 +92,7 @@ namespace FlightReLive.UI.Share
             }, new FuModalSize(new Vector2(450, 450)), new FuModalButton("Close", () => { ResetDownload(); }, FuButtonStyle.Default));
         }
 
-        internal static void DisplayShareModal(FlightFile fileToShare)
+        internal static void DisplayShareModal(RealmFlightItem fileToShare)
         {
             float uiScale = Fugui.DefaultContext.Scale;
 
@@ -217,7 +218,7 @@ namespace FlightReLive.UI.Share
             _focusGiven = false;
         }
 
-        private static async void StartShareAsync(FlightFile fileToShare)
+        private static async void StartShareAsync(RealmFlightItem fileToShare)
         {
             if (_isSharing || fileToShare == null)
             {
@@ -269,7 +270,7 @@ namespace FlightReLive.UI.Share
 
             try
             {
-                FlightFile flightFile = await FlightShareService.GetFlightFileAsync(sharedHash).ConfigureAwait(false);
+                RealmFlightItem flightFile = await FlightShareService.GetFlightFileAsync(sharedHash).ConfigureAwait(false);
 
                 if (flightFile == null)
                 {
@@ -294,7 +295,7 @@ namespace FlightReLive.UI.Share
             _downloadError = "SharedHash not found. Please paste a valid Flight ReLive sharedhash.";
         }
 
-        private static void OnFlightFileReceived(FlightFile flightFile)
+        private static void OnFlightFileReceived(RealmFlightItem flightFile)
         {
             _isDownloading = false;
             _dowloadSuccess = true;

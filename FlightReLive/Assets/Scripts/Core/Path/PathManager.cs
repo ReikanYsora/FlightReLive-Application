@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.POI;
 using FlightReLive.Core.Settings;
@@ -32,7 +32,7 @@ namespace FlightReLive.Core.Paths
         [SerializeField] private Color _pathEndColor;
 
         private List<PathPoint> _fullPath;
-        private List<FlightDataPoint> _interpolatedToFlightPoint;
+        private List<RealmFlightPointItem> _interpolatedToFlightPoint;
 
         //3D Path meshes
         private GameObject _progressionPath;
@@ -72,7 +72,7 @@ namespace FlightReLive.Core.Paths
             }
             Instance = this;
 
-            _interpolatedToFlightPoint = new List<FlightDataPoint>();
+            _interpolatedToFlightPoint = new List<RealmFlightPointItem>();
 
             //Precreate path meshes
             _progressionPath = new GameObject("Progression path");
@@ -198,9 +198,9 @@ namespace FlightReLive.Core.Paths
 
             //Estimate altitude at takeoff point
             Vector3 positionGPS = new Vector3(
-                (float)flightData.EstimateTakeOffPosition.Latitude,
+                (float)flightData.EstimateTakeOffPosition.X,
                 flightData.TakeOffAltitude,
-                (float)flightData.EstimateTakeOffPosition.Longitude);
+                (float)flightData.EstimateTakeOffPosition.Y);
 
             //Create bezier path
             List<Vector3> bezierPath = flightData.CreateBezierFlightPath(
@@ -267,7 +267,7 @@ namespace FlightReLive.Core.Paths
         #endregion
 
         #region CALLBACKS
-        private void OnProgressChanged(float progress, int flightIndex, FlightDataPoint dataPoint)
+        private void OnProgressChanged(float progress, int flightIndex, RealmFlightPointItem dataPoint)
         {
             _progressionPathMaterialInstance.SetFloat("_Progress", progress);
         }
@@ -283,7 +283,7 @@ namespace FlightReLive.Core.Paths
             bool smoothUVs = true)
         {
             List<Vector3> rawPath = new List<Vector3>();
-            _interpolatedToFlightPoint = new List<FlightDataPoint>();
+            _interpolatedToFlightPoint = new List<RealmFlightPointItem>();
 
             float totalTicks = flightData.Points.Last().Time.Ticks - flightData.Points.First().Time.Ticks;
 
@@ -304,7 +304,7 @@ namespace FlightReLive.Core.Paths
                     Vector3 bezier = CubicBezier(p0, c0, c1, p1, t);
                     rawPath.Add(bezier);
                     DateTime interpolatedTime = t0 + TimeSpan.FromTicks((long)((t1 - t0).Ticks * t));
-                    _interpolatedToFlightPoint.Add(new FlightDataPoint { Time = interpolatedTime });
+                    _interpolatedToFlightPoint.Add(new RealmFlightPointItem { Time = interpolatedTime });
                 }
             }
 

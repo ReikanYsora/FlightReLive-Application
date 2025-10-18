@@ -1,76 +1,52 @@
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using MessagePack;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace FlightReLive.Core.FFmpeg
 {
-    [MessagePackObject]
     public class FlightDataContainer
     {
-        [Key(0)]
         public Guid ID { get; set; }
 
-        [Key(1)]
         public string Name { get; set; }
 
-        [Key(2)]
         public string VideoPath { get; set; }
 
-        [Key(3)]
         public int Width { get; set; }
 
-        [Key(4)]
         public int Height { get; set; }
 
-        [Key(5)]
         public double Frequency { get; set; }
 
-        [Key(6)]
         public DateTime CreationDate { get; set; }
 
-        [Key(7)]
-        public FlightGPSData EstimateTakeOffPosition { get; set; }
+        public RealmDoubleVector2 EstimateTakeOffPosition { get; set; }
 
-        [Key(8)]
-        public List<FlightDataPoint> DataPoints { get; set; }
+        public List<RealmFlightPointItem> DataPoints { get; set; }
 
-        [Key(9)]
-        public SerializableVector2 FlightGPSCoordinates { get; set; }
+        public RealmDoubleVector2 FlightGPSCoordinates { get; set; }
 
-        [Key(10)]
         public byte[] Thumbnail { get; set; }
 
-        [Key(11)]
         public TimeSpan Duration { get; set; }
 
-        [Key(12)]
-        public bool HasExtractionError { get; set; }
-
-        [Key(13)]
-        public bool IsValid { get; set; }
-
-        [Key(14)]
-        public List<string> ErrorMessages { get; set; } = new List<string>();
-
-        [Key(15)]
         public bool TakeOffPositionAvailable { get; set; }
 
         #region CONSTRUCTOR
         public FlightDataContainer()
         {
-            DataPoints = new List<FlightDataPoint>();
+            DataPoints = new List<RealmFlightPointItem>();
         }
         #endregion
 
         #region METHODS
 
-        public SerializableVector2 GetFlightGPSCenter()
+        public RealmDoubleVector2 GetFlightGPSCenter()
         {
             if (DataPoints == null || DataPoints.Count == 0)
             {
-                return new SerializableVector2(new Vector2(0f, 0f));
+                return new RealmDoubleVector2(0f, 0f);
             }
 
             double minLat = double.MaxValue;
@@ -104,7 +80,7 @@ namespace FlightReLive.Core.FFmpeg
             double centerLat = (minLat + maxLat) / 2.0;
             double centerLon = (minLon + maxLon) / 2.0;
 
-            return new SerializableVector2(new Vector2((float)centerLat, (float)centerLon));
+            return new RealmDoubleVector2(centerLat, centerLon);
         }
         #endregion
     }

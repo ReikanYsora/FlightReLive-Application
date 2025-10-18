@@ -1,4 +1,4 @@
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,14 +41,15 @@ namespace FlightReLive.Core.FFmpeg
 
                     DataContainer.DataPoints = ParseSRT(srtLines);
                     DataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS();
-                    DataContainer.IsValid = IsFlightDataValid();
                     DataContainer.TakeOffPositionAvailable = TakeOffPositionAvailable();
+
+                    //Check flight validity, throw exception in case of error was founded
+                    CheckFlightIsValid();
                 }
             }
             catch (Exception ex)
             {
-                DataContainer.HasExtractionError = true;
-                DataContainer.ErrorMessages.Add(ex.Message);
+                throw ex;
             }
 
             return DataContainer;
@@ -57,9 +58,9 @@ namespace FlightReLive.Core.FFmpeg
         /// <summary>
         /// Parses the .srt file to extract individual flight data points.
         /// </summary>
-        private List<FlightDataPoint> ParseSRT(List<string> srtBuffer)
+        private List<RealmFlightPointItem> ParseSRT(List<string> srtBuffer)
         {
-            List<FlightDataPoint> dataPoints = new List<FlightDataPoint>();
+            List<RealmFlightPointItem> dataPoints = new List<RealmFlightPointItem>();
 
             Regex cameraRegex = new Regex(@"F\/([0-9.]+), SS ([0-9.]+), ISO (\d+), EV ([\-0-9.]+), DZOOM ([0-9.]+)", RegexOptions.Compiled);
             Regex gpsRegex = new Regex(@"GPS\s+\(([-+]?[0-9]*\.?[0-9]+),\s*([-+]?[0-9]*\.?[0-9]+),\s*([-+]?[0-9]*\.?[0-9]+)\)");
@@ -90,11 +91,10 @@ namespace FlightReLive.Core.FFmpeg
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogWarning($"Invalid timecode at line {i}: {timeLine} ({ex.Message})");
-                    continue;
+                    throw ex;
                 }
 
-                FlightDataPoint point = new FlightDataPoint { Time = absoluteTime, TimeSpan = offset };
+                RealmFlightPointItem point = new RealmFlightPointItem { Time = absoluteTime, TimeSpan = offset };
 
                 try
                 {
@@ -102,20 +102,19 @@ namespace FlightReLive.Core.FFmpeg
                     if (gps.Success && gps.Groups.Count >= 4)
                     {
                         point.Longitude = double.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture);
-                        point.Latitude = double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture); 
+                        point.Latitude = double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match camera = cameraRegex.Match(dataLine);
+
                     if (camera.Success && camera.Groups.Count >= 6)
                     {
-                        point.CameraSettings = new FlightDataPointCameraSettings
-                        {
-                            Aperture = float.Parse(camera.Groups[1].Value, CultureInfo.InvariantCulture),
-                            ShutterSpeed = float.Parse(camera.Groups[2].Value, CultureInfo.InvariantCulture),
-                            ISO = int.Parse(camera.Groups[3].Value, CultureInfo.InvariantCulture),
-                            Exposure = float.Parse(camera.Groups[4].Value, CultureInfo.InvariantCulture),
-                            DigitalZoom = float.Parse(camera.Groups[5].Value, CultureInfo.InvariantCulture)
-                        };
+                        point.Aperture = float.Parse(camera.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.ShutterSpeed = float.Parse(camera.Groups[2].Value, CultureInfo.InvariantCulture);
+                        point.ISO = int.Parse(camera.Groups[3].Value, CultureInfo.InvariantCulture);
+                        point.Exposure = float.Parse(camera.Groups[4].Value, CultureInfo.InvariantCulture);
+                        point.DigitalZoom = float.Parse(camera.Groups[5].Value, CultureInfo.InvariantCulture);
+                        point.ColorMode = "";
                     }
 
                     Match dMatch = dRegex.Match(dataLine);
@@ -144,7 +143,7 @@ namespace FlightReLive.Core.FFmpeg
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogWarning($"Data parsing error at line {i}: {ex.Message}");
+                    throw ex;
                 }
 
                 dataPoints.Add(point);

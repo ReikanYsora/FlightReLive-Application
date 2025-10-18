@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FlightReLive.Core.Cache;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Workspace;
+using FlightReLive.Core.Library;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -73,12 +73,12 @@ namespace FlightReLive.UI.MapView
 
         private class MapMarker
         {
-            public FlightFile FlightFile;
+            public RealmFlightItem FlightFile;
             public double Latitude;
             public double Longitude;
             public Color Color;
 
-            public MapMarker(FlightFile file, Color color)
+            public MapMarker(RealmFlightItem file, Color color)
             {
                 Latitude = file.DataPoints[0].Latitude;
                 Longitude = file.DataPoints[0].Longitude;
@@ -97,12 +97,12 @@ namespace FlightReLive.UI.MapView
 
         private void Start()
         {
-            WorkspaceManager.Instance.OnWorkspaceEndLoading += OnWorkspaceLoaded;
+            LibraryManager.Instance.OnLibraryEndLoading += OnWorkspaceLoaded;
         }
 
         private void OnDestroy()
         {
-            WorkspaceManager.Instance.OnWorkspaceEndLoading -= OnWorkspaceLoaded;
+            LibraryManager.Instance.OnLibraryEndLoading -= OnWorkspaceLoaded;
         }
         #endregion
 
@@ -490,7 +490,7 @@ namespace FlightReLive.UI.MapView
             float worldSize = TILE_SIZE * (1 << zoom);
             return new Vector2(worldPx.x / worldSize, worldPx.y / worldSize);
         }
-        public void AddMarker(FlightFile file, Color color)
+        public void AddMarker(RealmFlightItem file, Color color)
         {
             _markers.Add(new MapMarker(file, color));
         }
@@ -499,16 +499,16 @@ namespace FlightReLive.UI.MapView
         #region CALLBACKS
         private void OnWorkspaceLoaded()
         {
-            if (WorkspaceManager.Instance.LoadedFlights == null)
+            if (LibraryManager.Instance.LoadedFlights == null)
             {
                 return;
             }
 
-            foreach (KeyValuePair<string, FlightFile> flight in WorkspaceManager.Instance.LoadedFlights)
+            foreach (RealmFlightItem flight in LibraryManager.Instance.LoadedFlights)
             {
-                if (flight.Value != null && flight.Value.IsValid && flight.Value.DataPoints.Count > 0)
+                if (flight != null && flight.DataPoints.Count > 0)
                 {
-                    AddMarker(flight.Value, Color.red);
+                    AddMarker(flight, Color.red);
                 }
             }
         }

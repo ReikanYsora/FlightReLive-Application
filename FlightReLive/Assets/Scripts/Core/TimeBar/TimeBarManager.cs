@@ -1,4 +1,4 @@
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using Fu;
 using System;
 using System.Collections.Generic;
@@ -119,7 +119,7 @@ namespace FlightReLive.Core.TimeBar
         #endregion
 
         #region EVENTS
-        internal event Action<float, int, FlightDataPoint> OnProgressChanged;
+        internal event Action<float, int, RealmFlightPointItem> OnProgressChanged;
         internal event Action<float> OnPlaybackSpeedChanged;
         internal event Action<float> OnHoverChanged;
         internal event Action OnHoverCleared;
@@ -171,7 +171,7 @@ namespace FlightReLive.Core.TimeBar
             {
                 _lastPointIndex = index;
                 float progress = (Duration > 0) ? (float)(CurrentTime / Duration) : 0f;
-                FlightDataPoint point = _currentFlightData.Points[index];
+                RealmFlightPointItem point = _currentFlightData.Points[index];
                 OnProgressChanged?.Invoke(progress, index, point);
             }
 
@@ -316,7 +316,7 @@ namespace FlightReLive.Core.TimeBar
             }
 
             int targetIndex = Mathf.Max(0, _lastPointIndex - 1);
-            FlightDataPoint targetPoint = _currentFlightData.Points[targetIndex];
+            RealmFlightPointItem targetPoint = _currentFlightData.Points[targetIndex];
             Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
         }
 
@@ -347,7 +347,7 @@ namespace FlightReLive.Core.TimeBar
             }
 
             int targetIndex = Mathf.Min(_currentFlightData.Points.Count - 1, _lastPointIndex + 1);
-            FlightDataPoint targetPoint = _currentFlightData.Points[targetIndex];
+            RealmFlightPointItem targetPoint = _currentFlightData.Points[targetIndex];
             Seek(targetPoint.TimeSpan.Subtract(_firstTimeSpan).TotalSeconds);
         }
 
@@ -431,7 +431,7 @@ namespace FlightReLive.Core.TimeBar
         /// <param name="points"></param>
         /// <param name="currentSpan"></param>
         /// <returns></returns>
-        private int FindClosestPointIndex(List<FlightDataPoint> points, TimeSpan currentSpan)
+        private int FindClosestPointIndex(List<RealmFlightPointItem> points, TimeSpan currentSpan)
         {
             int low = 0;
             int high = points.Count - 1;

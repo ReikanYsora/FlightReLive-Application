@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Database;
 using FlightReLive.Core.Pipeline;
 using System;
 using System.Collections.Generic;
@@ -127,12 +127,12 @@ namespace FlightReLive.Core.ProceduralTerrain
             return metersPerTile;
         }
 
-        internal static FlightGPSData GetCenterOfBoundingBox(GPSBoundingBox bbox)
+        internal static RealmDoubleVector2 GetCenterOfBoundingBox(GPSBoundingBox bbox)
         {
             double centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2.0;
             double centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2.0;
 
-            return new FlightGPSData(centerLatitude, centerLongitude);
+            return new RealmDoubleVector2(centerLatitude, centerLongitude);
         }
         #endregion
     }

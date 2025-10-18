@@ -1,5 +1,5 @@
 ﻿using FlightReLive.Core.Cameras;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using Fu.Framework;
@@ -90,10 +90,10 @@ namespace FlightReLive.Core.POI
 
                     string poiLabel = !string.IsNullOrEmpty(feature.text) ? feature.text : feature.place_name;
 
-                    FlightGPSData poiGPS = new FlightGPSData
+                    RealmDoubleVector2 poiGPS = new RealmDoubleVector2
                     {
-                        Latitude = feature.geometry.coordinates[1],
-                        Longitude = feature.geometry.coordinates[0]
+                        X = feature.geometry.coordinates[1],
+                        Y = feature.geometry.coordinates[0]
                     };
 
                     float altitude = flightData.GetAltitudeAtPosition(tile, poiGPS);

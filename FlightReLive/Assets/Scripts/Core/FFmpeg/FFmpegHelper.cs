@@ -49,14 +49,12 @@ namespace FlightReLive.Core.FFmpeg
             string ffmpegPath = GetFFmpegPath();
             if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
             {
-                UnityEngine.Debug.LogError("FFmpeg path invalid.");
-                return;
+                throw new Exception("FFmpeg path invalid.");
             }
 
             if (!File.Exists(videoPath))
             {
-                UnityEngine.Debug.LogError("Video not found.");
-                return;
+                throw new Exception($"Video {videoPath} not found.");
             }
 
             string arguments = $"-i \"{videoPath}\"";
@@ -99,12 +97,11 @@ namespace FlightReLive.Core.FFmpeg
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                UnityEngine.Debug.LogError($"FFmpeg metadata extraction failed: {ex.Message}");
+                throw new Exception($"FFmpeg metadata extraction failed.");
             }
         }
-
 
         /// <summary>
         /// Extract flight data from SRT encrypted in video file
@@ -123,32 +120,22 @@ namespace FlightReLive.Core.FFmpeg
         {
             if (!File.Exists(videoPath))
             {
-                UnityEngine.Debug.LogError("Video file not found.");
-                return null;
+                throw new Exception("Video file not found.");
             }
 
             if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
             {
-                UnityEngine.Debug.LogError("FFmpeg path is not set or executable not found.");
-                return null;
+                throw new Exception("FFmpeg path is not set or executable not found.");
             }
 
-            try
+            //Define template with automatic detection (if SRT is embedded in the video file or not)
+            if (IsEmbeddedSubtitles(ffmpegPath, videoPath))
             {
-                //Define template with automatic detection (if SRT is embedded in the video file or not)
-                if (IsEmbeddedSubtitles(ffmpegPath, videoPath))
-                {
-                    return new EmbeddedSRT(ffmpegPath, videoPath).DataContainer;
-                }
-                else
-                {
-                    return new ExternalSRT(ffmpegPath, videoPath).DataContainer;
-                }
+                return new EmbeddedSRT(ffmpegPath, videoPath).DataContainer;
             }
-            catch (Exception ex)
+            else
             {
-                UnityEngine.Debug.LogException(ex);
-                return null;
+                return new ExternalSRT(ffmpegPath, videoPath).DataContainer;
             }
         }
 
@@ -197,9 +184,9 @@ namespace FlightReLive.Core.FFmpeg
                     return subtitleRegex.IsMatch(errorOutput);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"An error occurred while checking subtitles: {ex.Message}");
+                Console.WriteLine($"An error occurred while checking subtitles.");
                 return false;
             }
         }

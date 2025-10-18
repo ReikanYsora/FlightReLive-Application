@@ -1,5 +1,5 @@
 ﻿using FlightReLive.Core.Cache;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.Download;
 using FlightReLive.Core.ProceduralTerrain;
@@ -395,13 +395,13 @@ namespace FlightReLive.Core.Pipeline.API
                 return new ResourceResult<FeatureCollection>(cached, TileResourceSource.Cache);
             }
 
-            FlightGPSData center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
+            RealmDoubleVector2 center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
 
             string url = string.Format(
                 CultureInfo.InvariantCulture,
                 "https://api.maptiler.com/geocoding/{0},{1}.json?key={2}&bbox={3},{4},{5},{6}&language={7}",
-                center.Longitude,
-                center.Latitude,
+                center.Y,
+                center.X,
                 SettingsManager.CurrentSettings.MapTilerAPIKey,
                 tile.BoundingBox.MinLongitude,
                 tile.BoundingBox.MinLatitude,

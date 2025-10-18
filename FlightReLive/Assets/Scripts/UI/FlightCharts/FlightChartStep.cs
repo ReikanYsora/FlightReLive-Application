@@ -1,4 +1,4 @@
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using System;
 using UnityEngine;
 
@@ -18,7 +18,7 @@ namespace FlightReLive.UI.FlightCharts
 
         public Vector2 TooltipSize { get; set; }
 
-        public FlightDataPoint FlightDataPoint { get; set; }
+        public RealmFlightPointItem FlightPoint { get; set; }
 
         public FlightChartStep(int index, string label, DateTime date, double chartElement)
         {

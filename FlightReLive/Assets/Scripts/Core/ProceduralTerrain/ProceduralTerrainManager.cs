@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Database;
 using FlightReLive.Core.Pipeline;
 using FlightReLive.Core.Settings;
 using Fu;
@@ -23,7 +23,7 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         #region PROPERTIES
         internal static ProceduralTerrainManager Instance { get; private set; }
-        
+
         internal Bounds TerrainBounds
         {
             get
@@ -65,7 +65,7 @@ namespace FlightReLive.Core.ProceduralTerrain
             }
 
             double tileSizeM = MapTools.GetTileSizeMeters(flightData.MapDefinition.OriginLatitude);
-            float scale = flightData.GlobalScale;
+            float scale = flightData.WorldScale;
             int resTile = tiles[0].HeightMap.GetLength(0);
 
             //Adjust tile size to match Unity's terrain compression
@@ -80,12 +80,12 @@ namespace FlightReLive.Core.ProceduralTerrain
             foreach (TileDefinition tile in tiles)
             {
                 if (tile.X < minX)
-                { 
+                {
                     minX = tile.X;
                 }
 
                 if (tile.X > maxX)
-                { 
+                {
                     maxX = tile.X;
                 }
 
@@ -95,7 +95,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 }
 
                 if (tile.Y > maxY)
-                { 
+                {
                     maxY = tile.Y;
                 }
             }
@@ -126,12 +126,12 @@ namespace FlightReLive.Core.ProceduralTerrain
                         double h = (double)src[x, y];
 
                         if (h < minH)
-                        { 
+                        {
                             minH = h;
                         }
 
                         if (h > maxH)
-                        { 
+                        {
                             maxH = h;
                         }
                     }
@@ -239,7 +239,7 @@ namespace FlightReLive.Core.ProceduralTerrain
                 unityTerrains.TryGetValue((x + 1, y), out Terrain right);
                 unityTerrains.TryGetValue((x, y - 1), out Terrain bottom);
 
-                current.SetNeighbors(left, top, right, bottom);  
+                current.SetNeighbors(left, top, right, bottom);
             }
 
             foreach (TileDefinition tile in flightData.MapDefinition.TileDefinitions)

@@ -1,4 +1,4 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Database;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -23,14 +23,10 @@ namespace FlightReLive.Core.FFmpeg
         {
             string srtPath = Path.ChangeExtension(VideoPath, ".srt");
 
+            //NO SRT founded
             if (!File.Exists(srtPath))
             {
-                //No SRT founded
-                DataContainer.HasExtractionError = true;
-                DataContainer.ErrorMessages.Add($"No SRT file founded");
-                DataContainer.IsValid = false;
-
-                return DataContainer;
+                throw new Exception($"{VideoPath} : No SRT file founded.");
             }
 
             try
@@ -39,28 +35,27 @@ namespace FlightReLive.Core.FFmpeg
                 if (srtLines.Count > 0)
                 {
                     DataContainer.DataPoints = ParseSRTFile(srtLines, DataContainer);
-                    DataContainer.IsValid = IsFlightDataValid();
                     DataContainer.EstimateTakeOffPosition = EstimateFlightStartFromGPS();
+
+                    CheckFlightIsValid();
                 }
             }
             catch (Exception ex)
             {
-                DataContainer.HasExtractionError = true;
-                DataContainer.ErrorMessages.Add($"Error reading SRT file: {ex.Message}");
+                throw ex;
             }
 
             return DataContainer;
         }
 
-        private List<FlightDataPoint> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
+        private List<RealmFlightPointItem> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
         {
-            List<FlightDataPoint> dataPoints = new List<FlightDataPoint>();
+            List<RealmFlightPointItem> dataPoints = new List<RealmFlightPointItem>();
 
             for (int i = 0; i < srtBuffer.Count - 4; i++)
             {
                 string indexLine = srtBuffer[i].Trim();
                 string timeLine = srtBuffer[i + 1].Trim();
-                string frameLine = srtBuffer[i + 2].Trim();
                 string timestampLine = srtBuffer[i + 3].Trim();
                 string metadataLine = srtBuffer[i + 4].Trim();
 
@@ -69,7 +64,7 @@ namespace FlightReLive.Core.FFmpeg
                     continue;
                 }
 
-                // Parse relative timecode
+                //Parse relative timecode
                 DateTime absoluteTime;
                 TimeSpan offset;
 
@@ -78,10 +73,9 @@ namespace FlightReLive.Core.FFmpeg
                     string startTime = timeLine.Split(new[] { " --> " }, StringSplitOptions.None)[0];
                     offset = ParseTimecode(startTime);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    UnityEngine.Debug.LogWarning($"Invalid timecode at line {i}: {timeLine} ({ex.Message})");
-                    continue;
+                    throw new Exception($"Invalid timecode at line {i}.");
                 }
 
                 // Parse absolute timestamp
@@ -94,11 +88,10 @@ namespace FlightReLive.Core.FFmpeg
                     absoluteTime = parsedAbsolute.ToLocalTime();
                 }
 
-                FlightDataPoint point = new FlightDataPoint
+                RealmFlightPointItem point = new RealmFlightPointItem
                 {
                     Time = absoluteTime,
-                    TimeSpan = offset,
-                    CameraSettings = new FlightDataPointCameraSettings()
+                    TimeSpan = offset
                 };
 
                 try
@@ -109,7 +102,7 @@ namespace FlightReLive.Core.FFmpeg
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogWarning($"Altitude parsing failed: {ex.Message}");
+                    throw new Exception($"Altitude parsing failed: {ex.Message}");
                 }
 
                 string[] tokens = metadataLine.Split(new[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
@@ -135,22 +128,22 @@ namespace FlightReLive.Core.FFmpeg
                         switch (key)
                         {
                             case "iso":
-                                point.CameraSettings.ISO = int.Parse(value, CultureInfo.InvariantCulture);
+                                point.ISO = int.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "shutter":
-                                point.CameraSettings.ShutterSpeed = ParseShutterSpeed(value);
+                                point.ShutterSpeed = ParseShutterSpeed(value);
                                 break;
                             case "fnum":
-                                point.CameraSettings.Aperture = float.Parse(value, CultureInfo.InvariantCulture);
+                                point.Aperture = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "ev":
-                                point.CameraSettings.Exposure = float.Parse(value, CultureInfo.InvariantCulture);
+                                point.Exposure = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "color_md":
-                                point.CameraSettings.ColorMode = value;
+                                point.ColorMode = value;
                                 break;
                             case "focal_len":
-                                point.CameraSettings.FocalLength = float.Parse(value, CultureInfo.InvariantCulture);
+                                point.FocalLength = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "latitude":
                                 point.Latitude = double.Parse(value, CultureInfo.InvariantCulture);
@@ -162,7 +155,7 @@ namespace FlightReLive.Core.FFmpeg
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.LogWarning($"Parsing error for key '{key}': {ex.Message}");
+                        throw ex;
                     }
                 }
 
@@ -210,9 +203,9 @@ namespace FlightReLive.Core.FFmpeg
             return (0, 0);
         }
 
-        private List<FlightDataPoint> ReduceToOnePointPerSecond(List<FlightDataPoint> rawPoints)
+        private List<RealmFlightPointItem> ReduceToOnePointPerSecond(List<RealmFlightPointItem> rawPoints)
         {
-            List<FlightDataPoint> reducedPoints = new List<FlightDataPoint>();
+            List<RealmFlightPointItem> reducedPoints = new List<RealmFlightPointItem>();
             HashSet<long> seenSeconds = new HashSet<long>();
 
             foreach (var point in rawPoints)
@@ -243,7 +236,7 @@ namespace FlightReLive.Core.FFmpeg
             return reducedPoints;
         }
 
-        private double CalculateHorizontalDistance(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateHorizontalDistance(RealmFlightPointItem point1, RealmFlightPointItem point2)
         {
             double lat1 = ToRadians(point1.Latitude);
             double lon1 = ToRadians(point1.Longitude);
@@ -257,7 +250,7 @@ namespace FlightReLive.Core.FFmpeg
             return EARTH_RADIUS * c;
         }
 
-        private double CalculateHorizontalSpeed(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateHorizontalSpeed(RealmFlightPointItem point1, RealmFlightPointItem point2)
         {
             double distance = CalculateHorizontalDistance(point1, point2);
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
@@ -266,7 +259,7 @@ namespace FlightReLive.Core.FFmpeg
         }
 
 
-        private double CalculateVerticalSpeed(FlightDataPoint point1, FlightDataPoint point2)
+        private double CalculateVerticalSpeed(RealmFlightPointItem point1, RealmFlightPointItem point2)
         {
             double deltaAltitude = point2.AbsoluteAltitude - point1.AbsoluteAltitude;
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
@@ -279,7 +272,7 @@ namespace FlightReLive.Core.FFmpeg
             return degrees * Math.PI / 180.0;
         }
 
-        internal void CalculateSpeeds(List<FlightDataPoint> points)
+        internal void CalculateSpeeds(List<RealmFlightPointItem> points)
         {
             for (int i = 1; i < points.Count; i++)
             {

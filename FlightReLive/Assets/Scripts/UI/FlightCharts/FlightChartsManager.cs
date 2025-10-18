@@ -1,5 +1,5 @@
 ﻿using FlightReLive.Core;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.TimeBar;
@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using FlightReLive.Core.Library;
 
 namespace FlightReLive.UI.FlightCharts
 {
@@ -18,7 +19,7 @@ namespace FlightReLive.UI.FlightCharts
     {
         #region ATTRIBUTES
         private Dictionary<FlightChartType, FlightChart> _flightChartsBar;
-        [SerializeField] [Range(1f, 3f)] private float _chartLineWidth;
+        [SerializeField][Range(1f, 3f)] private float _chartLineWidth;
         private FlightChartType _displayedChart;
         private FlightChart _speedChart;
         private FlightChart _relativeAltitudeChart;
@@ -195,7 +196,7 @@ namespace FlightReLive.UI.FlightCharts
             List<FlightChartStep> exposureChart = new();
             List<FlightChartStep> digitalZoomChart = new();
 
-            List<FlightDataPoint> points = flight.Points;
+            List<RealmFlightPointItem> points = flight.Points;
 
             // Data preconversion
             List<float> convertedSpeeds = points.Select(p => SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))).ToList();
@@ -204,19 +205,19 @@ namespace FlightReLive.UI.FlightCharts
 
             if (points.Where(x => x.AbsoluteAltitude > 0).Any())
             {
-                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float) p.AbsoluteAltitude)).ToList();
+                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)p.AbsoluteAltitude)).ToList();
             }
             else
             {
-               convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
+                convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
             }
 
-            List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
-            List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();
-            List<float> focals = points.Select(p => p.CameraSettings.FocalLength).ToList();
-            List<int> isos = points.Select(p => p.CameraSettings.ISO).ToList();
-            List<float> exposures = points.Select(p => p.CameraSettings.Exposure).ToList();
-            List<float> digitalZooms = points.Select(p => p.CameraSettings.DigitalZoom).ToList();
+            List<float> apertures = points.Select(p => p.Aperture).ToList();
+            List<float> shutterSpeeds = points.Select(p => p.ShutterSpeed).ToList();
+            List<float> focals = points.Select(p => p.FocalLength).ToList();
+            List<int> isos = points.Select(p => p.ISO).ToList();
+            List<float> exposures = points.Select(p => p.Exposure).ToList();
+            List<float> digitalZooms = points.Select(p => p.DigitalZoom).ToList();
 
             // Min/max/range
             (var minSpeed, _, var rangeSpeed, var isFlatSpeed) = GetRange(convertedSpeeds, 10f);
@@ -238,22 +239,22 @@ namespace FlightReLive.UI.FlightCharts
                 float speed = SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed));
                 float relAlt = SettingsManager.ConvertAltitude((float)p.RelativeAltitude);
                 float absAlt = SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude));
-                float aperture = p.CameraSettings.Aperture;
-                float shutterSpeed = p.CameraSettings.ShutterSpeed;
-                float focal = p.CameraSettings.FocalLength;
-                float iso = p.CameraSettings.ISO;
-                float exposure = p.CameraSettings.Exposure;
-                float digitalZoom = p.CameraSettings.DigitalZoom;
+                float aperture = p.Aperture;
+                float shutterSpeed = p.ShutterSpeed;
+                float focal = p.FocalLength;
+                float iso = p.ISO;
+                float exposure = p.Exposure;
+                float digitalZoom = p.DigitalZoom;
 
-                speedChartSteps.Add(CreateStep(i, label, p.Time, speed, Normalize(speed, minSpeed, rangeSpeed, isFlatSpeed), p));
-                relativeAltitudeChart.Add(CreateStep(i, label, p.Time, relAlt, Normalize(relAlt, minRelAlt, rangeRelAlt, isFlatRelAlt), p));
-                absoluteAltitudeChart.Add(CreateStep(i, label, p.Time, absAlt, Normalize(absAlt, minAbsAlt, rangeAbsAlt, isFlatAbsAlt), p));
-                apertureChart.Add(CreateStep(i, label, p.Time, aperture, Normalize(aperture, minAperture, rangeAperture, isFlatAperture), p));
-                shutterSpeedChart.Add(CreateStep(i, label, p.Time, shutterSpeed, Normalize(shutterSpeed, minShutterSpeed, rangeShutterSpeed, isFlatShutterSpeed), p));
-                focalChart.Add(CreateStep(i, label, p.Time, focal, Normalize(focal, minFocal, rangeFocal, isFlatFocal), p));
-                isoChart.Add(CreateStep(i, label, p.Time, iso, Normalize(iso, minIso, rangeIso, isFlatIso), p));
-                exposureChart.Add(CreateStep(i, label, p.Time, exposure, Normalize(exposure, minExposure, rangeExposure, isFlatExposure), p));
-                digitalZoomChart.Add(CreateStep(i, label, p.Time, digitalZoom, Normalize(digitalZoom, minDigitalZoom, rangeDigitalZoom, isFlatDigitalZoom), p));
+                speedChartSteps.Add(CreateStep(i, label, p.Time, speed, p));
+                relativeAltitudeChart.Add(CreateStep(i, label, p.Time, relAlt, p));
+                absoluteAltitudeChart.Add(CreateStep(i, label, p.Time, absAlt, p));
+                apertureChart.Add(CreateStep(i, label, p.Time, aperture, p));
+                shutterSpeedChart.Add(CreateStep(i, label, p.Time, shutterSpeed, p));
+                focalChart.Add(CreateStep(i, label, p.Time, focal, p));
+                isoChart.Add(CreateStep(i, label, p.Time, iso, p));
+                exposureChart.Add(CreateStep(i, label, p.Time, exposure, p));
+                digitalZoomChart.Add(CreateStep(i, label, p.Time, digitalZoom, p));
             }
 
             // Add charts
@@ -268,7 +269,7 @@ namespace FlightReLive.UI.FlightCharts
             _digitalZoomChart.AddStep(digitalZoomChart);
         }
 
-        private FlightChartStep CreateStep(int index, string label, DateTime time, float value, float normalized, FlightDataPoint dataPoint)
+        private FlightChartStep CreateStep(int index, string label, DateTime time, float value, RealmFlightPointItem dataPoint)
         {
             Color color = Fugui.Themes.GetColor(FuColors.PlotLinesHovered);
 
@@ -276,7 +277,7 @@ namespace FlightReLive.UI.FlightCharts
             {
                 ColorU32 = ImGui.ColorConvertFloat4ToU32(color),
                 TooltipSize = ImGui.CalcTextSize($"{value:F2}"),
-                FlightDataPoint = dataPoint
+                FlightPoint = dataPoint
             };
         }
 
@@ -372,7 +373,7 @@ namespace FlightReLive.UI.FlightCharts
             List<FlightChartStep> speedChartSteps = new();
             List<FlightChartStep> relativeAltitudeChart = new();
             List<FlightChartStep> absoluteAltitudeChart = new();
-            List<FlightDataPoint> points = flight.Points;
+            List<RealmFlightPointItem> points = flight.Points;
 
             List<float> convertedSpeeds = points.Select(p =>
                 SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))
@@ -391,11 +392,11 @@ namespace FlightReLive.UI.FlightCharts
                 convertedAbsAlts = points.Select(p => SettingsManager.ConvertAltitude((float)(p.RelativeAltitude + flight.TakeOffAltitude))).ToList();
             }
 
-            List<float> apertures = points.Select(p => p.CameraSettings.Aperture).ToList();
-            List<float> shutterSpeeds = points.Select(p => p.CameraSettings.ShutterSpeed).ToList();
-            List<int> isos = points.Select(p => p.CameraSettings.ISO).ToList();
-            List<float> exposures = points.Select(p => p.CameraSettings.Exposure).ToList();
-            List<float> digitalZooms = points.Select(p => p.CameraSettings.DigitalZoom).ToList();
+            List<float> apertures = points.Select(p => p.Aperture).ToList();
+            List<float> shutterSpeeds = points.Select(p => p.ShutterSpeed).ToList();
+            List<int> isos = points.Select(p => p.ISO).ToList();
+            List<float> exposures = points.Select(p => p.Exposure).ToList();
+            List<float> digitalZooms = points.Select(p => p.DigitalZoom).ToList();
 
             (float minSpeed, float maxSpeed, float rangeSpeed, bool isFlatSpeed) = GetRange(convertedSpeeds, 10f);
             (float minRelAlt, float maxRelAlt, float rangeRelAlt, bool isFlatRelAlt) = GetRange(convertedRelAlts, 10f);
@@ -421,7 +422,7 @@ namespace FlightReLive.UI.FlightCharts
             // Populate chart steps
             for (int i = 0; i < points.Count; i++)
             {
-                FlightDataPoint p = points[i];
+                RealmFlightPointItem p = points[i];
                 string label = p.Time.ToString("HH:mm:ss");
 
                 float speed = convertedSpeeds[i];
@@ -430,7 +431,7 @@ namespace FlightReLive.UI.FlightCharts
                 {
                     ColorU32 = ImGui.ColorConvertFloat4ToU32(color),
                     TooltipSize = ImGui.CalcTextSize($"{speed:F2}"),
-                    FlightDataPoint = p
+                    FlightPoint = p
                 });
 
                 float relAlt = convertedRelAlts[i];
@@ -439,7 +440,7 @@ namespace FlightReLive.UI.FlightCharts
                 {
                     ColorU32 = ImGui.ColorConvertFloat4ToU32(color),
                     TooltipSize = ImGui.CalcTextSize($"{relAlt:F2}"),
-                    FlightDataPoint = p
+                    FlightPoint = p
                 });
 
                 float absAlt = convertedAbsAlts[i];
@@ -448,7 +449,7 @@ namespace FlightReLive.UI.FlightCharts
                 {
                     ColorU32 = ImGui.ColorConvertFloat4ToU32(color),
                     TooltipSize = ImGui.CalcTextSize($"{absAlt:F2}"),
-                    FlightDataPoint = p
+                    FlightPoint = p
                 });
             }
 

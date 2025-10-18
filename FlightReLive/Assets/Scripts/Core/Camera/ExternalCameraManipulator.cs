@@ -1,5 +1,5 @@
 ﻿using System;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.POI;
@@ -328,7 +328,7 @@ namespace FlightReLive.Core.Cameras
 
                         if (LoadingManager.Instance.CurrentFlightData != null)
                         {
-                            FlightGPSData data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
+                            RealmDoubleVector2 data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
                             _pivotPointPOI = POIManager.Instance.AddPOI($"Custom point", newPivot, Color.blueViolet, 50f);
                         }
                     }

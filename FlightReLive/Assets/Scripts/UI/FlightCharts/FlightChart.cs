@@ -1,4 +1,5 @@
-﻿using FlightReLive.Core.FlightDefinition;
+﻿using FlightReLive.Core.Library;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.TimeBar;
 using Fu;
 using Fu.Framework;
@@ -117,7 +118,7 @@ namespace FlightReLive.UI.FlightCharts
             TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
         }
 
-        private void OnProgressChanged(float ratio, int index, FlightDataPoint point)
+        private void OnProgressChanged(float ratio, int index, RealmFlightPointItem point)
         {
             if (Steps == null || Steps.Count == 0 || point == null)
             {
@@ -126,7 +127,7 @@ namespace FlightReLive.UI.FlightCharts
 
             _currentRatio = Math.Clamp(ratio, 0f, 1f);
 
-            int stepIndex = Steps.FindIndex(s => s.FlightDataPoint == point);
+            int stepIndex = Steps.FindIndex(s => s.FlightPoint == point);
 
             if (stepIndex >= 0)
             {
@@ -166,7 +167,7 @@ namespace FlightReLive.UI.FlightCharts
             return Math.Clamp(index, 0, stepCount - 1);
         }
 
-        private float GetRatioFromDataPoint(FlightDataPoint point)
+        private float GetRatioFromDataPoint(RealmFlightPointItem point)
         {
             double videoDuration = TimeBarManager.Instance.Length;
             double timeSeconds = point.TimeSpan.TotalSeconds;
@@ -175,7 +176,7 @@ namespace FlightReLive.UI.FlightCharts
             return Math.Clamp(ratio, 0f, 1f);
         }
 
-        private long GetFrameFromDataPoint(FlightDataPoint point)
+        private long GetFrameFromDataPoint(RealmFlightPointItem point)
         {
             float ratio = GetRatioFromDataPoint(point);
             long totalFrames = TimeBarManager.Instance.TotalFrameCount;
@@ -332,7 +333,7 @@ namespace FlightReLive.UI.FlightCharts
                 _currentStepIndex = stepIndex;
 
                 FlightChartStep selectedStep = Steps[stepIndex];
-                FlightDataPoint point = selectedStep.FlightDataPoint;
+                RealmFlightPointItem point = selectedStep.FlightPoint;
 
                 _currentRatio = GetRatioFromDataPoint(point);
                 OnStepChanged?.Invoke(selectedStep);
@@ -447,9 +448,9 @@ namespace FlightReLive.UI.FlightCharts
                 isHovering = true;
 
                 //Sync hover with TimeBarManager
-                if (step != null && step.FlightDataPoint != null)
+                if (step != null && step.FlightPoint != null)
                 {
-                    float ratio = GetRatioFromDataPoint(step.FlightDataPoint);
+                    float ratio = GetRatioFromDataPoint(step.FlightPoint);
                     TimeBarManager.Instance.SetHover(_windowDefinition.WindowName.Name, ratio);
                 }
 

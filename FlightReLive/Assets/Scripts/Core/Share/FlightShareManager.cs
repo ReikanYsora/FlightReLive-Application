@@ -1,11 +1,12 @@
 using FlightReLive.Core.Cache;
 using FlightReLive.Core.Loading;
-using FlightReLive.Core.Workspace;
+using FlightReLive.Core.Library;
 using Fu;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
+using FlightReLive.Core.Database;
 
 namespace FlightReLive.Core.Share
 {
@@ -27,7 +28,7 @@ namespace FlightReLive.Core.Share
             try
             {
                 //Load FlightFile from .FRS
-                FlightFile importedFile = await CacheManager.ImportFlightFileAsync(importPath);
+                RealmFlightItem importedFile = await CacheManager.ImportFlightFileAsync(importPath);
 
                 if (importedFile == null)
                 {

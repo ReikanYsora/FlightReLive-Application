@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.Cache;
+using FlightReLive.Core.Library;
 using FlightReLive.Core.Platform;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.Share;
@@ -57,6 +58,19 @@ namespace FlightReLive.UI.Layout
                 ApplicationManager.Instance.QuitApplication();
             });
 
+            //Import menu
+            MacOsMainMenuManager.AddMenuEntry("Import", "Add flight into library", () =>
+            {
+                string safePath = Path.Combine(Application.persistentDataPath);
+                FileBrowser.OpenFilePanelAsync("Select *.mp4 DJI drone video flight", Application.persistentDataPath, new ExtensionFilter[] { new ExtensionFilter("MPEG-4", "mp4") }, true,
+                    async (paths) =>
+                    {
+                        if (paths.Length > 0)
+                            await LibraryManager.Instance.ImportFlights(paths);
+                    });
+
+            }, "L");
+
             MacOsMainMenuManager.AddMenuEntry("Import", "Import local file", () =>
             {
                 if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
@@ -102,9 +116,9 @@ namespace FlightReLive.UI.Layout
                 CacheManager.ClearCache();
             });
 
-            MacOsMainMenuManager.AddMenuEntry("Settings", "Clear workspace cache", () =>
+            MacOsMainMenuManager.AddMenuEntry("Settings", "Clear flights library", () =>
             {
-                CacheManager.ClearWorkspaceCache();
+                LibraryManager.Instance.ClearLibrary();
             });
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Reset preferences", () =>
@@ -163,7 +177,22 @@ namespace FlightReLive.UI.Layout
             Fugui.RegisterMainMenuItem(flightReLiveTitle, null);
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Quit + "  Exit", () => { ApplicationManager.Instance.QuitApplication(); }, flightReLiveTitle);
 
+            //Import menu
             Fugui.RegisterMainMenuItem(flightReLiveImport, null);
+            Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Add flight into library", () =>
+            {
+                string safePath = Path.Combine(Application.persistentDataPath);
+                FileBrowser.OpenFilePanelAsync("Select *.mp4 DJI drone video flight", Application.persistentDataPath, new ExtensionFilter[] { new ExtensionFilter("MPEG-4", "mp4") }, true,
+                    async (paths) =>
+                    {
+                        if (paths.Length > 0)
+                            await LibraryManager.Instance.ImportFlights(paths);
+                    });
+
+            }, flightReLiveImport);
+
+            Fugui.RegisterMainMenuSeparator(flightReLiveImport);
+
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Import + "  Import local file", () =>
             {
                 if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
@@ -210,9 +239,9 @@ namespace FlightReLive.UI.Layout
             {
                 CacheManager.ClearCache();
             }, flightReLiveSettings);
-            Fugui.RegisterMainMenuItem("Clear workspace cache", () =>
+            Fugui.RegisterMainMenuItem("Clear flights library", () =>
             {
-                CacheManager.ClearWorkspaceCache();
+                LibraryManager.Instance.ClearLibrary();
             }, flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Reset preferences", () =>
             {

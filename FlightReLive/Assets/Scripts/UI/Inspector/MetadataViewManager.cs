@@ -1,5 +1,5 @@
 using FlightReLive.Core.Cameras;
-using FlightReLive.Core.FlightDefinition;
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Pipeline.API;
 using FlightReLive.Core.POI;
@@ -13,13 +13,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using FlightReLive.Core.Library;
 
 namespace FlightReLive.UI.Inspector
 {
     public class MetadataViewManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        private FlightDataPoint _currentDataPoint;
+        private RealmFlightPointItem _currentDataPoint;
         #endregion
 
         #region PROPERTIES
@@ -50,7 +51,7 @@ namespace FlightReLive.UI.Inspector
         #endregion
 
         #region CALLBACKS
-        private void OnProgressChanged(float arg1, int arg2, FlightDataPoint point)
+        private void OnProgressChanged(float arg1, int arg2, RealmFlightPointItem point)
         {
             _currentDataPoint = point;
         }
@@ -128,32 +129,32 @@ namespace FlightReLive.UI.Inspector
 
                     using (FuGrid grid = new FuGrid("cameraDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
-                        Draw(window, "5", grid, layout, FlightReLiveIcons.Aperture, _currentDataPoint.CameraSettings.Aperture.ToString(), "Aperture", FlightReLiveIcons.Charts, () =>
+                        Draw(window, "5", grid, layout, FlightReLiveIcons.Aperture, _currentDataPoint.Aperture.ToString(), "Aperture", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.Aperture;
                         }, "Display Aperture chart");
 
-                        Draw(window, "6", grid, layout, FlightReLiveIcons.ShutterSpeed, _currentDataPoint.CameraSettings.ShutterSpeed.ToString(), "Shutter Speed", FlightReLiveIcons.Charts, () =>
+                        Draw(window, "6", grid, layout, FlightReLiveIcons.ShutterSpeed, _currentDataPoint.ShutterSpeed.ToString(), "Shutter Speed", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.ShutterSpeed;
                         }, "Display Shutter speed chart");
 
-                        Draw(window, "7", grid, layout, FlightReLiveIcons.PostProcess, _currentDataPoint.CameraSettings.FocalLength.ToString(), "Focal Length", FlightReLiveIcons.Charts, () =>
+                        Draw(window, "7", grid, layout, FlightReLiveIcons.PostProcess, _currentDataPoint.FocalLength.ToString(), "Focal Length", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.Focal;
                         }, "Display Focal length chart");
 
-                        Draw(window, "8", grid, layout, FlightReLiveIcons.ISO, _currentDataPoint.CameraSettings.ISO.ToString(), "ISO", FlightReLiveIcons.Charts, () =>
+                        Draw(window, "8", grid, layout, FlightReLiveIcons.ISO, _currentDataPoint.ISO.ToString(), "ISO", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.ISO;
                         }, "Display ISO chart");
 
-                        Draw(window, "9", grid, layout, FlightReLiveIcons.Exposure, _currentDataPoint.CameraSettings.Exposure.ToString(), "Exposure", FlightReLiveIcons.Charts, () =>
+                        Draw(window, "9", grid, layout, FlightReLiveIcons.Exposure, _currentDataPoint.Exposure.ToString(), "Exposure", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.Exposure;
                         }, "Display exposure chart");
 
-                        string formattedZoom = $"X{_currentDataPoint.CameraSettings.DigitalZoom:F1}";
+                        string formattedZoom = $"X{_currentDataPoint.DigitalZoom:F1}";
                         Draw(window, "10", grid, layout, FlightReLiveIcons.DigitalZoom, formattedZoom, "Digital Zoom", FlightReLiveIcons.Charts, () =>
                         {
                             FlightChartsManager.Instance.DisplayedChart = FlightChartType.DigitalZoom;
@@ -196,8 +197,8 @@ namespace FlightReLive.UI.Inspector
                                 string formattedDistance = FormatDistance(distance);
 
                                 //Formatted GPS position
-                                FlightGPSData gpsData = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(poi.transform.position);
-                                string formattedPosition = $"{gpsData.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {gpsData.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
+                                RealmDoubleVector2 gpsData = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(poi.transform.position);
+                                string formattedPosition = $"{gpsData.X.ToString("F4", CultureInfo.InvariantCulture)}, {gpsData.Y.ToString("F5", CultureInfo.InvariantCulture)}";
 
                                 //Name with distance
                                 string label = $"{poi.Text} ({formattedDistance})";
@@ -211,7 +212,7 @@ namespace FlightReLive.UI.Inspector
                                     FlightReLiveIcons.Maps,
                                     () =>
                                     {
-                                        OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)gpsData.Latitude, (float)gpsData.Longitude));
+                                        OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)gpsData.X, (float)gpsData.Y));
                                     },
                                     "Display on OpenStreetMap");
                             }

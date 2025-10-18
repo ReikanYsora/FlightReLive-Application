@@ -778,7 +778,7 @@ GameObject:
   - component: {fileID: 445681718}
   - component: {fileID: 445681719}
   m_Layer: 0
-  m_Name: WorkspaceView
+  m_Name: LibraryView
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -813,7 +813,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _windowName:
     _id: 12
-    _name: "\uE069  Workspace"
+    _name: "\uE069  Library"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32

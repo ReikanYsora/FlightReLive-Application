@@ -670,7 +670,7 @@ MonoBehaviour:
     _name: "\uE067  Map View"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
@@ -816,7 +816,7 @@ MonoBehaviour:
     _name: "\uE069  Workspace"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
@@ -1603,7 +1603,7 @@ MonoBehaviour:
     _name: "\uE07F  Inspector"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
@@ -1945,7 +1945,7 @@ MonoBehaviour:
     _name: "\uE06B  Flight Charts"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
-  _windowFlags: 0
+  _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0

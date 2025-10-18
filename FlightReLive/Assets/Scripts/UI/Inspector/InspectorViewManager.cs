@@ -34,11 +34,10 @@ namespace FlightReLive.UI.Inspector
         #endregion
 
         #region UI
-        public override void OnWindowCreated(FuWindow window)
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
         {
-            window.HeaderHeight = TOP_BAR_HEIGHT;
-            window.HeaderUI = DrawHeader;
-            window.UI = OnUI;
+            windowDefinition.SetHeaderUI(DrawHeader, TOP_BAR_HEIGHT);
+            windowDefinition.SetUI(OnUI);
         }
 
         private void DrawHeader(FuWindow window, Vector2 size)
@@ -49,7 +48,7 @@ namespace FlightReLive.UI.Inspector
             FuLayout layout = new FuLayout();
             FuStyle customStyle = new FuStyle(FuTextStyle.Default, FuFrameStyle.Default, new FuPanelStyle(Fugui.Themes.GetColor(FuColors.MenuBarBg), Fugui.Themes.GetColor(FuColors.Border)), FuStyle.Unpadded.FramePadding, FuStyle.Unpadded.WindowPadding);
 
-            using (FuPanel inspectorPanel = new FuPanel("inspectorPanel", customStyle, false, window.HeaderHeight, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
+            using (FuPanel inspectorPanel = new FuPanel("inspectorPanel", customStyle, false, TOP_BAR_HEIGHT, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
             {
                 Fugui.Push(ImGuiCol.MenuBarBg, Fugui.Themes.GetColor(FuColors.Border));
                 layout.Spacing();

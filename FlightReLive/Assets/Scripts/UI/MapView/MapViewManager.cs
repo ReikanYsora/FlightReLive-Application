@@ -24,8 +24,9 @@ namespace FlightReLive.UI.MapView
         private const int MIN_ZOOM = 3;
         private const int MAX_ZOOM_DEFAULT = 20;
         private const float INERTIA_DAMPING = 0.90f;
-        private const float MARKER_RADIUS = 4f; // bigger visible markers
-        private const float ZOOM_SPEED = 2.5f; // speed of auto zoom (lerp)
+        private const float MARKER_RADIUS = 4f;
+        private const float ZOOM_SPEED = 2.5f;
+        private const string MAP_STYLE = "satellite-v2";
         #endregion
 
         #region ATTRIBUTES
@@ -37,13 +38,7 @@ namespace FlightReLive.UI.MapView
         private Vector2 _panVelocity;
         private readonly Dictionary<TileId, TileEntry> _tiles = new Dictionary<TileId, TileEntry>(1024);
         private int _inFlight = 0;
-
-        private string _mapStyle = "satellite-v2";
-
-        // Markers
         private readonly List<MapMarker> _markers = new List<MapMarker>();
-
-        // For smooth auto-zoom
         private bool _isAutoZooming = false;
         private float _targetZoom = 3f;
         private Vector2 _targetCenter01;
@@ -63,7 +58,14 @@ namespace FlightReLive.UI.MapView
 
         private class TileEntry
         {
-            public enum State { Empty, Loading, Ready, Failed }
+            public enum State
+            {
+                Empty,
+                Loading,
+                Ready,
+                Failed
+            }
+
             public State CurrentState = State.Empty;
             public Texture2D Texture;
             public IntPtr TextureId = IntPtr.Zero;
@@ -71,13 +73,15 @@ namespace FlightReLive.UI.MapView
 
         private class MapMarker
         {
+            public FlightFile FlightFile;
             public double Latitude;
             public double Longitude;
             public Color Color;
-            public MapMarker(double latitude, double longitude, Color color)
+
+            public MapMarker(FlightFile file, Color color)
             {
-                Latitude = latitude;
-                Longitude = longitude;
+                Latitude = file.DataPoints[0].Latitude;
+                Longitude = file.DataPoints[0].Longitude;
                 Color = color;
             }
         }
@@ -106,20 +110,23 @@ namespace FlightReLive.UI.MapView
         private void HandleInput(Vector2 viewTopLeft, Vector2 viewSize)
         {
             if (_isAutoZooming)
-                return; // disable manual input during auto zoom
+            {
+                return;
+            }
 
             ImGuiIOPtr io = ImGui.GetIO();
             Vector2 mouse = io.MousePos;
             bool hovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.None);
 
-            // --- Mouse wheel zoom centered on cursor ---
             if (hovered)
             {
                 float wheel = io.MouseWheel;
+
                 if (Mathf.Abs(wheel) > float.Epsilon)
                 {
                     int oldZoom = _zoom;
                     int newZoom = Mathf.Clamp(_zoom + (wheel > 0f ? 1 : -1), MIN_ZOOM, _maxZoom);
+
                     if (newZoom != oldZoom)
                     {
                         Vector2 worldCenterPxOld = Mercator01ToWorldPixels(_center01, oldZoom);
@@ -138,7 +145,6 @@ namespace FlightReLive.UI.MapView
                 }
             }
 
-            // --- Panning ---
             if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 _isPanning = true;
@@ -159,7 +165,9 @@ namespace FlightReLive.UI.MapView
                     _panVelocity = delta;
                 }
                 else
+                {
                     _isPanning = false;
+                }
             }
             else if (_panVelocity.sqrMagnitude > 0.01f)
             {
@@ -176,9 +184,10 @@ namespace FlightReLive.UI.MapView
         private void UpdateAutoZoom(Vector2 viewTopLeft, Vector2 viewSize)
         {
             if (!_isAutoZooming)
+            {
                 return;
+            }
 
-            // interpolate zoom
             float oldZoom = _zoom;
             float newZoom = Mathf.Lerp(_zoom, _targetZoom, Time.deltaTime * ZOOM_SPEED);
 
@@ -190,7 +199,6 @@ namespace FlightReLive.UI.MapView
                 return;
             }
 
-            // Interpolate center smoothly
             _center01 = Vector2.Lerp(_center01, _targetCenter01, Time.deltaTime * 3f);
             _zoom = Mathf.RoundToInt(newZoom);
         }
@@ -219,7 +227,11 @@ namespace FlightReLive.UI.MapView
 
             for (int ty = firstTileY; ty < firstTileY + tilesY; ty++)
             {
-                if (ty < 0 || ty >= n) continue;
+                if (ty < 0 || ty >= n)
+                {
+                    continue;
+                }
+
                 for (int tx = firstTileX; tx < firstTileX + tilesX; tx++)
                 {
                     int wrappedTx = Mod(tx, n);
@@ -230,8 +242,11 @@ namespace FlightReLive.UI.MapView
                     for (int wrap = -1; wrap <= 1; wrap++)
                     {
                         Vector2 drawPos = tileOnScreen + new Vector2(wrap * worldWidthPx, 0f);
+
                         if (drawPos.x + TILE_SIZE < viewTopLeft.x - TILE_SIZE || drawPos.x > viewTopLeft.x + viewSize.x + TILE_SIZE)
+                        {
                             continue;
+                        }
 
                         TileId id = new TileId(_zoom, wrappedTx, ty);
                         TileEntry entry = GetOrRequestTile(id);
@@ -239,7 +254,10 @@ namespace FlightReLive.UI.MapView
                         if (entry.CurrentState == TileEntry.State.Ready && entry.Texture != null)
                         {
                             if (entry.TextureId == IntPtr.Zero)
+                            {
                                 entry.TextureId = FuWindow.CurrentDrawingWindow.Container.GetTextureID(entry.Texture);
+                            }
+
                             ImGui.SetCursorScreenPos(drawPos);
                             ImGui.Image(entry.TextureId, new Vector2(TILE_SIZE, TILE_SIZE));
                         }
@@ -247,7 +265,6 @@ namespace FlightReLive.UI.MapView
                 }
             }
 
-            // Draw markers above tiles
             foreach (MapMarker marker in _markers)
             {
                 DrawMarker(dl, viewTopLeft, viewSize, marker);
@@ -263,17 +280,25 @@ namespace FlightReLive.UI.MapView
             Vector2 worldTopLeftPx = worldCenterPx - viewHalf;
             Vector2 screenPos = viewTopLeft + (worldPosPx - worldTopLeftPx);
             float worldWidthPx = TILE_SIZE * (1 << _zoom);
-            if (screenPos.x < viewTopLeft.x - 50f) screenPos.x += worldWidthPx;
-            if (screenPos.x > viewTopLeft.x + viewSize.x + 50f) screenPos.x -= worldWidthPx;
+
+            if (screenPos.x < viewTopLeft.x - 50f)
+            {
+                screenPos.x += worldWidthPx;
+            }
+
+            if (screenPos.x > viewTopLeft.x + viewSize.x + 50f)
+            {
+                screenPos.x -= worldWidthPx;
+            }
 
             uint col = ImGui.ColorConvertFloat4ToU32(new Vector4(marker.Color.r, marker.Color.g, marker.Color.b, 1f));
             dl.AddCircleFilled(screenPos, MARKER_RADIUS, col);
 
-            // clickable area
             Vector2 markerMin = screenPos - new Vector2(MARKER_RADIUS, MARKER_RADIUS);
             Vector2 markerMax = screenPos + new Vector2(MARKER_RADIUS, MARKER_RADIUS);
             ImGui.SetCursorScreenPos(markerMin);
             ImGui.InvisibleButton($"marker_{marker.Latitude}_{marker.Longitude}", markerMax - markerMin);
+
             if (ImGui.IsItemClicked())
             {
                 StartAutoZoom(mercator);
@@ -301,28 +326,36 @@ namespace FlightReLive.UI.MapView
         private TileEntry GetOrRequestTile(TileId id)
         {
             if (_tiles.TryGetValue(id, out TileEntry existing))
+            {
                 return existing;
+            }
 
             TileEntry entry = new TileEntry();
             _tiles[id] = entry;
+
             if (_inFlight < MAX_CONCURRENT_DOWNLOADS)
+            {
                 _ = LoadTileAsync(id, entry);
+            }
+
             return entry;
         }
 
         private async Task LoadTileAsync(TileId id, TileEntry entry)
         {
             if (entry.CurrentState != TileEntry.State.Empty)
+            {
                 return;
+            }
 
             entry.CurrentState = TileEntry.State.Loading;
             _inFlight++;
 
             try
             {
-                Texture2D cached = await CacheManager.LoadSatelliteTileAsync(TILE_SIZE, id.Z, id.X, id.Y);
-                if (cached != null)
+                if (await CacheManager.MapTileExistsAsync(MAP_STYLE, id.Z, id.X, id.Y))
                 {
+                    Texture2D cached = await CacheManager.LoadMapTileAsync(TILE_SIZE, MAP_STYLE, id.Z, id.X, id.Y);
                     cached.filterMode = FilterMode.Trilinear;
                     cached.wrapMode = TextureWrapMode.Clamp;
                     entry.Texture = cached;
@@ -331,16 +364,14 @@ namespace FlightReLive.UI.MapView
                 }
 
                 string key = SettingsManager.CurrentSettings.MapTilerAPIKey;
-                if (string.IsNullOrEmpty(key))
-                {
-                    entry.CurrentState = TileEntry.State.Failed;
-                    return;
-                }
-
-                string url = $"https://api.maptiler.com/tiles/{_mapStyle}/{id.Z}/{id.X}/{id.Y}.jpg?key={key}";
+                string url = $"https://api.maptiler.com/tiles/{MAP_STYLE}/{id.Z}/{id.X}/{id.Y}.jpg?key={key}";
                 using UnityWebRequest req = UnityWebRequestTexture.GetTexture(url, nonReadable: false);
-                var op = req.SendWebRequest();
-                while (!op.isDone) await Task.Yield();
+
+                UnityWebRequestAsyncOperation operation = req.SendWebRequest();
+                while (!operation.isDone)
+                {
+                    await Task.Yield();
+                }
 
                 if (req.result != UnityWebRequest.Result.Success)
                 {
@@ -378,7 +409,7 @@ namespace FlightReLive.UI.MapView
                         final.wrapMode = TextureWrapMode.Clamp;
                         entry.Texture = final;
                         entry.CurrentState = TileEntry.State.Ready;
-                        _ = CacheManager.SaveSatelliteTileAsync(final, id.Z, id.X, id.Y);
+                        _ = CacheManager.SaveMapTileAsync(final, MAP_STYLE, id.Z, id.X, id.Y);
                     }
                 }
             }
@@ -390,12 +421,17 @@ namespace FlightReLive.UI.MapView
             finally
             {
                 _inFlight = Mathf.Max(0, _inFlight - 1);
-                foreach (var kvp in _tiles)
+                foreach (KeyValuePair<TileId, TileEntry> tile in _tiles)
                 {
                     if (_inFlight >= MAX_CONCURRENT_DOWNLOADS)
+                    {
                         break;
-                    if (kvp.Value.CurrentState == TileEntry.State.Empty)
-                        _ = LoadTileAsync(kvp.Key, kvp.Value);
+                    }
+
+                    if (tile.Value.CurrentState == TileEntry.State.Empty)
+                    {
+                        _ = LoadTileAsync(tile.Key, tile.Value);
+                    }
                 }
             }
         }
@@ -416,8 +452,34 @@ namespace FlightReLive.UI.MapView
         #endregion
 
         #region MATH
-        private static int Mod(int a, int n) { int r = a % n; if (r < 0) r += n; return r; }
-        private static float Frac01(float x) { x -= Mathf.Floor(x); if (x < 0f) x += 1f; if (x >= 1f) x -= 1f; return x; }
+        private static int Mod(int a, int n)
+        {
+            int r = a % n;
+
+            if (r < 0)
+            {
+                r += n;
+            }
+
+            return r;
+        }
+
+        private static float Frac01(float x)
+        {
+            x -= Mathf.Floor(x);
+            if (x < 0f)
+            {
+                x += 1f;
+            }
+
+            if (x >= 1f)
+            {
+                x -= 1f;
+            }
+
+            return x;
+        }
+
         private static Vector2 Mercator01ToWorldPixels(Vector2 merc01, int zoom)
         {
             float worldSize = TILE_SIZE * (1 << zoom);
@@ -428,21 +490,25 @@ namespace FlightReLive.UI.MapView
             float worldSize = TILE_SIZE * (1 << zoom);
             return new Vector2(worldPx.x / worldSize, worldPx.y / worldSize);
         }
-        public void AddMarker(double lat, double lon, Color color) => _markers.Add(new MapMarker(lat, lon, color));
+        public void AddMarker(FlightFile file, Color color)
+        {
+            _markers.Add(new MapMarker(file, color));
+        }
         #endregion
 
         #region CALLBACKS
         private void OnWorkspaceLoaded()
         {
             if (WorkspaceManager.Instance.LoadedFlights == null)
-                return;
-
-            foreach (var kvp in WorkspaceManager.Instance.LoadedFlights)
             {
-                if (kvp.Value != null && kvp.Value.IsValid && kvp.Value.DataPoints.Count > 0)
+                return;
+            }
+
+            foreach (KeyValuePair<string, FlightFile> flight in WorkspaceManager.Instance.LoadedFlights)
+            {
+                if (flight.Value != null && flight.Value.IsValid && flight.Value.DataPoints.Count > 0)
                 {
-                    FlightDataPoint p = kvp.Value.DataPoints[0];
-                    AddMarker(p.Latitude, p.Longitude, Color.red);
+                    AddMarker(flight.Value, Color.red);
                 }
             }
         }

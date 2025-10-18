@@ -26,6 +26,13 @@ namespace FlightReLive.UI.Layout
             Fugui.Layouts.SetLayout("Default");
             RegisterMainMenuItems();
         }
+
+        private void OnDestroy()
+        {
+#if UNITY_STANDALONE_OSX && !UNITY_EDITOR
+            MacOsMainMenuManager.ResetMenu();
+#endif
+        }
         #endregion
 
         #region METHODS

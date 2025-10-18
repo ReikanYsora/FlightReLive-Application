@@ -36,33 +36,10 @@ namespace FlightReLive.Core.Platform
         }
 
 
-#if UNITY_EDITOR
         static MacOsMainMenuManager()
         {
-#if UNITY_STANDALONE_OSX
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            InitializeOnReload();
-#endif
-        }
 
-        [InitializeOnLoadMethod]
-        private static void InitializeOnReload()
-        {
-            if (EditorApplication.isPlaying)
-            {
-                ResetMenu();
-            }
         }
-
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.ExitingPlayMode)
-            {
-                ResetMenu();
-                EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            }
-        }
-#endif
 
         public static void AddMenuEntry(string menuTitle, string itemTitle, Action callback,
                                         string keyEquivalent = "",

@@ -1,21 +1,25 @@
+﻿using System;
+using FlightReLive.Core.Cameras;
 using FlightReLive.Core.Capture;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
 using FlightReLive.Core.Settings;
+using FlightReLive.Core.TimeBar;
+using FlightReLive.Core.UI.Overlays;
+using FlightReLive.UI.Overlays;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
-using System;
 using UnityEngine;
 
 namespace FlightReLive.UI.CameraViews
 {
-    internal class CameraViewManager : FuCameraWindowBehaviour
+    internal class ReLiveViewManager : FuCameraWindowBehaviour
     {
         #region CONSTANTS
-        private const float TOP_BAR_HEIGHT = 26f;
-        private const float FOOTER_BAR_HEIGHT = 26f;
+        protected const float HEADER_BAR_HEIGHT = 26f;
+        protected const float FOOTER_BAR_HEIGHT = 26f;
         private const float TOGGLE_CAPTURE_WIDTH = 103f;
         private const float SETTINGS_POPUP_BUTTON_WIDTH = 42f;
         private const float SETTINGS_POPUP_WIDTH = 300f;
@@ -24,11 +28,70 @@ namespace FlightReLive.UI.CameraViews
         private const float DAY_CYCLE_TEXT_AREA_WIDTH = 50f;
         #endregion
 
-        #region UI
-        private void DrawCameraWindowHeaderBar(FuWindow window, Vector2 size)
+        #region ATTRIBUTES
+        private TimeBarOverlay _timeBarOverlay;
+        private CameraModeOverlay _cameraModeOverlay;
+        private CompassOverlay _compassOverlay;
+        #endregion
+
+        #region PROPERTIES
+        public static ReLiveViewManager Instance { get; private set; }
+        #endregion
+
+        #region UNITY METHODS
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+        }
+
+        private void Start()
+        {
+            TimeBarManager.Instance.RegisterWindowName(_windowName);
+        }
+
+        private void OnDestroy()
+        {
+            TimeBarManager.Instance.UnregisterWindowName(_windowName);
+        }
+        #endregion
+
+        #region METHODS
+        protected void InitializeCameraView()
+        {
+            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
+            ExternalCameraManipulator.Instance.CameraModeOverlay = _cameraModeOverlay;
+            PathManager.Instance.Camera = CameraWindow;
+        }
+
+        public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
+        {
+            windowDefinition.SetHeaderUI(DrawHeaderBar, HEADER_BAR_HEIGHT);
+            windowDefinition.SetFooterUI(DrawFooterBar, HEADER_BAR_HEIGHT);
+            windowDefinition.SetUI(OnUI);
+
+            _timeBarOverlay = new TimeBarOverlay();
+            _timeBarOverlay.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
+            _cameraModeOverlay = new CameraModeOverlay();
+            _cameraModeOverlay.DisplayCameraModeOverlay(windowDefinition);
+            _compassOverlay = new CompassOverlay();
+            _compassOverlay.DisplayCompassOverlay(windowDefinition, Camera);
+        }
+
+        public override void OnWindowCreated(FuWindow window)
+        {
+            InitializeCameraView();
+        }
+
+        protected void DrawHeaderBar(FuWindow window, Vector2 size)
         {
             float scale = Fugui.CurrentContext.Scale;
-            size.y = TOP_BAR_HEIGHT * scale;
+            size.y = HEADER_BAR_HEIGHT * scale;
             float unscaledHeight = size.y / scale;
             FuLayout layout = new FuLayout();
             FuStyle customStyle = new FuStyle(FuTextStyle.Default, FuFrameStyle.Default, new FuPanelStyle((Color)Fugui.Themes.GetColor(FuColors.MenuBarBg), (Color)Fugui.Themes.GetColor(FuColors.Border)), FuStyle.Unpadded.FramePadding, FuStyle.Unpadded.WindowPadding);
@@ -114,7 +177,7 @@ namespace FlightReLive.UI.CameraViews
             Fugui.DrawPopup("PopUp" + text, popupSize, popupPos);
         }
 
-        private void DrawCameraWindowFooterBar(FuWindow window, Vector2 size)
+        protected void DrawFooterBar(FuWindow window, Vector2 size)
         {
             float scale = Fugui.CurrentContext.Scale;
             size.y = FOOTER_BAR_HEIGHT * scale;
@@ -344,22 +407,6 @@ namespace FlightReLive.UI.CameraViews
             ImGui.Dummy(Vector2.zero);
             EnvironmentManager.Instance.DrawSceneSettings(layout);
             ImGui.Dummy(Vector2.zero);
-        }
-
-        protected virtual void InitializeCameraView()
-        {
-
-        }
-        #endregion
-
-        #region CALLBACKS
-        public override void OnWindowCreated(FuWindow window)
-        {
-            window.HeaderHeight = TOP_BAR_HEIGHT;
-            window.FooterHeight = FOOTER_BAR_HEIGHT;
-            window.HeaderUI = DrawCameraWindowHeaderBar;
-            window.FooterUI = DrawCameraWindowFooterBar;
-            InitializeCameraView();
         }
         #endregion
     }

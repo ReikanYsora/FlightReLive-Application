@@ -311,6 +311,89 @@ namespace FlightReLive.Core.Cache
         }
         #endregion
 
+        #region MAP ASYNC
+        internal static Task<bool> MapTileExistsAsync(string mapStyle, int zoom, int tileX, int tileY)
+        {
+            string imagePath = GetMapTilePath(mapStyle, zoom, tileX, tileY);
+            return Task.FromResult(File.Exists(imagePath));
+        }
+
+        internal static string GetMapTilePath(string mapStyle, int zoom, int tileX, int tileY)
+        {
+            string tileFile = $"m_{mapStyle}_{zoom}_{tileX}_{tileY}.raw";
+            return Path.Combine(_cacheFolder, tileFile);
+        }
+
+        internal static async Task<Texture2D> LoadMapTileAsync(int tileSize, string mapStyle, int zoom, int tileX, int tileY)
+        {
+            if (!await MapTileExistsAsync(mapStyle, zoom, tileX, tileY))
+            {
+                return null;
+            }
+
+            string path = GetMapTilePath(mapStyle, zoom, tileX, tileY);
+
+            try
+            {
+                byte[] rawData;
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+                {
+                    rawData = new byte[stream.Length];
+                    int read = 0;
+
+                    while (read < rawData.Length)
+                    {
+                        int r = await stream.ReadAsync(rawData, read, rawData.Length - read);
+
+                        if (r == 0)
+                        {
+                            break;
+                        }
+
+                        read += r;
+                    }
+                }
+
+                Texture2D texture = new Texture2D(tileSize, tileSize, TextureFormat.RGB24, false);
+                texture.LoadRawTextureData(rawData);
+                texture.Apply(false, false);
+                texture.name = $"{mapStyle}_{zoom}_{tileX}_{tileY}";
+                texture.filterMode = FilterMode.Trilinear;
+
+                return texture;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to load map tile {zoom}_{tileX}_{tileY} : {ex.Message}");
+                return null;
+            }
+        }
+
+        internal static async Task SaveMapTileAsync(Texture2D final, string mapStyle, int zoom, int tileX, int tileY)
+        {
+            if (final == null)
+            {
+                return;
+            }
+
+            string savePath = GetSatelliteTilePath(zoom, tileX, tileY);
+
+            try
+            {
+                //Get raw bytes
+                byte[] rawBytes = final.GetRawTextureData();
+
+                using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+                {
+                    await stream.WriteAsync(rawBytes, 0, rawBytes.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to save map tile {mapStyle}_{zoom}_{tileX}_{tileY} : {ex.Message}");
+            }
+        }
+
         #endregion
 
         #region SATELLITE TILE METHODS (ASYNC)
@@ -580,6 +663,7 @@ namespace FlightReLive.Core.Cache
                 return null;
             }
         }
+        #endregion
         #endregion
     }
 }

@@ -16,7 +16,7 @@
       "dependencies": {
         "com.unity.postprocessing": "3.2.2"
       },
-      "hash": "ccd94ae156ed46bd9fa8f7e47e102bb306c70131"
+      "hash": "486c01c471a2b30692ba73f58e3107433371c36b"
     },
     "com.tnd.upscaler.fsr3": {
       "version": "file:com.tnd.upscaler.fsr3",
@@ -252,13 +252,6 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
-    },
-    "io.realm.unity": {
-      "version": "20.1.0",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {},
-      "url": "https://registry.npmjs.org"
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",

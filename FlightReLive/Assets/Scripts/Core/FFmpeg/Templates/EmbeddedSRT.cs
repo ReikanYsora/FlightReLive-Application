@@ -58,9 +58,9 @@ namespace FlightReLive.Core.FFmpeg
         /// <summary>
         /// Parses the .srt file to extract individual flight data points.
         /// </summary>
-        private List<RealmFlightPointItem> ParseSRT(List<string> srtBuffer)
+        private List<SerializedFlightDataPoint> ParseSRT(List<string> srtBuffer)
         {
-            List<RealmFlightPointItem> dataPoints = new List<RealmFlightPointItem>();
+            List<SerializedFlightDataPoint> dataPoints = new List<SerializedFlightDataPoint>();
 
             Regex cameraRegex = new Regex(@"F\/([0-9.]+), SS ([0-9.]+), ISO (\d+), EV ([\-0-9.]+), DZOOM ([0-9.]+)", RegexOptions.Compiled);
             Regex gpsRegex = new Regex(@"GPS\s+\(([-+]?[0-9]*\.?[0-9]+),\s*([-+]?[0-9]*\.?[0-9]+),\s*([-+]?[0-9]*\.?[0-9]+)\)");
@@ -94,15 +94,14 @@ namespace FlightReLive.Core.FFmpeg
                     throw ex;
                 }
 
-                RealmFlightPointItem point = new RealmFlightPointItem { Time = absoluteTime, TimeSpan = offset };
+                SerializedFlightDataPoint point = new SerializedFlightDataPoint { Time = absoluteTime, TimeSpan = offset };
 
                 try
                 {
                     Match gps = gpsRegex.Match(dataLine);
                     if (gps.Success && gps.Groups.Count >= 4)
                     {
-                        point.Longitude = double.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture);
-                        point.Latitude = double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture);
+                        point.Coordinate = new SerializedGPSCoordinate(double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture), double.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture));
                     }
 
                     Match camera = cameraRegex.Match(dataLine);
@@ -120,25 +119,25 @@ namespace FlightReLive.Core.FFmpeg
                     Match dMatch = dRegex.Match(dataLine);
                     if (dMatch.Success && dMatch.Groups.Count >= 2)
                     {
-                        point.Distance = double.Parse(dMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.Distance = float.Parse(dMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match hMatch = hRegex.Match(dataLine);
                     if (hMatch.Success && hMatch.Groups.Count >= 2)
                     {
-                        point.RelativeAltitude = double.Parse(hMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.RelativeAltitude = float.Parse(hMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match hsMatch = hsRegex.Match(dataLine);
                     if (hsMatch.Success && hsMatch.Groups.Count >= 2)
                     {
-                        point.HorizontalSpeed = double.Parse(hsMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.HorizontalSpeed = float.Parse(hsMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
 
                     Match vsMatch = vsRegex.Match(dataLine);
                     if (vsMatch.Success && vsMatch.Groups.Count >= 2)
                     {
-                        point.VerticalSpeed = double.Parse(vsMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                        point.VerticalSpeed = float.Parse(vsMatch.Groups[1].Value, CultureInfo.InvariantCulture);
                     }
                 }
                 catch (Exception ex)

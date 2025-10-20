@@ -90,10 +90,10 @@ namespace FlightReLive.Core.POI
 
                     string poiLabel = !string.IsNullOrEmpty(feature.text) ? feature.text : feature.place_name;
 
-                    RealmDoubleVector2 poiGPS = new RealmDoubleVector2
+                    SerializedGPSCoordinate poiGPS = new SerializedGPSCoordinate
                     {
-                        X = feature.geometry.coordinates[1],
-                        Y = feature.geometry.coordinates[0]
+                        Latitude = feature.geometry.coordinates[1],
+                        Longitude = feature.geometry.coordinates[0]
                     };
 
                     float altitude = flightData.GetAltitudeAtPosition(tile, poiGPS);

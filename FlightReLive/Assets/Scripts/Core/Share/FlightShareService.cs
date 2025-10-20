@@ -1,5 +1,4 @@
-﻿using FlightReLive.Core.Library;
-using FlightReLive.Core.Database;
+﻿using FlightReLive.Core.Database;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -26,7 +25,7 @@ namespace FlightReLive.Core.Share
         #endregion
 
         #region METHODS
-        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(RealmFlightItem flightFile)
+        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(SerializedFlightData flightFile)
         {
             if (flightFile == null)
             {
@@ -63,7 +62,7 @@ namespace FlightReLive.Core.Share
             }
         }
 
-        public static async Task<RealmFlightItem> GetFlightFileAsync(string shareHashOrDisplay)
+        public static async Task<SerializedFlightData> GetFlightFileAsync(string shareHashOrDisplay)
         {
             string hash = NormalizeHash(shareHashOrDisplay);
             if (!IsValidShareHash(hash))
@@ -96,7 +95,7 @@ namespace FlightReLive.Core.Share
                     return null;
                 }
 
-                RealmFlightItem file = FromDownloadResponse(dto);
+                SerializedFlightData file = FromDownloadResponse(dto);
                 file.DecodeTextures();
                 return file;
             }
@@ -107,11 +106,11 @@ namespace FlightReLive.Core.Share
             }
         }
 
-        private static FlightFileUpload ToUploadRequest(RealmFlightItem file)
+        private static FlightFileUpload ToUploadRequest(SerializedFlightData file)
         {
             List<FlightDataPointUpload> dataPoints = new List<FlightDataPointUpload>();
 
-            foreach (RealmFlightPointItem point in file.DataPoints)
+            foreach (SerializedFlightDataPoint point in file.DataPoints)
             {
                 dataPoints.Add(new FlightDataPointUpload
                 {
@@ -124,8 +123,8 @@ namespace FlightReLive.Core.Share
                     DigitalZoom = point.DigitalZoom,
                     FocalLength = point.FocalLength,
                     ColorMode = point.ColorMode,
-                    Longitude = point.Longitude,
-                    Latitude = point.Latitude,
+                    Longitude = point.Coordinate.Longitude,
+                    Latitude = point.Coordinate.Latitude,
                     Distance = point.Distance,
                     RelativeAltitude = point.RelativeAltitude,
                     AbsoluteAltitude = point.AbsoluteAltitude,
@@ -143,18 +142,18 @@ namespace FlightReLive.Core.Share
                 DurationTicks = file.Duration.Ticks,
                 CreationDate = ToUtcSafe(file.CreationDate),
                 ThumbnailData = file.ThumbnailData,
-                TakeOffLatitude = file.EstimateTakeOffPosition?.X,
-                TakeOffLongitude = file.EstimateTakeOffPosition?.Y,
-                FlightGPSX = file.FlightGPSCoordinates?.X,
-                FlightGPSY = file.FlightGPSCoordinates?.Y,
+                TakeOffLatitude = file.EstimateTakeOffPosition.Latitude,
+                TakeOffLongitude = file.EstimateTakeOffPosition.Longitude,
+                FlightGPSX = file.FlightGPSCoordinates.Latitude,
+                FlightGPSY = file.FlightGPSCoordinates.Longitude,
                 HasTakeOffPosition = file.HasTakeOffPosition,
                 DataPoints = dataPoints
             };
         }
 
-        private static RealmFlightItem FromDownloadResponse(FlightFileDownloadResponse dto)
+        private static SerializedFlightData FromDownloadResponse(FlightFileDownloadResponse dto)
         {
-            RealmFlightItem file = new RealmFlightItem
+            SerializedFlightData file = new SerializedFlightData
             {
                 Name = dto.Name,
                 Width = dto.Width,
@@ -163,12 +162,8 @@ namespace FlightReLive.Core.Share
                 Duration = TimeSpan.FromTicks(dto.DurationTicks),
                 CreationDate = ToUtcSafe(dto.CreationDateUtc),
                 ThumbnailData = dto.ThumbnailData,
-                EstimateTakeOffPosition = (dto.TakeOffLatitude.HasValue && dto.TakeOffLongitude.HasValue)
-                    ? new RealmDoubleVector2(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value)
-                    : null,
-                FlightGPSCoordinates = (dto.FlightGPSX.HasValue && dto.FlightGPSY.HasValue)
-                    ? new RealmDoubleVector2(dto.FlightGPSX.Value, dto.FlightGPSY.Value)
-                    : null,
+                EstimateTakeOffPosition = (dto.TakeOffLatitude.HasValue && dto.TakeOffLongitude.HasValue) ? new SerializedGPSCoordinate(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value) : null,
+                FlightGPSCoordinates = (dto.FlightGPSX.HasValue && dto.FlightGPSY.HasValue) ? new SerializedGPSCoordinate(dto.FlightGPSX.Value, dto.FlightGPSY.Value) : null,
                 HasTakeOffPosition = dto.HasTakeOffPosition
             };
 
@@ -181,7 +176,7 @@ namespace FlightReLive.Core.Share
             {
                 foreach (var p in dto.DataPoints)
                 {
-                    file.DataPoints.Add(new RealmFlightPointItem
+                    file.DataPoints.Add(new SerializedFlightDataPoint
                     {
                         Time = ToUtcSafe(p.TimeUtc),
                         TimeSpan = TimeSpan.FromTicks(p.TimeSpanTicks),
@@ -192,8 +187,7 @@ namespace FlightReLive.Core.Share
                         DigitalZoom = p.DigitalZoom ?? 0f,
                         FocalLength = p.FocalLength ?? 0f,
                         ColorMode = p.ColorMode,
-                        Longitude = p.Longitude,
-                        Latitude = p.Latitude,
+                        Coordinate = new SerializedGPSCoordinate(p.Latitude, p.Longitude),
                         Distance = p.Distance,
                         RelativeAltitude = p.RelativeAltitude,
                         AbsoluteAltitude = p.AbsoluteAltitude,

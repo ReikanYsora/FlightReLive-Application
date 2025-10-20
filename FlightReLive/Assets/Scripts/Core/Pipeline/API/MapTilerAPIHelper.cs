@@ -395,13 +395,13 @@ namespace FlightReLive.Core.Pipeline.API
                 return new ResourceResult<FeatureCollection>(cached, TileResourceSource.Cache);
             }
 
-            RealmDoubleVector2 center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
+            SerializedGPSCoordinate center = MapTools.GetCenterOfBoundingBox(tile.BoundingBox);
 
             string url = string.Format(
                 CultureInfo.InvariantCulture,
                 "https://api.maptiler.com/geocoding/{0},{1}.json?key={2}&bbox={3},{4},{5},{6}&language={7}",
-                center.Y,
-                center.X,
+                center.Longitude,
+                center.Latitude,
                 SettingsManager.CurrentSettings.MapTilerAPIKey,
                 tile.BoundingBox.MinLongitude,
                 tile.BoundingBox.MinLatitude,

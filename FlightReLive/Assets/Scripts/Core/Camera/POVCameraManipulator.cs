@@ -1,3 +1,4 @@
+using FlightReLive.Core.Database;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Settings;
 using FlightReLive.Core.UI.Overlays;
@@ -158,7 +159,7 @@ namespace FlightReLive.Core.Cameras
             _rotationSensitivity = rotationSpeed;
         }
 
-        private void OnFlightEndLoading()
+        private void OnFlightEndLoading(SerializedFlightData flight)
         {
             if (SensorOverlay != null)
             {

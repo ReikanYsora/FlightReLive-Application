@@ -13,14 +13,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
-using FlightReLive.Core.Library;
 
 namespace FlightReLive.UI.Inspector
 {
     public class MetadataViewManager : MonoBehaviour
     {
         #region ATTRIBUTES
-        private RealmFlightPointItem _currentDataPoint;
+        private FlightDataPoint _currentDataPoint;
         #endregion
 
         #region PROPERTIES
@@ -51,7 +50,7 @@ namespace FlightReLive.UI.Inspector
         #endregion
 
         #region CALLBACKS
-        private void OnProgressChanged(float arg1, int arg2, RealmFlightPointItem point)
+        private void OnProgressChanged(float arg1, int arg2, FlightDataPoint point)
         {
             _currentDataPoint = point;
         }
@@ -92,10 +91,10 @@ namespace FlightReLive.UI.Inspector
 
                     using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
-                        string formattedPosition = $"{_currentDataPoint.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
+                        string formattedPosition = $"{_currentDataPoint.Coordinate.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Coordinate.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
                         Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.Maps, () =>
                         {
-                            OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)_currentDataPoint.Latitude, (float)_currentDataPoint.Longitude));
+                            OpenStreetMapHelper.OpenOpenStreetMapBrowser(_currentDataPoint.Coordinate);
                         }, "Display on OpenStreetMap");
 
                         string formattedAbsoluteAltitude = SettingsManager.FormatAltitude(currentFlightData.TakeOffAltitude + _currentDataPoint.RelativeAltitude);
@@ -197,8 +196,8 @@ namespace FlightReLive.UI.Inspector
                                 string formattedDistance = FormatDistance(distance);
 
                                 //Formatted GPS position
-                                RealmDoubleVector2 gpsData = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(poi.transform.position);
-                                string formattedPosition = $"{gpsData.X.ToString("F4", CultureInfo.InvariantCulture)}, {gpsData.Y.ToString("F5", CultureInfo.InvariantCulture)}";
+                                SerializedGPSCoordinate gpsData = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(poi.transform.position);
+                                string formattedPosition = $"{gpsData.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {gpsData.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
 
                                 //Name with distance
                                 string label = $"{poi.Text} ({formattedDistance})";
@@ -212,7 +211,7 @@ namespace FlightReLive.UI.Inspector
                                     FlightReLiveIcons.Maps,
                                     () =>
                                     {
-                                        OpenStreetMapHelper.OpenOpenStreetMapBrowser(new Vector2((float)gpsData.X, (float)gpsData.Y));
+                                        OpenStreetMapHelper.OpenOpenStreetMapBrowser(gpsData);
                                     },
                                     "Display on OpenStreetMap");
                             }

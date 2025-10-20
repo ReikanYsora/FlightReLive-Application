@@ -82,22 +82,22 @@ namespace FlightReLive.Core.FFmpeg
         /// </summary>
         protected void CheckFlightIsValid()
         {
-            if (DataContainer == null || DataContainer.DataPoints == null || DataContainer.DataPoints.Count == 0 || DataContainer.DataPoints.Where(x => x.Latitude == 0 || x.Longitude == 0).Any())
+            if (DataContainer == null || DataContainer.DataPoints == null || DataContainer.DataPoints.Count == 0 || DataContainer.DataPoints.Where(x => x.Coordinate.Latitude == 0 || x.Coordinate.Longitude == 0).Any())
             {
                 throw new Exception("Missing or zero GPS coordinates.");
             }
 
-            RealmDoubleVector2 gps = DataContainer.GetFlightGPSCenter();
+            SerializedGPSCoordinate gps = DataContainer.GetFlightGPSCenter();
 
-            if (gps == null || (gps.X == 0.0f && gps.Y == 0.0f))
+            if (gps == null || (gps.Latitude == 0.0f && gps.Longitude == 0.0f))
             {
                 throw new Exception("Center GPS coordinates calculation failed.");
             }
 
             bool hasValidPoint = DataContainer.DataPoints.Any(dp =>
-                (dp.Latitude != 0.0 || dp.Longitude != 0.0) &&
-                dp.Latitude >= -90 && dp.Latitude <= 90 &&
-                dp.Longitude >= -180 && dp.Longitude <= 180
+                (dp.Coordinate.Latitude != 0.0 || dp.Coordinate.Longitude != 0.0) &&
+                dp.Coordinate.Latitude >= -90 && dp.Coordinate.Latitude <= 90 &&
+                dp.Coordinate.Longitude >= -180 && dp.Coordinate.Longitude <= 180
             );
 
             if (!hasValidPoint)
@@ -113,7 +113,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns></returns>
         protected bool TakeOffPositionAvailable()
         {
-            if (DataContainer.FlightGPSCoordinates == null || DataContainer.FlightGPSCoordinates.X == 0 || DataContainer.FlightGPSCoordinates.Y == 0 || DataContainer.EstimateTakeOffPosition.X == 0 || DataContainer.EstimateTakeOffPosition.Y == 0 || DataContainer.EstimateTakeOffPosition == null)
+            if (DataContainer.FlightGPSCoordinates == null || DataContainer.FlightGPSCoordinates.Latitude == 0 || DataContainer.FlightGPSCoordinates.Longitude == 0 || DataContainer.EstimateTakeOffPosition.Latitude == 0 || DataContainer.EstimateTakeOffPosition.Longitude == 0 || DataContainer.EstimateTakeOffPosition == null)
             {
                 return false;
             }
@@ -139,28 +139,28 @@ namespace FlightReLive.Core.FFmpeg
         /// Estimate flight start position from GPS data
         /// </summary>
         /// <returns></returns>
-        protected RealmDoubleVector2 EstimateFlightStartFromGPS()
+        protected SerializedGPSCoordinate EstimateFlightStartFromGPS()
         {
-            List<RealmFlightPointItem> points = DataContainer.DataPoints.Where(p => p.Latitude != 0 && p.Longitude != 0 && p.Distance > 0).ToList();
+            List<SerializedFlightDataPoint> points = DataContainer.DataPoints.Where(p => p.Coordinate.Latitude != 0 && p.Coordinate.Longitude != 0 && p.Distance > 0).ToList();
 
             if (DataContainer.DataPoints.Count > 0 && points.Count < 3)
             {
-                return new RealmDoubleVector2(DataContainer.DataPoints[0].Latitude, DataContainer.DataPoints[0].Longitude);
+                return new SerializedGPSCoordinate(DataContainer.DataPoints[0].Coordinate.Latitude, DataContainer.DataPoints[0].Coordinate.Longitude);
             }
 
-            double originLat = points[0].Latitude;
-            double originLon = points[0].Longitude;
+            double originLat = points[0].Coordinate.Latitude;
+            double originLon = points[0].Coordinate.Longitude;
 
-            List<RealmDoubleVector2> gpsPoints = new List<RealmDoubleVector2>();
+            List<SerializedGPSCoordinate> gpsPoints = new List<SerializedGPSCoordinate>();
             List<double> distances = new List<double>();
 
-            foreach (RealmFlightPointItem p in points)
+            foreach (SerializedFlightDataPoint p in points)
             {
-                gpsPoints.Add(new RealmDoubleVector2(p.Latitude, p.Longitude));
+                gpsPoints.Add(new SerializedGPSCoordinate(p.Coordinate.Latitude, p.Coordinate.Longitude));
                 distances.Add(p.Distance);
             }
 
-            RealmDoubleVector2 estimatedGPS = EstimateGPSAdaptive(gpsPoints, distances);
+            SerializedGPSCoordinate estimatedGPS = EstimateGPSAdaptive(gpsPoints, distances);
 
             return estimatedGPS;
         }
@@ -171,16 +171,16 @@ namespace FlightReLive.Core.FFmpeg
         /// <param name="gpsPoints"></param>
         /// <param name="distances"></param>
         /// <returns></returns>
-        private RealmDoubleVector2 EstimateGPSAdaptive(List<RealmDoubleVector2> gpsPoints, List<double> distances)
+        private SerializedGPSCoordinate EstimateGPSAdaptive(List<SerializedGPSCoordinate> gpsPoints, List<double> distances)
         {
-            double latCenter = gpsPoints[0].X;
-            double lonCenter = gpsPoints[0].Y;
+            double latCenter = gpsPoints[0].Latitude;
+            double lonCenter = gpsPoints[0].Longitude;
 
             double step = 0.0001;
             int range = 50;
             int zoomLevels = 4;
 
-            RealmDoubleVector2 bestPoint = null;
+            SerializedGPSCoordinate bestPoint = null;
             double bestError = double.MaxValue;
 
             for (int zoom = 0; zoom < zoomLevels; zoom++)
@@ -195,21 +195,21 @@ namespace FlightReLive.Core.FFmpeg
                         double totalError = 0;
                         for (int k = 0; k < gpsPoints.Count; k++)
                         {
-                            double d = Haversine(lat, lon, gpsPoints[k].X, gpsPoints[k].Y);
+                            double d = Haversine(new SerializedGPSCoordinate(lat, lon), gpsPoints[k]);
                             totalError += Math.Abs(d - distances[k]);
                         }
 
                         if (totalError < bestError)
                         {
                             bestError = totalError;
-                            bestPoint = new RealmDoubleVector2(lat, lon);
+                            bestPoint = new SerializedGPSCoordinate(lat, lon);
                         }
                     }
                 }
 
                 //Zoom in
-                latCenter = bestPoint.X;
-                lonCenter = bestPoint.Y;
+                latCenter = bestPoint.Latitude;
+                lonCenter = bestPoint.Longitude;
                 step /= 2;
                 range = 20;
             }
@@ -225,13 +225,13 @@ namespace FlightReLive.Core.FFmpeg
         /// <param name="lat2"></param>
         /// <param name="lon2"></param>
         /// <returns></returns>
-        private static double Haversine(double lat1, double lon1, double lat2, double lon2)
+        private static double Haversine(SerializedGPSCoordinate coord1, SerializedGPSCoordinate coord2)
         {
             double R = 6371000;
-            double dLat = DegreesToRadians(lat2 - lat1);
-            double dLon = DegreesToRadians(lon2 - lon1);
+            double dLat = DegreesToRadians(coord2.Latitude - coord1.Latitude);
+            double dLon = DegreesToRadians(coord2.Longitude - coord1.Longitude);
             double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                       Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                       Math.Cos(DegreesToRadians(coord1.Latitude)) * Math.Cos(DegreesToRadians(coord2.Latitude)) *
                        Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
             double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
             return R * c;

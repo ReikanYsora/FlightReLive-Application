@@ -813,14 +813,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _windowName:
     _id: 12
-    _name: "\uE069  Library"
+    _name: "\uE09F  Library"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
   _size: {x: 0, y: 0}
   _position: {x: 0, y: 0}
   _forceCreateAloneOnAwake: 0
-  _thumbnailScale: 1
 --- !u!1 &468566122
 GameObject:
   m_ObjectHideFlags: 0

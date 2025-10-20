@@ -90,7 +90,7 @@ namespace FlightReLive.Core.FFmpeg
                             container.Height = height;
                         }
 
-                        if (double.TryParse(match.Groups[3].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double fps))
+                        if (float.TryParse(match.Groups[3].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out float fps))
                         {
                             container.Frequency = fps;
                         }

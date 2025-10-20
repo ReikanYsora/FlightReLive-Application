@@ -18,7 +18,7 @@ namespace FlightReLive.UI.FlightCharts
 
         public Vector2 TooltipSize { get; set; }
 
-        public RealmFlightPointItem FlightPoint { get; set; }
+        public FlightDataPoint FlightPoint { get; set; }
 
         public FlightChartStep(int index, string label, DateTime date, double chartElement)
         {

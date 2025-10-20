@@ -15,12 +15,10 @@ using Fu.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using ImGuiNET;
-using FlightReLive.UI.Helpers;
 
 namespace FlightReLive.Core.Loading
 {
@@ -50,14 +48,14 @@ namespace FlightReLive.Core.Loading
 
         internal bool IsLoaded { get; private set; }
 
-        internal RealmFlightItem CurrentFlightFile { get; private set; }
+        internal SerializedFlightData CurrentFlightFile { get; private set; }
 
         internal FlightData CurrentFlightData { get; private set; }
         #endregion
 
         #region EVENTS
-        internal event Action OnFlightStartLoading;
-        internal event Action OnFlightEndLoading;
+        internal event Action<SerializedFlightData> OnFlightStartLoading;
+        internal event Action<SerializedFlightData> OnFlightEndLoading;
         internal event Action OnFlightUnloaded;
         #endregion
 
@@ -96,14 +94,14 @@ namespace FlightReLive.Core.Loading
         /// Starts loading the scene for the given flight file.
         /// </summary>
         /// <param name="flightFile"></param>
-        internal async void StartLoadingScene(RealmFlightItem flightFile)
+        internal async void StartLoadingScene(SerializedFlightData flightFile)
         {
             await CancelLoading();
 
             _cancellationTokenSource = new CancellationTokenSource();
             CancellationToken token = _cancellationTokenSource.Token;
 
-            FlightData flightData = ConvertFileToFlight(flightFile);
+            FlightData flightData = ConvertRealmFlightDataToFlightData(flightFile);
             CurrentFlightFile = flightFile;
             CurrentFlightData = flightData;
 
@@ -119,7 +117,7 @@ namespace FlightReLive.Core.Loading
 
             DisplayLoading();
             IsLoading = true;
-            OnFlightStartLoading?.Invoke();
+            OnFlightStartLoading?.Invoke(flightFile);
             await Task.Delay(1000);
 
             try
@@ -211,7 +209,7 @@ namespace FlightReLive.Core.Loading
                 TimeBarManager.Instance.Load(flightData);
                 Fugui.CloseModal();
                 Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info, 3f);
-                OnFlightEndLoading?.Invoke();
+                OnFlightEndLoading?.Invoke(flightFile);
                 IsLoaded = true;
             }
             catch (OperationCanceledException)
@@ -233,8 +231,32 @@ namespace FlightReLive.Core.Loading
             await UnloadFlightDataInModules();
         }
 
-        internal static FlightData ConvertFileToFlight(RealmFlightItem file)
+        internal static FlightData ConvertRealmFlightDataToFlightData(SerializedFlightData file)
         {
+            List<FlightDataPoint> dataPoints = new List<FlightDataPoint>();
+
+            foreach (SerializedFlightDataPoint point in file.DataPoints)
+            {
+                dataPoints.Add(new FlightDataPoint
+                {
+                    Time = point.Time,
+                    TimeSpan = point.TimeSpan,
+                    Coordinate = point.Coordinate,
+                    Distance = point.Distance,
+                    RelativeAltitude = point.RelativeAltitude,
+                    AbsoluteAltitude = point.AbsoluteAltitude,
+                    HorizontalSpeed = point.HorizontalSpeed,
+                    VerticalSpeed = point.VerticalSpeed,
+                    Aperture = point.Aperture,
+                    ShutterSpeed = point.ShutterSpeed,
+                    ISO = point.ISO,
+                    Exposure = point.Exposure,
+                    DigitalZoom = point.DigitalZoom,
+                    FocalLength = point.FocalLength,
+                    ColorMode = point.ColorMode
+                });
+            }
+
             FlightData flightData = new FlightData
             {
                 Name = file.Name,
@@ -243,34 +265,33 @@ namespace FlightReLive.Core.Loading
                 Frequency = file.Frequency,
                 Date = file.CreationDate,
                 Length = file.Duration,
-                Points = file.DataPoints.ToList(),
+                Points = dataPoints,
                 HasTakeOffPosition = file.HasTakeOffPosition,
             };
 
             if (file.HasTakeOffPosition)
             {
-                flightData.GPSOrigin = new RealmDoubleVector2(file.FlightGPSCoordinates.X, file.FlightGPSCoordinates.Y);
+                flightData.GPSOrigin = file.FlightGPSCoordinates;
             }
             else
             {
-                RealmFlightPointItem firstPoint = file.DataPoints.First();
-                flightData.GPSOrigin = new RealmDoubleVector2(firstPoint.Latitude, firstPoint.Longitude);
+                SerializedFlightDataPoint firstPoint = file.DataPoints.First();
+                flightData.GPSOrigin = firstPoint.Coordinate;
             }
 
             flightData.InitializeMapDefinition();
             flightData.EstimateTakeOffPosition = file.EstimateTakeOffPosition;
 
-
-            IEnumerable<(double Latitude, double Longitude)> allPoints;
+            IEnumerable<SerializedGPSCoordinate> allPoints;
             if (file.HasTakeOffPosition)
             {
                 allPoints = file.DataPoints
-                    .Select(p => (p.Latitude, p.Longitude))
-                    .Append((file.EstimateTakeOffPosition.X, file.EstimateTakeOffPosition.Y));
+                    .Select(p => (p.Coordinate))
+                    .Append((file.EstimateTakeOffPosition));
             }
             else
             {
-                allPoints = file.DataPoints.Select(p => (p.Latitude, p.Longitude));
+                allPoints = file.DataPoints.Select(p => p.Coordinate);
             }
 
             double minLat = allPoints.Min(p => p.Latitude);
@@ -408,7 +429,7 @@ namespace FlightReLive.Core.Loading
         /// Callback when a flight file is selected in the workspace.
         /// </summary>
         /// <param name="flightFile"></param>
-        private async void OnFlightFileSelected(RealmFlightItem flightFile)
+        private async void OnFlightFileSelected(SerializedFlightData flightFile)
         {
             if (CurrentFlightData != null)
             {

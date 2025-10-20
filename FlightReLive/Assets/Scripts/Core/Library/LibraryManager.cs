@@ -10,35 +10,37 @@ using UnityEngine;
 using Fu;
 using Fu.Framework;
 using System.Reflection;
+using FlightReLive.Core.Loading;
 
 namespace FlightReLive.Core.Library
 {
+    /// <summary>
+    /// Centralized controller for library operations:
+    /// importing, displaying, and selecting flights.
+    /// Reacts automatically to DatabaseManager changes.
+    /// </summary>
     public class LibraryManager : MonoBehaviour
     {
         #region ATTRIBUTES
         private readonly ConcurrentDictionary<string, byte> _inFlightOps = new ConcurrentDictionary<string, byte>();
         private CancellationTokenSource _importCancellationTokenSource;
-        private float _smoothProgress = 0f;
+        private float _smoothProgress;
         private bool _importCompleted;
         private int _importTotal;
         private int _importProcessed;
         private int _importSuccess;
         private int _importErrors;
         private string _importCurrentFile = "";
-        private Dictionary<string, string> _importErrorList = new();
+        private readonly Dictionary<string, string> _importErrorList = new();
         #endregion
 
         #region PROPERTIES
         internal static LibraryManager Instance { get; private set; }
-
-        internal List<RealmFlightItem> LoadedFlights { get; private set; }
+        internal List<SerializedFlightData> LoadedFlights { get; private set; } = new();
         #endregion
 
         #region EVENTS
-        internal event Action OnLibraryStartLoading;
-        internal event Action<float> OnLibraryLoading;
-        internal event Action OnLibraryEndLoading;
-        internal event Action<RealmFlightItem> OnFlightFileSelected;
+        internal event Action<SerializedFlightData> OnFlightFileSelected;
         #endregion
 
         #region UNITY METHODS
@@ -51,58 +53,71 @@ namespace FlightReLive.Core.Library
             }
 
             Instance = this;
-            LoadedFlights = new List<RealmFlightItem>();
+        }
+
+        private void Start()
+        {
+            DatabaseManager.OnFlightsChanged += OnDatabaseChanged;
+
+            //Load initial state
+            RefreshLoadedFlights();
+        }
+
+        private void OnDestroy()
+        {
+            DatabaseManager.OnFlightsChanged -= OnDatabaseChanged;
         }
         #endregion
 
         #region METHODS
-        internal void SelectFlight(RealmFlightItem file)
+        /// <summary>
+        /// Refresh list of current flights library
+        /// </summary>
+        private void RefreshLoadedFlights()
         {
-            if (file == null)
-                return;
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                LoadedFlights = DatabaseManager.GetAllFlights();
 
-            OnFlightFileSelected?.Invoke(file);
+                for (int i = 0; i < LoadedFlights.Count; i++)
+                {
+                    LoadedFlights[i].DecodeTextures();
+                }
+
+                Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
+            });
         }
 
-        internal void LoadFlightsFromDatabase()
+        /// <summary>
+        /// Select a flight and raise the event (loadingManager is listening to this event)
+        /// </summary>
+        /// <param name="file"></param>
+        internal void SelectFlight(SerializedFlightData file)
         {
-            OnLibraryStartLoading?.Invoke();
-            LoadedFlights = DatabaseManager.LoadFlightItems();
-            int total = LoadedFlights.Count;
-
-            if (total == 0)
+            if (file == null)
             {
-                OnLibraryLoading?.Invoke(1f);
-                OnLibraryEndLoading?.Invoke();
                 return;
             }
 
-            for (int i = 0; i < total; i++)
-            {
-                LoadedFlights[i].DecodeTextures();
-                float progress = (i + 1f) / total;
-                OnLibraryLoading?.Invoke(progress);
-            }
-
-            OnLibraryEndLoading?.Invoke();
+            OnFlightFileSelected?.Invoke(file);
         }
 
         /// <summary>
         /// Build a FlightFile by extracting metadata and flight data with FFmpeg.
         /// </summary>
-        private async Task BuildFlightFileFromVideo(string fullVideoPath)
+        private void BuildFlightFileFromVideo(string fullVideoPath)
         {
+            if (string.IsNullOrEmpty(fullVideoPath) || !File.Exists(fullVideoPath))
+            {
+                return;
+            }
+
             try
             {
-                if (string.IsNullOrEmpty(fullVideoPath) || !File.Exists(fullVideoPath))
-                {
-                    return;
-                }
-
                 FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
                 FFmpegHelper.ExtractVideoMetadata(fullVideoPath, container);
 
-                RealmFlightItem tempFile = new RealmFlightItem
+                SerializedFlightData tempFile = new SerializedFlightData
                 {
                     Name = container.Name,
                     Width = container.Width,
@@ -115,38 +130,38 @@ namespace FlightReLive.Core.Library
                     Duration = container.Duration
                 };
 
-                foreach (RealmFlightPointItem item in container.DataPoints)
+                tempFile.ComputeUniqueKey();
+
+                foreach (SerializedFlightDataPoint item in container.DataPoints)
                 {
                     tempFile.DataPoints.Add(item);
                 }
 
-                if (container.Thumbnail != null && container.Thumbnail.Length > 0)
+                if (container.Thumbnail is { Length: > 0 })
                 {
                     tempFile.ThumbnailData = container.Thumbnail;
                 }
 
-                await DatabaseManager.SaveFlightItemAsync(tempFile);
+                UnityMainThreadDispatcher.AddActionInMainThread(() =>
+                {
+                    DatabaseManager.SaveFlight(tempFile);
+                });
             }
             catch (Exception ex)
             {
-                throw ex;
+                Debug.LogError($"[LibraryManager] Failed to build flight file: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Clears all flights from Realm and refreshes the library view.
+        /// Clears all flights from Realm.
         /// </summary>
-        internal async void ClearLibrary()
+        internal void ClearLibrary()
         {
             try
             {
-                await UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
-                {
-                    List<RealmFlightItem> detachedFlights = new List<RealmFlightItem>(LoadedFlights);
-                    LoadedFlights.Clear();
-                    await DatabaseManager.ClearAllFlightsAsync();
-                    Fugui.Notify("Successful operation", "The flight library has been cleared successfully.", StateType.Info, 3f);
-                });
+                DatabaseManager.ClearAllFlights();
+                Fugui.Notify("Successful operation", "The flight library has been cleared successfully.", StateType.Info, 3f);
             }
             catch (Exception ex)
             {
@@ -176,57 +191,36 @@ namespace FlightReLive.Core.Library
             _importCurrentFile = "";
             _importErrorList.Clear();
 
-            OnLibraryStartLoading?.Invoke();
-            OnLibraryLoading?.Invoke(0f);
-
-            //Display import modal
-            await UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
+            // Display progress modal
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
                 Fugui.ShowModal("Importing flight videos", (layout) =>
                 {
-                    float scale = Fugui.CurrentContext.Scale;
-                    float paddingX = 10f;
-                    layout.Spacing();
                     float targetProgress = _importTotal > 0 ? (float)_importProcessed / _importTotal : 0f;
                     _smoothProgress = Mathf.Lerp(_smoothProgress, targetProgress, 10f * Time.deltaTime);
                     float progress = _smoothProgress;
+
                     layout.CenterNextItemH(400f);
                     layout.ProgressBar("##importProgress", progress, new FuElementSize(400f, 6f), ProgressBarTextPosition.None);
                     layout.Spacing();
 
                     layout.Collapsable("Import details", () =>
                     {
-                        using (FuGrid grid = new FuGrid("importDetailsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground, 2, 2, paddingX))
+                        using (FuGrid grid = new FuGrid("importDetailsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground))
                         {
                             grid.Text("Current file");
                             grid.FramedText($"{_importCurrentFile}");
 
-                            grid.Text("Files processed");
+                            grid.Text("Processed");
                             grid.FramedText($"{_importProcessed} / {_importTotal}");
 
-                            grid.Text("Successful imports");
+                            grid.Text("Success");
                             grid.FramedText($"{_importSuccess}");
 
-                            grid.Text("Failed imports");
+                            grid.Text("Errors");
                             grid.FramedText($"{_importErrors}");
                         }
-
                     }, FuButtonStyle.Collapsable, defaultOpen: true);
-
-                    if (_importErrorList.Count > 0)
-                    {
-                        layout.Collapsable("Errors log", () =>
-                        {
-                            using (FuGrid grid = new FuGrid("importErrorsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground, 2, 2, paddingX))
-                            {
-                                foreach (KeyValuePair<string, string> fileToErrors in _importErrorList)
-                                {
-                                    grid.Text($"{Path.GetFileName(fileToErrors.Key)}");
-                                    grid.FramedText($"{fileToErrors.Value}");
-                                }
-                            }
-                        }, FuButtonStyle.Danger, defaultOpen: true);
-                    }
                 },
                 FuModalSize.Medium,
                 new FuModalButton("Cancel import", () =>
@@ -244,7 +238,7 @@ namespace FlightReLive.Core.Library
                 return Task.CompletedTask;
             });
 
-            await Task.Run(async () =>
+            await Task.Run(() =>
             {
                 foreach (string path in paths)
                 {
@@ -263,8 +257,7 @@ namespace FlightReLive.Core.Library
                             continue;
                         }
 
-                        await BuildFlightFileFromVideo(path);
-                        LoadFlightsFromDatabase();
+                        BuildFlightFileFromVideo(path);
                         _importSuccess++;
                     }
                     catch (Exception ex)
@@ -275,20 +268,14 @@ namespace FlightReLive.Core.Library
                     finally
                     {
                         _inFlightOps.TryRemove(path, out _);
-                        await Task.Yield();
                     }
                 }
             });
 
             _importCompleted = true;
 
-            await UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
+            await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {
-                OnLibraryLoading?.Invoke(1f);
-                OnLibraryEndLoading?.Invoke();
-
-                Fugui.Notify("Import finished", $"Imported {_importSuccess}/{_importTotal} flights ({_importErrors} failed).", _importErrors > 0 ? StateType.Warning : StateType.Success, 4f);
-
                 FieldInfo modalButtonsField = typeof(Fugui).GetField("_modalButtons", BindingFlags.NonPublic | BindingFlags.Static);
 
                 if (modalButtonsField?.GetValue(null) is FuModalButton[] buttons && buttons.Length > 0)
@@ -297,7 +284,38 @@ namespace FlightReLive.Core.Library
                     buttons[0].SetStyle(FuButtonStyle.Default);
                 }
 
-                LoadFlightsFromDatabase();
+                return Task.CompletedTask;
+            });
+        }
+
+        /// <summary>
+        /// Delete a flight from library
+        /// </summary>
+        /// <param name="flight"></param>
+        internal void DeleteFlightItem(SerializedFlightData flight)
+        {
+            if (flight == null)
+            {
+                return;
+            }
+
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                DatabaseManager.DeleteFlight(flight.UniqueKey);
+            });
+        }
+        #endregion
+
+
+        #region CALLBACKS
+        /// <summary>
+        /// Triggered whenever the Realm data changes (add/update/delete).
+        /// </summary>
+        private void OnDatabaseChanged()
+        {
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                RefreshLoadedFlights();
             });
         }
         #endregion

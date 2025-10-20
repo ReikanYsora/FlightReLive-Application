@@ -123,9 +123,6 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
-
-            //Close database
-            DatabaseManager.Close();
         }
         #endregion
 

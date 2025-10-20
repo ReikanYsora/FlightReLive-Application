@@ -328,7 +328,7 @@ namespace FlightReLive.Core.Cameras
 
                         if (LoadingManager.Instance.CurrentFlightData != null)
                         {
-                            RealmDoubleVector2 data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
+                            SerializedGPSCoordinate data = LoadingManager.Instance.CurrentFlightData.ConvertWorldToGPSPosition(newPivot);
                             _pivotPointPOI = POIManager.Instance.AddPOI($"Custom point", newPivot, Color.blueViolet, 50f);
                         }
                     }
@@ -479,7 +479,7 @@ namespace FlightReLive.Core.Cameras
             _panSpeed = SettingsManager.CurrentSettings.PanSpeed;
         }
 
-        private void OnFlightEndLoading()
+        private void OnFlightEndLoading(SerializedFlightData flight)
         {
             RecenterCamera();
 

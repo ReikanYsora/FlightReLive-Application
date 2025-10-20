@@ -118,7 +118,7 @@ namespace FlightReLive.UI.FlightCharts
             TimeBarManager.Instance.OnProgressChanged += OnProgressChanged;
         }
 
-        private void OnProgressChanged(float ratio, int index, RealmFlightPointItem point)
+        private void OnProgressChanged(float ratio, int index, FlightDataPoint point)
         {
             if (Steps == null || Steps.Count == 0 || point == null)
             {
@@ -167,7 +167,7 @@ namespace FlightReLive.UI.FlightCharts
             return Math.Clamp(index, 0, stepCount - 1);
         }
 
-        private float GetRatioFromDataPoint(RealmFlightPointItem point)
+        private float GetRatioFromDataPoint(FlightDataPoint point)
         {
             double videoDuration = TimeBarManager.Instance.Length;
             double timeSeconds = point.TimeSpan.TotalSeconds;
@@ -176,7 +176,7 @@ namespace FlightReLive.UI.FlightCharts
             return Math.Clamp(ratio, 0f, 1f);
         }
 
-        private long GetFrameFromDataPoint(RealmFlightPointItem point)
+        private long GetFrameFromDataPoint(FlightDataPoint point)
         {
             float ratio = GetRatioFromDataPoint(point);
             long totalFrames = TimeBarManager.Instance.TotalFrameCount;
@@ -333,7 +333,7 @@ namespace FlightReLive.UI.FlightCharts
                 _currentStepIndex = stepIndex;
 
                 FlightChartStep selectedStep = Steps[stepIndex];
-                RealmFlightPointItem point = selectedStep.FlightPoint;
+                FlightDataPoint point = selectedStep.FlightPoint;
 
                 _currentRatio = GetRatioFromDataPoint(point);
                 OnStepChanged?.Invoke(selectedStep);
@@ -366,7 +366,6 @@ namespace FlightReLive.UI.FlightCharts
 
             float chartTopY = position.y;
             float chartBottomY = position.y + size.y;
-            float chartHeight = (size.y - 10f) * 2f / 3f;
             float intervalWidth = size.x / (float)(stepCount - 1);
             bool isHoveringPoint = false;
             float circleRadius = CHARTS_CIRCLE_RADIUS * Fugui.CurrentContext.Scale;

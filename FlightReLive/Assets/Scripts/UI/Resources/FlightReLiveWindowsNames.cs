@@ -10,7 +10,7 @@ public class FlightReLiveWindowsNames : FuSystemWindowsNames
 
     public static FuWindowName ReLiveView { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _ReLiveView; }
 
-    private static FuWindowName _Library = new FuWindowName(12, FlightReLiveIcons.Workspace + "  Library", true, -1);
+    private static FuWindowName _Library = new FuWindowName(12, FlightReLiveIcons.Library + "  Library", true, -1);
 
     public static FuWindowName Library { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Library; }
 

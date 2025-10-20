@@ -186,7 +186,7 @@ namespace FlightReLive.Core.OpenVectorTile
                     continue;
                 }
 
-                RealmDoubleVector2 baryGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
+                SerializedGPSCoordinate baryGPS = ComputeRingBarycenterGPS(ring, tile.X, tile.Y, MapTools.ZOOM_LEVEL_OPENTILEMAP);
                 float terrainAltitude = flight.GetAltitudeAtPosition(tile, baryGPS);
                 Vector3 position = new(center.x, terrainAltitude * flight.WorldScale, center.y);
                 float estimatedHeight = EstimateHeightFromFootprint(contour, flight);
@@ -404,7 +404,7 @@ namespace FlightReLive.Core.OpenVectorTile
         /// <param name="tileY"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        private RealmDoubleVector2 ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY, int zoom)
+        private SerializedGPSCoordinate ComputeRingBarycenterGPS(List<Point2d<int>> ring, int tileX, int tileY, int zoom)
         {
             double lonW = (double)tileX / (1 << zoom) * 360.0 - 180.0;
             double lonE = (double)(tileX + 1) / (1 << zoom) * 360.0 - 180.0;
@@ -432,7 +432,7 @@ namespace FlightReLive.Core.OpenVectorTile
                 count++;
             }
 
-            return count == 0 ? new RealmDoubleVector2(0.0, 0.0) : new RealmDoubleVector2(sumLat / count, sumLon / count);
+            return count == 0 ? new SerializedGPSCoordinate(0f, 0f) : new SerializedGPSCoordinate(sumLat / count, sumLon / count);
         }
 
         /// <summary>

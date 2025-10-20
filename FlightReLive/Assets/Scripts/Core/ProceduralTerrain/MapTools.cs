@@ -127,12 +127,12 @@ namespace FlightReLive.Core.ProceduralTerrain
             return metersPerTile;
         }
 
-        internal static RealmDoubleVector2 GetCenterOfBoundingBox(GPSBoundingBox bbox)
+        internal static SerializedGPSCoordinate GetCenterOfBoundingBox(GPSBoundingBox bbox)
         {
             double centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2.0;
             double centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2.0;
 
-            return new RealmDoubleVector2(centerLatitude, centerLongitude);
+            return new SerializedGPSCoordinate(centerLatitude, centerLongitude);
         }
         #endregion
     }

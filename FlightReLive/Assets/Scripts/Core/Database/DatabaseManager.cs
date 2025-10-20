@@ -1,87 +1,52 @@
+using MessagePack;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using FlightReLive.Core.FFmpeg;
-using Realms;
+using System.IO;
+using UnityEngine;
 
 namespace FlightReLive.Core.Database
 {
     /// <summary>
-    /// Centralized manager for all Realm database operations.
-    /// Handles FlightItem storage, retrieval, and lifecycle management.
+    /// Centralized manager for all flight storage operations using MessagePack.
+    /// Replaces the Realm-based implementation with a file-based system.
     /// </summary>
     public static class DatabaseManager
     {
         #region CONSTANTS
-        private const string REALM_DATABASE_NAME = "FlightReLive.realm";
+        private const string LIBRARY_FOLDER_NAME = "Library";
+        private const string FILE_EXTENSION = ".msgpack";
         #endregion
 
         #region ATTRIBUTES
-        private static Realm _realm;
+        private static string _libraryPath;
+        private static readonly object _fileLock = new object();
+        #endregion
+
+        #region EVENTS
+        internal static event Action OnFlightsChanged;
         #endregion
 
         #region INITIALIZATION
-        /// <summary>
-        /// Initializes the Realm instance if not already done (async and thread-safe).
-        /// </summary>
         internal static void Initialize()
         {
-            if (_realm != null)
-            {
-                return;
-            }
+            _libraryPath = Path.Combine(Application.persistentDataPath, LIBRARY_FOLDER_NAME);
 
-            try
+            if (!Directory.Exists(_libraryPath))
             {
-                RealmConfiguration config = new RealmConfiguration(REALM_DATABASE_NAME)
-                {
-                    ShouldDeleteIfMigrationNeeded = false,
-                    SchemaVersion = 1
-                };
-
-                _realm = Realm.GetInstance(config);
+                Directory.CreateDirectory(_libraryPath);
             }
-            catch (Exception) { }
+            else
+            {
+                Debug.Log($"[DatabaseManager] Using existing library folder: {_libraryPath}");
+            }
         }
         #endregion
 
-        #region METHODS
-        internal static void ImportFlight(string[] videoPaths)
-        {
-            foreach (string videoPath in videoPaths)
-            {
-                FFmpegHelper.ExtractFlightData(videoPath);
-            }
-        }
-
+        #region SAVE METHODS
         /// <summary>
-        /// Loads all stored flight items from Realm.
+        /// Saves or updates a single flight file.
         /// </summary>
-        /// <returns>List of all RealmFlightItem objects stored in the local Realm database.</returns>
-        internal static List<RealmFlightItem> LoadFlightItems()
-        {
-            try
-            {
-                if (_realm == null)
-                {
-                    return new List<RealmFlightItem>();
-                }
-
-                IQueryable<RealmFlightItem> query = _realm.All<RealmFlightItem>();
-                return query.ToList();
-            }
-            catch (Exception)
-            {
-                return new List<RealmFlightItem>();
-            }
-        }
-
-        /// <summary>
-        /// Saves (or updates) a flight item in Realm.
-        /// If an existing flight with the same Id exists, it will be updated.
-        /// </summary>
-        internal static async Task SaveFlightItemAsync(RealmFlightItem item)
+        internal static void SaveFlight(SerializedFlightData item)
         {
             if (item == null)
             {
@@ -90,81 +55,158 @@ namespace FlightReLive.Core.Database
 
             try
             {
-                await UnityMainThreadDispatcher.AwaitOnMainThread(async () =>
+                if (string.IsNullOrEmpty(item.UniqueKey))
                 {
-                    _realm.Write(() => { _realm.Add(item, update: true); });
-                    return Task.CompletedTask;
-                });
-            }
-            catch (Exception) { }
-        }
-
-        /// <summary>
-        /// Returns the number of stored flight items.
-        /// </summary>
-        internal static int FlightItemsCount()
-        {
-            try
-            {
-                return _realm?.All<RealmFlightItem>().Count() ?? 0;
-            }
-            catch (Exception)
-            {
-                return 0;
-            }
-        }
-
-        /// <summary>
-        /// Deletes a flight from Realm by its Id.
-        /// </summary>
-        internal static async Task<bool> DeleteFlightItemAsync(string id)
-        {
-            try
-            {
-                RealmFlightItem toDelete = _realm.Find<RealmFlightItem>(id);
-                if (toDelete == null)
-                {
-                    return false;
+                    item.ComputeUniqueKey();
                 }
 
-                await _realm.WriteAsync(() =>
-                {
-                    _realm.Remove(toDelete);
-                });
+                string filePath = GetFlightFilePath(item.UniqueKey);
 
-                return true;
+                // Encode texture if needed
+                item.EncodeTextures();
+
+                lock (_fileLock)
+                {
+                    byte[] bytes = MessagePackSerializer.Serialize(item);
+                    File.WriteAllBytes(filePath, bytes);
+                }
+
+                OnFlightsChanged?.Invoke();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                Debug.LogError($"[DatabaseManager] SaveFlight failed: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Clears all stored flights.
+        /// Saves or updates multiple flights at once.
         /// </summary>
-        internal static async Task ClearAllFlightsAsync()
+        internal static void SaveFlights(IEnumerable<SerializedFlightData> items)
+        {
+            if (items == null)
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (SerializedFlightData item in items)
+                {
+                    SaveFlight(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DatabaseManager] SaveFlights failed: {ex.Message}");
+            }
+        }
+        #endregion
+
+        #region LOAD METHODS
+        /// <summary>
+        /// Loads all stored flights from disk.
+        /// </summary>
+        internal static List<SerializedFlightData> GetAllFlights()
+        {
+            List<SerializedFlightData> flights = new List<SerializedFlightData>();
+
+            try
+            {
+                if (!Directory.Exists(_libraryPath))
+                {
+                    Directory.CreateDirectory(_libraryPath);
+                    return flights;
+                }
+
+                string[] files = Directory.GetFiles(_libraryPath, "*" + FILE_EXTENSION);
+
+                foreach (string file in files)
+                {
+                    try
+                    {
+                        byte[] data = File.ReadAllBytes(file);
+                        SerializedFlightData flight = MessagePackSerializer.Deserialize<SerializedFlightData>(data);
+                        flights.Add(flight);
+                    }
+                    catch (Exception innerEx)
+                    {
+                        Debug.LogWarning($"[DatabaseManager] Failed to load flight {Path.GetFileName(file)}: {innerEx.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DatabaseManager] GetAllFlights failed: {ex.Message}");
+            }
+
+            return flights;
+        }
+        #endregion
+
+        #region DELETE METHODS
+        /// <summary>
+        /// Deletes a single flight by unique ID or key.
+        /// </summary>
+        internal static void DeleteFlight(string uniqueKey)
         {
             try
             {
-                await _realm.WriteAsync(() =>
+                string filePath = GetFlightFilePath(uniqueKey);
+                if (File.Exists(filePath))
                 {
-                    _realm.RemoveAll<RealmFlightItem>();
-                });
+                    File.Delete(filePath);
+                    OnFlightsChanged?.Invoke();
+                }
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DatabaseManager] DeleteFlight failed: {ex.Message}");
+            }
         }
 
         /// <summary>
-        /// Closes the Realm database safely (e.g. on app quit).
+        /// Deletes multiple flights by their unique keys.
         /// </summary>
-        internal static void Close()
+        internal static void DeleteFlights(IEnumerable<string> uniqueKeys)
         {
-            if (_realm != null)
+            if (uniqueKeys == null)
             {
-                _realm.Dispose();
-                _realm = null;
+                return;
             }
+
+            foreach (string key in uniqueKeys)
+            {
+                DeleteFlight(key);
+            }
+        }
+
+        /// <summary>
+        /// Clears the entire library.
+        /// </summary>
+        internal static void ClearAllFlights()
+        {
+            try
+            {
+                if (Directory.Exists(_libraryPath))
+                {
+                    Directory.Delete(_libraryPath, true);
+                }
+
+                Directory.CreateDirectory(_libraryPath);
+                OnFlightsChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DatabaseManager] ClearAllFlights failed: {ex.Message}");
+            }
+        }
+        #endregion
+
+        #region UTILS
+        private static string GetFlightFilePath(string uniqueKey)
+        {
+            return Path.Combine(_libraryPath, $"{uniqueKey}{FILE_EXTENSION}");
         }
         #endregion
     }

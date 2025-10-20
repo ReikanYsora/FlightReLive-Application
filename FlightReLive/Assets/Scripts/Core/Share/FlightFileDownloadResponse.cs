@@ -12,7 +12,7 @@ namespace FlightReLive.Core.Share
 
         public int Height { get; set; }
 
-        public double Frequency { get; set; }
+        public float Frequency { get; set; }
 
         public long DurationTicks { get; set; }
 
@@ -22,9 +22,9 @@ namespace FlightReLive.Core.Share
 
         public byte[] ThumbnailData { get; set; }
 
-        public double? TakeOffLatitude { get; set; }
+        public float? TakeOffLatitude { get; set; }
 
-        public double? TakeOffLongitude { get; set; }
+        public float? TakeOffLongitude { get; set; }
 
         public float? FlightGPSX { get; set; }
 

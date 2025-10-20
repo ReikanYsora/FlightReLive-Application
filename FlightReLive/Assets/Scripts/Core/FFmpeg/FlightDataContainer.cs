@@ -1,5 +1,4 @@
 using FlightReLive.Core.Database;
-using MessagePack;
 using System;
 using System.Collections.Generic;
 
@@ -17,15 +16,15 @@ namespace FlightReLive.Core.FFmpeg
 
         public int Height { get; set; }
 
-        public double Frequency { get; set; }
+        public float Frequency { get; set; }
 
         public DateTime CreationDate { get; set; }
 
-        public RealmDoubleVector2 EstimateTakeOffPosition { get; set; }
+        public SerializedGPSCoordinate EstimateTakeOffPosition { get; set; }
 
-        public List<RealmFlightPointItem> DataPoints { get; set; }
+        public List<SerializedFlightDataPoint> DataPoints { get; set; }
 
-        public RealmDoubleVector2 FlightGPSCoordinates { get; set; }
+        public SerializedGPSCoordinate FlightGPSCoordinates { get; set; }
 
         public byte[] Thumbnail { get; set; }
 
@@ -36,17 +35,17 @@ namespace FlightReLive.Core.FFmpeg
         #region CONSTRUCTOR
         public FlightDataContainer()
         {
-            DataPoints = new List<RealmFlightPointItem>();
+            DataPoints = new List<SerializedFlightDataPoint>();
         }
         #endregion
 
         #region METHODS
 
-        public RealmDoubleVector2 GetFlightGPSCenter()
+        public SerializedGPSCoordinate GetFlightGPSCenter()
         {
             if (DataPoints == null || DataPoints.Count == 0)
             {
-                return new RealmDoubleVector2(0f, 0f);
+                return new SerializedGPSCoordinate(0f, 0f);
             }
 
             double minLat = double.MaxValue;
@@ -56,31 +55,31 @@ namespace FlightReLive.Core.FFmpeg
 
             foreach (var point in DataPoints)
             {
-                if (point.Latitude < minLat)
+                if (point.Coordinate.Latitude < minLat)
                 {
-                    minLat = point.Latitude;
+                    minLat = point.Coordinate.Latitude;
                 }
 
-                if (point.Latitude > maxLat)
+                if (point.Coordinate.Latitude > maxLat)
                 {
-                    maxLat = point.Latitude;
+                    maxLat = point.Coordinate.Latitude;
                 }
 
-                if (point.Longitude < minLon)
+                if (point.Coordinate.Longitude < minLon)
                 {
-                    minLon = point.Longitude;
+                    minLon = point.Coordinate.Longitude;
                 }
 
-                if (point.Longitude > maxLon)
+                if (point.Coordinate.Longitude > maxLon)
                 {
-                    maxLon = point.Longitude;
+                    maxLon = point.Coordinate.Longitude;
                 }
             }
 
             double centerLat = (minLat + maxLat) / 2.0;
             double centerLon = (minLon + maxLon) / 2.0;
 
-            return new RealmDoubleVector2(centerLat, centerLon);
+            return new SerializedGPSCoordinate(centerLat, centerLon);
         }
         #endregion
     }

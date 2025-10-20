@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using UnityEngine;
+using FlightReLive.Core.Database;
 
 namespace FlightReLive.Core.Pipeline.API
 {
@@ -11,10 +11,10 @@ namespace FlightReLive.Core.Pipeline.API
         /// <summary>
         /// Open OpenStreetMap in the browser centered on a single GPS coordinate.
         /// </summary>
-        internal static void OpenOpenStreetMapBrowser(Vector2 gpsCoord, int zoomLevel = 14)
+        internal static void OpenOpenStreetMapBrowser(SerializedGPSCoordinate gpsCoord, int zoomLevel = 14)
         {
-            string latitude = gpsCoord.x.ToString(CultureInfo.InvariantCulture);
-            string longitude = gpsCoord.y.ToString(CultureInfo.InvariantCulture);
+            string latitude = gpsCoord.Latitude.ToString(CultureInfo.InvariantCulture);
+            string longitude = gpsCoord.Longitude.ToString(CultureInfo.InvariantCulture);
             string fullUrl = $"https://www.openstreetmap.org/?mlat={latitude}&mlon={longitude}#map={zoomLevel}/{latitude}/{longitude}";
 
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
@@ -30,44 +30,44 @@ namespace FlightReLive.Core.Pipeline.API
         /// Open OpenStreetMap centered on the bounding box of all given GPS coordinates.
         /// Each Vector2 is (X = Latitude, Y = Longitude).
         /// </summary>
-        internal static void OpenOpenStreetMapBrowser(List<Vector2> gpsPoints, int zoomLevel = 10)
+        internal static void OpenOpenStreetMapBrowser(List<SerializedGPSCoordinate> gpsPoints, int zoomLevel = 10)
         {
             if (gpsPoints == null || gpsPoints.Count == 0)
             {
                 return;
             }
 
-            float minLat = float.MaxValue;
-            float maxLat = float.MinValue;
-            float minLon = float.MaxValue;
-            float maxLon = float.MinValue;
+            double minLat = double.MaxValue;
+            double maxLat = double.MinValue;
+            double minLon = double.MaxValue;
+            double maxLon = double.MinValue;
 
-            foreach (Vector2 point in gpsPoints)
+            foreach (SerializedGPSCoordinate point in gpsPoints)
             {
-                if (point.x < minLat)
+                if (point.Latitude < minLat)
                 {
-                    minLat = point.x;
+                    minLat = point.Latitude;
                 }
 
-                if (point.x > maxLat)
+                if (point.Latitude > maxLat)
                 {
-                    maxLat = point.x;
+                    maxLat = point.Latitude;
                 }
 
-                if (point.y < minLon)
+                if (point.Longitude < minLon)
                 {
-                    minLon = point.y;
+                    minLon = point.Longitude;
                 }
 
-                if (point.y > maxLon)
+                if (point.Longitude > maxLon)
                 {
-                    maxLon = point.y;
+                    maxLon = point.Longitude;
                 }
             }
 
             //Bounding box central point
-            float centerLat = (minLat + maxLat) / 2f;
-            float centerLon = (minLon + maxLon) / 2f;
+            double centerLat = (minLat + maxLat) / 2f;
+            double centerLon = (minLon + maxLon) / 2f;
 
             string latitude = centerLat.ToString(CultureInfo.InvariantCulture);
             string longitude = centerLon.ToString(CultureInfo.InvariantCulture);

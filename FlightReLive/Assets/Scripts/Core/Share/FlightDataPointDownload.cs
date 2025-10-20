@@ -23,18 +23,18 @@ namespace FlightReLive.Core.Share
 
         public string ColorMode { get; set; }
 
-        public double Longitude { get; set; }
+        public float Longitude { get; set; }
 
-        public double Latitude { get; set; }
+        public float Latitude { get; set; }
 
-        public double Distance { get; set; }
+        public float Distance { get; set; }
 
-        public double RelativeAltitude { get; set; }
+        public float RelativeAltitude { get; set; }
 
-        public double AbsoluteAltitude { get; set; }
+        public float AbsoluteAltitude { get; set; }
 
-        public double HorizontalSpeed { get; set; }
+        public float HorizontalSpeed { get; set; }
 
-        public double VerticalSpeed { get; set; }
+        public float VerticalSpeed { get; set; }
     }
 }

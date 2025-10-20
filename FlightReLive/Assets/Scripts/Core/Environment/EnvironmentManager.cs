@@ -244,8 +244,8 @@ namespace FlightReLive.Core.Environment
 
                 _flightTimeUTC = flightUtc;
                 _sceneTimeUTC = flightUtc;
-                _latitude = flightData.GPSOrigin.X;
-                _longitude = flightData.GPSOrigin.Y;
+                _latitude = flightData.GPSOrigin.Latitude;
+                _longitude = flightData.GPSOrigin.Longitude;
                 _dayRatio = GetNormalizedTimeOfDay(_sceneTimeUTC);
 
                 //Initialize volume profile
@@ -253,7 +253,7 @@ namespace FlightReLive.Core.Environment
 
                 //Use local time to get correct sunrise/sunset hours
                 _sunTimes = SunHelper.GetSunriseSunset(localTime, _latitude, _longitude);
-                ApplyEnvironment(_sceneTimeUTC, flightData.GPSOrigin.X, flightData.GPSOrigin.Y);
+                ApplyEnvironment(_sceneTimeUTC, flightData.GPSOrigin.Latitude, flightData.GPSOrigin.Longitude);
             });
         }
 

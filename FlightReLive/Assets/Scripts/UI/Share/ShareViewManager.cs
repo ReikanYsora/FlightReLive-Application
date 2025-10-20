@@ -1,8 +1,6 @@
 ﻿using FlightReLive.Core;
-using FlightReLive.Core.Cache;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Share;
-using FlightReLive.Core.Library;
 using Fu;
 using Fu.Framework;
 using ImGuiNET;
@@ -92,7 +90,7 @@ namespace FlightReLive.UI.Share
             }, new FuModalSize(new Vector2(450, 450)), new FuModalButton("Close", () => { ResetDownload(); }, FuButtonStyle.Default));
         }
 
-        internal static void DisplayShareModal(RealmFlightItem fileToShare)
+        internal static void DisplayShareModal(SerializedFlightData fileToShare)
         {
             float uiScale = Fugui.DefaultContext.Scale;
 
@@ -190,11 +188,11 @@ namespace FlightReLive.UI.Share
                         {
                             string safePath = Path.Combine(Application.persistentDataPath);
                             FileBrowser.SaveFilePanelAsync("Export a Flight Relive Shared file (.frs)", safePath, fileToShare.Name, "frs",
-                            async (x) =>
+                            (x) =>
                             {
                                 if (!string.IsNullOrEmpty(x))
                                 {
-                                    await CacheManager.ExportFlightFileAsync(fileToShare, x);
+                                    //await CacheManager.ExportFlightFileAsync(fileToShare, x);
                                 }
                             });
                         }
@@ -218,7 +216,7 @@ namespace FlightReLive.UI.Share
             _focusGiven = false;
         }
 
-        private static async void StartShareAsync(RealmFlightItem fileToShare)
+        private static async void StartShareAsync(SerializedFlightData fileToShare)
         {
             if (_isSharing || fileToShare == null)
             {
@@ -270,7 +268,7 @@ namespace FlightReLive.UI.Share
 
             try
             {
-                RealmFlightItem flightFile = await FlightShareService.GetFlightFileAsync(sharedHash).ConfigureAwait(false);
+                SerializedFlightData flightFile = await FlightShareService.GetFlightFileAsync(sharedHash).ConfigureAwait(false);
 
                 if (flightFile == null)
                 {
@@ -295,7 +293,7 @@ namespace FlightReLive.UI.Share
             _downloadError = "SharedHash not found. Please paste a valid Flight ReLive sharedhash.";
         }
 
-        private static void OnFlightFileReceived(RealmFlightItem flightFile)
+        private static void OnFlightFileReceived(SerializedFlightData flightFile)
         {
             _isDownloading = false;
             _dowloadSuccess = true;

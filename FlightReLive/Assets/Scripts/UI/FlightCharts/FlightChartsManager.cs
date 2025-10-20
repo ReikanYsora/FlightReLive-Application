@@ -196,7 +196,7 @@ namespace FlightReLive.UI.FlightCharts
             List<FlightChartStep> exposureChart = new();
             List<FlightChartStep> digitalZoomChart = new();
 
-            List<RealmFlightPointItem> points = flight.Points;
+            List<FlightDataPoint> points = flight.Points;
 
             // Data preconversion
             List<float> convertedSpeeds = points.Select(p => SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))).ToList();
@@ -269,7 +269,7 @@ namespace FlightReLive.UI.FlightCharts
             _digitalZoomChart.AddStep(digitalZoomChart);
         }
 
-        private FlightChartStep CreateStep(int index, string label, DateTime time, float value, RealmFlightPointItem dataPoint)
+        private FlightChartStep CreateStep(int index, string label, DateTime time, float value, FlightDataPoint dataPoint)
         {
             Color color = Fugui.Themes.GetColor(FuColors.PlotLinesHovered);
 
@@ -373,7 +373,7 @@ namespace FlightReLive.UI.FlightCharts
             List<FlightChartStep> speedChartSteps = new();
             List<FlightChartStep> relativeAltitudeChart = new();
             List<FlightChartStep> absoluteAltitudeChart = new();
-            List<RealmFlightPointItem> points = flight.Points;
+            List<FlightDataPoint> points = flight.Points;
 
             List<float> convertedSpeeds = points.Select(p =>
                 SettingsManager.ConvertSpeed(CalculateSpeed((float)p.HorizontalSpeed, (float)p.VerticalSpeed))
@@ -422,7 +422,7 @@ namespace FlightReLive.UI.FlightCharts
             // Populate chart steps
             for (int i = 0; i < points.Count; i++)
             {
-                RealmFlightPointItem p = points[i];
+                FlightDataPoint p = points[i];
                 string label = p.Time.ToString("HH:mm:ss");
 
                 float speed = convertedSpeeds[i];

@@ -48,9 +48,9 @@ namespace FlightReLive.Core.FFmpeg
             return DataContainer;
         }
 
-        private List<RealmFlightPointItem> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
+        private List<SerializedFlightDataPoint> ParseSRTFile(List<string> srtBuffer, FlightDataContainer dataContainer)
         {
-            List<RealmFlightPointItem> dataPoints = new List<RealmFlightPointItem>();
+            List<SerializedFlightDataPoint> dataPoints = new List<SerializedFlightDataPoint>();
 
             for (int i = 0; i < srtBuffer.Count - 4; i++)
             {
@@ -88,15 +88,16 @@ namespace FlightReLive.Core.FFmpeg
                     absoluteTime = parsedAbsolute.ToLocalTime();
                 }
 
-                RealmFlightPointItem point = new RealmFlightPointItem
+                SerializedFlightDataPoint point = new SerializedFlightDataPoint
                 {
                     Time = absoluteTime,
-                    TimeSpan = offset
+                    TimeSpan = offset,
+                    Coordinate = new SerializedGPSCoordinate()
                 };
 
                 try
                 {
-                    (double relative, double absolute) altitudes = ExtractAltitudes(metadataLine);
+                    (float relative, float absolute) altitudes = ExtractAltitudes(metadataLine);
                     point.RelativeAltitude = altitudes.relative;
                     point.AbsoluteAltitude = altitudes.absolute;
                 }
@@ -146,10 +147,10 @@ namespace FlightReLive.Core.FFmpeg
                                 point.FocalLength = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "latitude":
-                                point.Latitude = double.Parse(value, CultureInfo.InvariantCulture);
+                                point.Coordinate.Latitude = double.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "longitude":
-                                point.Longitude = double.Parse(value, CultureInfo.InvariantCulture);
+                                point.Coordinate.Longitude = double.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                         }
                     }
@@ -159,7 +160,7 @@ namespace FlightReLive.Core.FFmpeg
                     }
                 }
 
-                if (point.Time != default && point.Latitude != 0 && point.Longitude != 0)
+                if (point.Time != default && point.Coordinate.Latitude != 0 && point.Coordinate.Longitude != 0)
                 {
                     dataPoints.Add(point);
                 }
@@ -190,12 +191,12 @@ namespace FlightReLive.Core.FFmpeg
             return float.Parse(shutter, CultureInfo.InvariantCulture);
         }
 
-        private (double relAlt, double absAlt) ExtractAltitudes(string input)
+        private (float relAlt, float absAlt) ExtractAltitudes(string input)
         {
             Regex regex = new Regex(@"\[rel_alt:\s*([\d\.]+)\s+abs_alt:\s*([\d\.]+)\]");
             Match match = regex.Match(input);
 
-            if (match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double relAlt) && double.TryParse(match.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out double absAlt))
+            if (match.Success && float.TryParse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out float relAlt) && float.TryParse(match.Groups[2].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out float absAlt))
             {
                 return (relAlt, absAlt);
             }
@@ -203,9 +204,9 @@ namespace FlightReLive.Core.FFmpeg
             return (0, 0);
         }
 
-        private List<RealmFlightPointItem> ReduceToOnePointPerSecond(List<RealmFlightPointItem> rawPoints)
+        private List<SerializedFlightDataPoint> ReduceToOnePointPerSecond(List<SerializedFlightDataPoint> rawPoints)
         {
-            List<RealmFlightPointItem> reducedPoints = new List<RealmFlightPointItem>();
+            List<SerializedFlightDataPoint> reducedPoints = new List<SerializedFlightDataPoint>();
             HashSet<long> seenSeconds = new HashSet<long>();
 
             foreach (var point in rawPoints)
@@ -236,12 +237,12 @@ namespace FlightReLive.Core.FFmpeg
             return reducedPoints;
         }
 
-        private double CalculateHorizontalDistance(RealmFlightPointItem point1, RealmFlightPointItem point2)
+        private double CalculateHorizontalDistance(SerializedFlightDataPoint point1, SerializedFlightDataPoint point2)
         {
-            double lat1 = ToRadians(point1.Latitude);
-            double lon1 = ToRadians(point1.Longitude);
-            double lat2 = ToRadians(point2.Latitude);
-            double lon2 = ToRadians(point2.Longitude);
+            double lat1 = ToRadians(point1.Coordinate.Latitude);
+            double lon1 = ToRadians(point1.Coordinate.Longitude);
+            double lat2 = ToRadians(point2.Coordinate.Latitude);
+            double lon2 = ToRadians(point2.Coordinate.Longitude);
             double deltaLat = lat2 - lat1;
             double deltaLon = lon2 - lon1;
             double a = Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) + Math.Cos(lat1) * Math.Cos(lat2) * Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
@@ -250,21 +251,21 @@ namespace FlightReLive.Core.FFmpeg
             return EARTH_RADIUS * c;
         }
 
-        private double CalculateHorizontalSpeed(RealmFlightPointItem point1, RealmFlightPointItem point2)
+        private double CalculateHorizontalSpeed(SerializedFlightDataPoint point1, SerializedFlightDataPoint point2)
         {
             double distance = CalculateHorizontalDistance(point1, point2);
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
 
-            return timeDifference > 0 ? distance / timeDifference : 0;
+            return (float)timeDifference > 0 ? distance / timeDifference : 0;
         }
 
 
-        private double CalculateVerticalSpeed(RealmFlightPointItem point1, RealmFlightPointItem point2)
+        private double CalculateVerticalSpeed(SerializedFlightDataPoint point1, SerializedFlightDataPoint point2)
         {
             double deltaAltitude = point2.AbsoluteAltitude - point1.AbsoluteAltitude;
             double timeDifference = (point2.Time - point1.Time).TotalSeconds;
 
-            return timeDifference > 0 ? deltaAltitude / timeDifference : 0;
+            return (float)timeDifference > 0 ? deltaAltitude / timeDifference : 0;
         }
 
         private double ToRadians(double degrees)
@@ -272,15 +273,15 @@ namespace FlightReLive.Core.FFmpeg
             return degrees * Math.PI / 180.0;
         }
 
-        internal void CalculateSpeeds(List<RealmFlightPointItem> points)
+        internal void CalculateSpeeds(List<SerializedFlightDataPoint> points)
         {
             for (int i = 1; i < points.Count; i++)
             {
                 double horizontalSpeed = CalculateHorizontalSpeed(points[i - 1], points[i]);
                 double verticalSpeed = CalculateVerticalSpeed(points[i - 1], points[i]);
 
-                points[i].HorizontalSpeed = horizontalSpeed;
-                points[i].VerticalSpeed = verticalSpeed;
+                points[i].HorizontalSpeed = (float)horizontalSpeed;
+                points[i].VerticalSpeed = (float)verticalSpeed;
             }
         }
         #endregion

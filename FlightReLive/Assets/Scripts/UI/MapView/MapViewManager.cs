@@ -73,15 +73,15 @@ namespace FlightReLive.UI.MapView
 
         private class MapMarker
         {
-            public RealmFlightItem FlightFile;
+            public SerializedFlightData FlightFile;
             public double Latitude;
             public double Longitude;
             public Color Color;
 
-            public MapMarker(RealmFlightItem file, Color color)
+            public MapMarker(SerializedFlightData file, Color color)
             {
-                Latitude = file.DataPoints[0].Latitude;
-                Longitude = file.DataPoints[0].Longitude;
+                Latitude = file.DataPoints[0].Coordinate.Latitude;
+                Longitude = file.DataPoints[0].Coordinate.Longitude;
                 Color = color;
             }
         }
@@ -93,16 +93,6 @@ namespace FlightReLive.UI.MapView
             window.HeaderHeight = 26f;
             window.FooterHeight = 0f;
             window.UI = OnUI;
-        }
-
-        private void Start()
-        {
-            LibraryManager.Instance.OnLibraryEndLoading += OnWorkspaceLoaded;
-        }
-
-        private void OnDestroy()
-        {
-            LibraryManager.Instance.OnLibraryEndLoading -= OnWorkspaceLoaded;
         }
         #endregion
 
@@ -490,7 +480,7 @@ namespace FlightReLive.UI.MapView
             float worldSize = TILE_SIZE * (1 << zoom);
             return new Vector2(worldPx.x / worldSize, worldPx.y / worldSize);
         }
-        public void AddMarker(RealmFlightItem file, Color color)
+        public void AddMarker(SerializedFlightData file, Color color)
         {
             _markers.Add(new MapMarker(file, color));
         }
@@ -504,7 +494,7 @@ namespace FlightReLive.UI.MapView
                 return;
             }
 
-            foreach (RealmFlightItem flight in LibraryManager.Instance.LoadedFlights)
+            foreach (SerializedFlightData flight in LibraryManager.Instance.LoadedFlights)
             {
                 if (flight != null && flight.DataPoints.Count > 0)
                 {

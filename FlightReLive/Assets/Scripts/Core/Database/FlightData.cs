@@ -24,6 +24,8 @@ namespace FlightReLive.Core.Database
         #endregion
 
         #region PROPERTIES
+        public string Id { set; get; }
+
         internal string Name { set; get; }
 
         internal DateTime Date { set; get; }
@@ -32,9 +34,9 @@ namespace FlightReLive.Core.Database
 
         internal int Height { set; get; }
 
-        internal double Frequency { set; get; }
+        internal float Frequency { set; get; }
 
-        internal List<RealmFlightPointItem> Points { set; get; }
+        internal List<FlightDataPoint> Points { set; get; }
 
         internal MapTilesDefinition MapDefinition { set; get; }
 
@@ -46,11 +48,11 @@ namespace FlightReLive.Core.Database
 
         internal bool HasTakeOffPosition { get; set; }
 
-        internal RealmDoubleVector2 EstimateTakeOffPosition { set; get; }
+        internal SerializedGPSCoordinate EstimateTakeOffPosition { set; get; }
 
         internal float TakeOffAltitude { get; set; }
 
-        internal RealmDoubleVector2 GPSOrigin { get; set; }
+        internal SerializedGPSCoordinate GPSOrigin { get; set; }
 
         internal TimeSpan Length { get; set; }
 
@@ -70,7 +72,7 @@ namespace FlightReLive.Core.Database
         /// </summary>
         internal void InitializeMapDefinition()
         {
-            MapDefinition = new MapTilesDefinition(GPSOrigin.X, GPSOrigin.Y);
+            MapDefinition = new MapTilesDefinition(GPSOrigin.Latitude, GPSOrigin.Longitude);
         }
 
         /// <summary>
@@ -94,7 +96,7 @@ namespace FlightReLive.Core.Database
 
             if (MapDefinition == null)
             {
-                MapDefinition = new MapTilesDefinition(GPSOrigin.X, GPSOrigin.Y);
+                MapDefinition = new MapTilesDefinition(GPSOrigin.Latitude, GPSOrigin.Longitude);
             }
 
             if (_tileLookup == null)
@@ -142,7 +144,7 @@ namespace FlightReLive.Core.Database
         /// <summary>
         /// Returns interpolated altitude at the given GPS position.
         /// </summary>
-        internal float GetAltitudeAtPosition(RealmDoubleVector2 gps)
+        internal float GetAltitudeAtPosition(SerializedGPSCoordinate gps)
         {
             if (_tileLookup == null || _tileLookup.Count == 0)
             {
@@ -153,7 +155,7 @@ namespace FlightReLive.Core.Database
                 }
             }
 
-            (int tx, int ty) = MapTools.GPSToTileXY(gps.X, gps.Y);
+            (int tx, int ty) = MapTools.GPSToTileXY(gps.Latitude, gps.Longitude);
 
             if (_tileLookup.TryGetValue((tx, ty), out TileDefinition tile) && tile.HeightMap != null)
             {
@@ -162,7 +164,7 @@ namespace FlightReLive.Core.Database
 
             foreach (TileDefinition t in _tileLookup.Values)
             {
-                if (IsInsideBoundingBox(t.BoundingBox, gps.X, gps.Y) && t.HeightMap != null)
+                if (IsInsideBoundingBox(t.BoundingBox, gps.Latitude, gps.Longitude) && t.HeightMap != null)
                 {
                     return GetAltitudeAtPosition(t, gps);
                 }
@@ -174,15 +176,15 @@ namespace FlightReLive.Core.Database
         /// <summary>
         /// Returns altitude from a specific tile using bilinear interpolation.
         /// </summary>
-        internal float GetAltitudeAtPosition(TileDefinition tile, RealmDoubleVector2 gps)
+        internal float GetAltitudeAtPosition(TileDefinition tile, SerializedGPSCoordinate gps)
         {
             GPSBoundingBox bbox = tile.BoundingBox;
             float[,] heightmap = tile.HeightMap;
             int width = heightmap.GetLength(0);
             int height = heightmap.GetLength(1);
 
-            float nx = Mathf.InverseLerp((float)bbox.MinLongitude, (float)bbox.MaxLongitude, (float)gps.Y);
-            float ny = Mathf.InverseLerp((float)bbox.MinLatitude, (float)bbox.MaxLatitude, (float)gps.X);
+            float nx = Mathf.InverseLerp((float)bbox.MinLongitude, (float)bbox.MaxLongitude, (float)gps.Longitude);
+            float ny = Mathf.InverseLerp((float)bbox.MinLatitude, (float)bbox.MaxLatitude, (float)gps.Latitude);
 
             float fx = nx * (width - 1);
             float fy = (1f - ny) * (height - 1);
@@ -224,7 +226,7 @@ namespace FlightReLive.Core.Database
         /// <summary>
         /// Converts a world position into GPS position (lat, lon).
         /// </summary>
-        internal RealmDoubleVector2 ConvertWorldToGPSPosition(Vector3 worldPos)
+        internal SerializedGPSCoordinate ConvertWorldToGPSPosition(Vector3 worldPos)
         {
             float xMeters = worldPos.x / WorldScale;
             float zMeters = worldPos.z / WorldScale;
@@ -238,7 +240,7 @@ namespace FlightReLive.Core.Database
             double dLat = zMeters / metersPerDegLat;
             double dLon = (metersPerDegLon != 0.0) ? xMeters / metersPerDegLon : 0.0;
 
-            return new RealmDoubleVector2(lat0 + dLat, lon0 + dLon);
+            return new SerializedGPSCoordinate(lat0 + dLat, lon0 + dLon);
         }
 
         /// <summary>
@@ -255,7 +257,7 @@ namespace FlightReLive.Core.Database
                 .OrderBy(x => x.TimeSpan)
                 .Select(p =>
                 {
-                    Vector3 gps = new Vector3((float)p.Latitude, referenceAltitude + (float)p.RelativeAltitude, (float)p.Longitude);
+                    Vector3 gps = new Vector3((float)p.Coordinate.Latitude, referenceAltitude + (float)p.RelativeAltitude, (float)p.Coordinate.Longitude);
                     return ConvertGPSPositionToWorld(gps);
                 })
                 .ToList();
@@ -267,10 +269,7 @@ namespace FlightReLive.Core.Database
         private static bool IsInsideBoundingBox(GPSBoundingBox bb, double lat, double lon)
         {
             const double eps = 1e-7;
-            return lat >= bb.MinLatitude - eps &&
-                   lat <= bb.MaxLatitude + eps &&
-                   lon >= bb.MinLongitude - eps &&
-                   lon <= bb.MaxLongitude + eps;
+            return lat >= bb.MinLatitude - eps && lat <= bb.MaxLatitude + eps && lon >= bb.MinLongitude - eps && lon <= bb.MaxLongitude + eps;
         }
 
         /// <summary>

@@ -141,7 +141,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns></returns>
         protected SerializedGPSCoordinate EstimateFlightStartFromGPS()
         {
-            List<SerializedFlightDataPoint> points = DataContainer.DataPoints.Where(p => p.Coordinate.Latitude != 0 && p.Coordinate.Longitude != 0 && p.Distance > 0).ToList();
+            List<SerializedFlightDataPoint> points = DataContainer.DataPoints.Where(p => p.Coordinate != null && p.Coordinate.Latitude != 0 && p.Coordinate.Longitude != 0 && p.Distance > 0).ToList();
 
             if (DataContainer.DataPoints.Count > 0 && points.Count < 3)
             {
@@ -173,15 +173,15 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns></returns>
         private SerializedGPSCoordinate EstimateGPSAdaptive(List<SerializedGPSCoordinate> gpsPoints, List<double> distances)
         {
-            double latCenter = gpsPoints[0].Latitude;
-            double lonCenter = gpsPoints[0].Longitude;
+            float latCenter = gpsPoints[0].Latitude;
+            float lonCenter = gpsPoints[0].Longitude;
 
-            double step = 0.0001;
+            float step = 0.0001f;
             int range = 50;
             int zoomLevels = 4;
 
             SerializedGPSCoordinate bestPoint = null;
-            double bestError = double.MaxValue;
+            float bestError = float.MaxValue;
 
             for (int zoom = 0; zoom < zoomLevels; zoom++)
             {
@@ -189,14 +189,14 @@ namespace FlightReLive.Core.FFmpeg
                 {
                     for (int j = -range; j <= range; j++)
                     {
-                        double lat = latCenter + i * step;
-                        double lon = lonCenter + j * step;
+                        float lat = latCenter + i * step;
+                        float lon = lonCenter + j * step;
 
-                        double totalError = 0;
+                        float totalError = 0;
                         for (int k = 0; k < gpsPoints.Count; k++)
                         {
-                            double d = Haversine(new SerializedGPSCoordinate(lat, lon), gpsPoints[k]);
-                            totalError += Math.Abs(d - distances[k]);
+                            float d = Haversine(new SerializedGPSCoordinate(lat, lon), gpsPoints[k]);
+                            totalError += (float)Math.Abs(d - distances[k]);
                         }
 
                         if (totalError < bestError)
@@ -225,7 +225,7 @@ namespace FlightReLive.Core.FFmpeg
         /// <param name="lat2"></param>
         /// <param name="lon2"></param>
         /// <returns></returns>
-        private static double Haversine(SerializedGPSCoordinate coord1, SerializedGPSCoordinate coord2)
+        private static float Haversine(SerializedGPSCoordinate coord1, SerializedGPSCoordinate coord2)
         {
             double R = 6371000;
             double dLat = DegreesToRadians(coord2.Latitude - coord1.Latitude);
@@ -234,7 +234,7 @@ namespace FlightReLive.Core.FFmpeg
                        Math.Cos(DegreesToRadians(coord1.Latitude)) * Math.Cos(DegreesToRadians(coord2.Latitude)) *
                        Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
             double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return R * c;
+            return (float)(R * c);
         }
 
         /// <summary>

@@ -35,13 +35,13 @@ namespace FlightReLive.Core.ProceduralTerrain
         internal static GPSBoundingBox GetBoundingBoxFromTileXY(int xTile, int yTile)
         {
             int n = 1 << ZOOM_LEVEL_HEIGHTMAP;
-            double lonPerTile = 360.0 / n;
-            double minLon = xTile * lonPerTile - 180.0;
-            double maxLon = (xTile + 1) * lonPerTile - 180.0;
+            float lonPerTile = 360.0f / n;
+            float minLon = xTile * lonPerTile - 180f;
+            float maxLon = (xTile + 1) * lonPerTile - 180f;
             double latRadNorth = Math.Atan(Math.Sinh(Math.PI * (1 - 2.0 * yTile / n)));
             double latRadSouth = Math.Atan(Math.Sinh(Math.PI * (1 - 2.0 * (yTile + 1) / n)));
-            double maxLat = latRadNorth * (180.0 / Math.PI);
-            double minLat = latRadSouth * (180.0 / Math.PI);
+            float maxLat = (float)(latRadNorth * (180.0 / Math.PI));
+            float minLat = (float)(latRadSouth * (180.0 / Math.PI));
 
             return new GPSBoundingBox
             {
@@ -129,8 +129,8 @@ namespace FlightReLive.Core.ProceduralTerrain
 
         internal static SerializedGPSCoordinate GetCenterOfBoundingBox(GPSBoundingBox bbox)
         {
-            double centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2.0;
-            double centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2.0;
+            float centerLatitude = (bbox.MinLatitude + bbox.MaxLatitude) / 2f;
+            float centerLongitude = (bbox.MinLongitude + bbox.MaxLongitude) / 2f;
 
             return new SerializedGPSCoordinate(centerLatitude, centerLongitude);
         }

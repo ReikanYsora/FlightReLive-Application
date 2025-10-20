@@ -10,7 +10,6 @@ using UnityEngine;
 using Fu;
 using Fu.Framework;
 using System.Reflection;
-using FlightReLive.Core.Loading;
 
 namespace FlightReLive.Core.Library
 {
@@ -112,45 +111,38 @@ namespace FlightReLive.Core.Library
                 return;
             }
 
-            try
+            FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
+            FFmpegHelper.ExtractVideoMetadata(fullVideoPath, container);
+
+            SerializedFlightData tempFile = new SerializedFlightData
             {
-                FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
-                FFmpegHelper.ExtractVideoMetadata(fullVideoPath, container);
+                Name = container.Name,
+                Width = container.Width,
+                Height = container.Height,
+                Frequency = container.Frequency,
+                CreationDate = container.CreationDate,
+                EstimateTakeOffPosition = container.EstimateTakeOffPosition,
+                FlightGPSCoordinates = container.FlightGPSCoordinates,
+                HasTakeOffPosition = container.TakeOffPositionAvailable,
+                Duration = container.Duration
+            };
 
-                SerializedFlightData tempFile = new SerializedFlightData
-                {
-                    Name = container.Name,
-                    Width = container.Width,
-                    Height = container.Height,
-                    Frequency = container.Frequency,
-                    CreationDate = container.CreationDate,
-                    EstimateTakeOffPosition = container.EstimateTakeOffPosition,
-                    FlightGPSCoordinates = container.FlightGPSCoordinates,
-                    HasTakeOffPosition = container.TakeOffPositionAvailable,
-                    Duration = container.Duration
-                };
+            tempFile.ComputeUniqueKey();
 
-                tempFile.ComputeUniqueKey();
-
-                foreach (SerializedFlightDataPoint item in container.DataPoints)
-                {
-                    tempFile.DataPoints.Add(item);
-                }
-
-                if (container.Thumbnail is { Length: > 0 })
-                {
-                    tempFile.ThumbnailData = container.Thumbnail;
-                }
-
-                UnityMainThreadDispatcher.AddActionInMainThread(() =>
-                {
-                    DatabaseManager.SaveFlight(tempFile);
-                });
-            }
-            catch (Exception ex)
+            foreach (SerializedFlightDataPoint item in container.DataPoints)
             {
-                Debug.LogError($"[LibraryManager] Failed to build flight file: {ex.Message}");
+                tempFile.DataPoints.Add(item);
             }
+
+            if (container.Thumbnail is { Length: > 0 })
+            {
+                tempFile.ThumbnailData = container.Thumbnail;
+            }
+
+            UnityMainThreadDispatcher.AddActionInMainThread(() =>
+            {
+                DatabaseManager.SaveFlight(tempFile);
+            });
         }
 
         /// <summary>
@@ -197,6 +189,7 @@ namespace FlightReLive.Core.Library
                 Fugui.ShowModal("Importing flight videos", (layout) =>
                 {
                     float targetProgress = _importTotal > 0 ? (float)_importProcessed / _importTotal : 0f;
+                    float paddingX = 10f;
                     _smoothProgress = Mathf.Lerp(_smoothProgress, targetProgress, 10f * Time.deltaTime);
                     float progress = _smoothProgress;
 
@@ -206,7 +199,7 @@ namespace FlightReLive.Core.Library
 
                     layout.Collapsable("Import details", () =>
                     {
-                        using (FuGrid grid = new FuGrid("importDetailsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground))
+                        using (FuGrid grid = new FuGrid("importDetailsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground, 2, 2, paddingX))
                         {
                             grid.Text("Current file");
                             grid.FramedText($"{_importCurrentFile}");
@@ -221,6 +214,21 @@ namespace FlightReLive.Core.Library
                             grid.FramedText($"{_importErrors}");
                         }
                     }, FuButtonStyle.Collapsable, defaultOpen: true);
+
+                    if (_importErrorList.Count > 0)
+                    {
+                        layout.Collapsable("Errors log", () =>
+                        {
+                            using (FuGrid grid = new FuGrid("importErrorsGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.LinesBackground, 2, 2, paddingX))
+                            {
+                                foreach (KeyValuePair<string, string> fileToErrors in _importErrorList)
+                                {
+                                    grid.Text($"{Path.GetFileName(fileToErrors.Key)}");
+                                    grid.FramedText($"{fileToErrors.Value}");
+                                }
+                            }
+                        }, FuButtonStyle.Danger, defaultOpen: true);
+                    }
                 },
                 FuModalSize.Medium,
                 new FuModalButton("Cancel import", () =>

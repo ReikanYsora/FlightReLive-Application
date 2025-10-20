@@ -44,18 +44,18 @@ namespace FlightReLive.Core.Pipeline
                 return;
             }
 
-            double minLat = double.MaxValue;
-            double maxLat = double.MinValue;
-            double minLon = double.MaxValue;
-            double maxLon = double.MinValue;
+            float minLat = float.MaxValue;
+            float maxLat = float.MinValue;
+            float minLon = float.MaxValue;
+            float maxLon = float.MinValue;
 
             foreach (var tile in _tileDefinitions)
             {
                 GPSBoundingBox bbox = tile.BoundingBox;
-                minLat = Math.Min(minLat, bbox.MinLatitude);
-                maxLat = Math.Max(maxLat, bbox.MaxLatitude);
-                minLon = Math.Min(minLon, bbox.MinLongitude);
-                maxLon = Math.Max(maxLon, bbox.MaxLongitude);
+                minLat = (float)Math.Min(minLat, bbox.MinLatitude);
+                maxLat = (float)Math.Max(maxLat, bbox.MaxLatitude);
+                minLon = (float)Math.Min(minLon, bbox.MinLongitude);
+                maxLon = (float)Math.Max(maxLon, bbox.MaxLongitude);
             }
 
             MapBoundingBox = new GPSBoundingBox

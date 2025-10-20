@@ -147,10 +147,10 @@ namespace FlightReLive.Core.FFmpeg
                                 point.FocalLength = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "latitude":
-                                point.Coordinate.Latitude = double.Parse(value, CultureInfo.InvariantCulture);
+                                point.Coordinate.Latitude = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                             case "longitude":
-                                point.Coordinate.Longitude = double.Parse(value, CultureInfo.InvariantCulture);
+                                point.Coordinate.Longitude = float.Parse(value, CultureInfo.InvariantCulture);
                                 break;
                         }
                     }

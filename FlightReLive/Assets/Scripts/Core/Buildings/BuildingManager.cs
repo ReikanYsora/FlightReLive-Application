@@ -432,7 +432,10 @@ namespace FlightReLive.Core.OpenVectorTile
                 count++;
             }
 
-            return count == 0 ? new SerializedGPSCoordinate(0f, 0f) : new SerializedGPSCoordinate(sumLat / count, sumLon / count);
+            float sumLatFloat = (float)sumLat;
+            float sumLonFloat = (float)sumLon;
+
+            return count == 0 ? new SerializedGPSCoordinate(0f, 0f) : new SerializedGPSCoordinate(sumLatFloat / count, sumLonFloat / count);
         }
 
         /// <summary>

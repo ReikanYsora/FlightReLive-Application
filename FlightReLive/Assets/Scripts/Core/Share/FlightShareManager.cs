@@ -14,7 +14,7 @@ namespace FlightReLive.Core.Share
         /// Import a shared FlightFile (.FRS) into the current workspace.
         /// </summary>
         /// <param name="importPath">Path to the .FRS file</param>
-        internal static async Task<bool> ImportAsync(string importPath)
+        internal static bool ImportAsync(string importPath)
         {
             if (string.IsNullOrEmpty(importPath) || !File.Exists(importPath))
             {

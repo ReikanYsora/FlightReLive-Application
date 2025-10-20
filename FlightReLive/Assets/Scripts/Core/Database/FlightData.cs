@@ -128,10 +128,8 @@ namespace FlightReLive.Core.Database
             // Fix: do NOT recompute SceneCenterGPS every time.
             if (!_sceneCenterInitialized)
             {
-                double avgLat = MapDefinition.TileDefinitions.Average(
-                    t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
-                double avgLon = MapDefinition.TileDefinitions.Average(
-                    t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
+                double avgLat = MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLatitude + t.BoundingBox.MaxLatitude) / 2.0);
+                double avgLon = MapDefinition.TileDefinitions.Average(t => (t.BoundingBox.MinLongitude + t.BoundingBox.MaxLongitude) / 2.0);
 
                 SceneCenterGPS = new Vector2((float)avgLat, (float)avgLon);
                 _sceneCenterInitialized = true;
@@ -231,14 +229,14 @@ namespace FlightReLive.Core.Database
             float xMeters = worldPos.x / WorldScale;
             float zMeters = worldPos.z / WorldScale;
 
-            double lat0 = SceneCenterGPS.x;
-            double lon0 = SceneCenterGPS.y;
+            float lat0 = SceneCenterGPS.x;
+            float lon0 = SceneCenterGPS.y;
 
-            const double metersPerDegLat = 111132.0;
-            double metersPerDegLon = 111320.0 * Mathf.Cos((float)(lat0 * Mathf.Deg2Rad));
+            const float metersPerDegLat = 111132f;
+            float metersPerDegLon = (float)(111320.0 * Mathf.Cos((float)(lat0 * Mathf.Deg2Rad)));
 
-            double dLat = zMeters / metersPerDegLat;
-            double dLon = (metersPerDegLon != 0.0) ? xMeters / metersPerDegLon : 0.0;
+            float dLat = zMeters / metersPerDegLat;
+            float dLon = (metersPerDegLon != 0f) ? xMeters / metersPerDegLon : 0f;
 
             return new SerializedGPSCoordinate(lat0 + dLat, lon0 + dLon);
         }

@@ -3,13 +3,13 @@ namespace FlightReLive.Core.Pipeline
     public class GPSBoundingBox
     {
         #region PROPERTIES
-        public double MinLatitude { set; get; }
+        public float MinLatitude { set; get; }
 
-        public double MaxLatitude { set; get; }
+        public float MaxLatitude { set; get; }
 
-        public double MinLongitude { set; get; }
+        public float MinLongitude { set; get; }
 
-        public double MaxLongitude { set; get; }
+        public float MaxLongitude { set; get; }
         #endregion
     }
 }

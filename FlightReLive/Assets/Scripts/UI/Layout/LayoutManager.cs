@@ -77,11 +77,11 @@ namespace FlightReLive.UI.Layout
                 {
                     string safePath = Path.Combine(Application.persistentDataPath);
                     FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
-                    async (x) =>
+                    (x) =>
                     {
                         if (x.Length > 0)
                         {
-                            await FlightShareManager.ImportAsync(x[0]);
+                            FlightShareManager.ImportAsync(x[0]);
                         }
                     });
                 }
@@ -199,11 +199,11 @@ namespace FlightReLive.UI.Layout
                 {
                     string safePath = Path.Combine(Application.persistentDataPath);
                     FileBrowser.OpenFilePanelAsync("Select a Flight Relive Shared file (.frs)", safePath, new ExtensionFilter[1] { new ExtensionFilter("Flight Relive Shared", "frs") }, false,
-                    async (x) =>
+                    (x) =>
                     {
                         if (x.Length > 0)
                         {
-                            await FlightShareManager.ImportAsync(x[0]);
+                            FlightShareManager.ImportAsync(x[0]);
                         }
                     });
                 }

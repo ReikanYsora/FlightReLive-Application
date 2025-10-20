@@ -9,15 +9,15 @@ namespace FlightReLive.Core.Database
     public class SerializedGPSCoordinate
     {
         #region PROPERTIES
-        [Key(0)] public double Latitude { get; set; }
+        [Key(0)] public float Latitude { get; set; }
 
-        [Key(1)] public double Longitude { get; set; }
+        [Key(1)] public float Longitude { get; set; }
         #endregion
 
         #region CONSTRUCTOR
         public SerializedGPSCoordinate() { }
 
-        public SerializedGPSCoordinate(double latitude, double longitude)
+        public SerializedGPSCoordinate(float latitude, float longitude)
         {
             Latitude = latitude;
             Longitude = longitude;

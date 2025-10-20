@@ -101,7 +101,11 @@ namespace FlightReLive.Core.FFmpeg
                     Match gps = gpsRegex.Match(dataLine);
                     if (gps.Success && gps.Groups.Count >= 4)
                     {
-                        point.Coordinate = new SerializedGPSCoordinate(double.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture), double.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture));
+                        point.Coordinate = new SerializedGPSCoordinate(float.Parse(gps.Groups[2].Value, CultureInfo.InvariantCulture), float.Parse(gps.Groups[1].Value, CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        point.Coordinate = new SerializedGPSCoordinate();
                     }
 
                     Match camera = cameraRegex.Match(dataLine);

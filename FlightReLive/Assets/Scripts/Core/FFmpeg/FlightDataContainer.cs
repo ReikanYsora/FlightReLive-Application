@@ -48,12 +48,12 @@ namespace FlightReLive.Core.FFmpeg
                 return new SerializedGPSCoordinate(0f, 0f);
             }
 
-            double minLat = double.MaxValue;
-            double maxLat = double.MinValue;
-            double minLon = double.MaxValue;
-            double maxLon = double.MinValue;
+            float minLat = float.MaxValue;
+            float maxLat = float.MinValue;
+            float minLon = float.MaxValue;
+            float maxLon = float.MinValue;
 
-            foreach (var point in DataPoints)
+            foreach (SerializedFlightDataPoint point in DataPoints)
             {
                 if (point.Coordinate.Latitude < minLat)
                 {
@@ -76,8 +76,8 @@ namespace FlightReLive.Core.FFmpeg
                 }
             }
 
-            double centerLat = (minLat + maxLat) / 2.0;
-            double centerLon = (minLon + maxLon) / 2.0;
+            float centerLat = (minLat + maxLat) / 2f;
+            float centerLon = (minLon + maxLon) / 2f;
 
             return new SerializedGPSCoordinate(centerLat, centerLon);
         }

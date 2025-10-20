@@ -480,6 +480,7 @@ namespace FlightReLive.Core.Pipeline.API
             return collection;
         }
         #endregion
+
         #region COMMONS
         private static string GetPreferredLanguage()
         {

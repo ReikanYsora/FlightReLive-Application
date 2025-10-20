@@ -13,7 +13,6 @@ using UnityEditor;
 using UnityEngine;
 using FlightReLive.Core.Database;
 using System.Collections.Generic;
-using SharpFont;
 
 namespace FlightReLive.UI.Library
 {
@@ -27,6 +26,8 @@ namespace FlightReLive.UI.Library
         private const float SLIDER_WIDTH = 80f;
         private const float SLIDER_HEIGHT = 20f;
         private const float HORIZONTAL_PADDING = 10f;
+        private const float PROGRESSBAR_WIDTH = 100f;
+        private const float PROGRESSBAR_HEIGHT = 6f;
         #endregion
 
         #region ATTIBUTES
@@ -34,6 +35,8 @@ namespace FlightReLive.UI.Library
         private float _thumbnailScale;
         private string _filterWord = "";
         private readonly Dictionary<string, float> _hoverBlendFactors = new Dictionary<string, float>();
+        private bool _libraryIsLoading = false;
+        private float _loadingProgress = 0f;
         #endregion
 
         #region UNITY METHODS
@@ -42,6 +45,9 @@ namespace FlightReLive.UI.Library
             SettingsManager.OnLibraryZoomChanged += OnLibraryZoomChanged;
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
+            LibraryManager.Instance.OnLibraryLoading += OnLibraryLoading;
+            LibraryManager.Instance.OnLibraryStartLoading += OnLibraryStartLoading;
+            LibraryManager.Instance.OnLibraryEndLoading += OnLibraryEndLoading;
             _thumbnailScale = SettingsManager.CurrentSettings.LibraryZoom;
         }
 
@@ -50,6 +56,9 @@ namespace FlightReLive.UI.Library
             SettingsManager.OnLibraryZoomChanged -= OnLibraryZoomChanged;
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
+            LibraryManager.Instance.OnLibraryLoading -= OnLibraryLoading;
+            LibraryManager.Instance.OnLibraryStartLoading -= OnLibraryStartLoading;
+            LibraryManager.Instance.OnLibraryEndLoading -= OnLibraryEndLoading;
         }
         #endregion
 
@@ -68,6 +77,23 @@ namespace FlightReLive.UI.Library
         }
 
         #region CALLBACKS
+        private void OnLibraryStartLoading()
+        {
+            _libraryIsLoading = true;
+        }
+
+        private void OnLibraryLoading(float progress)
+        {
+            _loadingProgress = progress;
+            Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
+        }
+
+        private void OnLibraryEndLoading()
+        {
+            _loadingProgress = 1f;
+            _libraryIsLoading = false;
+        }
+
         private void OnFlightEndLoading(SerializedFlightData flight)
         {
             flight.IsNew = false;
@@ -158,6 +184,16 @@ namespace FlightReLive.UI.Library
                     float iconOffsetY = (frameHeight - 14f + 2) / 2f;
                     float baseY = ImGui.GetCursorPosY() + iconOffsetY;
 
+                    if (_libraryIsLoading)
+                    {
+                        Vector2 barSize = new Vector2(PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT);
+                        FuElementSize fuBarSize = new FuElementSize(barSize);
+                        Fugui.MoveX(HORIZONTAL_PADDING);
+                        layout.CenterNextItemV(PROGRESSBAR_HEIGHT);
+                        layout.ProgressBar("##libraryFooterSLoadingBar", _loadingProgress, fuBarSize, ProgressBarTextPosition.None);
+                        layout.SameLine();
+                    }
+
                     if (layout.GetAvailableWidth() > SLIDER_WIDTH + HORIZONTAL_PADDING * 2)
                     {
                         float sliderW = SLIDER_WIDTH * scale;
@@ -192,6 +228,15 @@ namespace FlightReLive.UI.Library
             {
                 FuContextMenuBuilder contextMenuBuilder = FuContextMenuBuilder.Start();
 
+                contextMenuBuilder.AddTitle(flight.Name);
+
+                if (flight.Thumbnail != null)
+                {
+                    contextMenuBuilder.AddImage(flight.Thumbnail, new FuElementSize(flight.Thumbnail.width, flight.Thumbnail.height), 1, null);
+
+                    contextMenuBuilder.AddSeparator();
+                }
+
                 contextMenuBuilder.AddItem($"{FlightReLiveIcons.Globe}   Load", () =>
                 {
                     LibraryManager.Instance.SelectFlight(flight);
@@ -207,19 +252,17 @@ namespace FlightReLive.UI.Library
                     ShareViewManager.DisplayShareModal(flight);
                 });
 
+                contextMenuBuilder.AddItem($"{FlightReLiveIcons.Check}   Mark as loaded", () =>
+                {
+                    flight.IsNew = false;
+                    DatabaseManager.SaveFlight(flight);
+                });
+
                 contextMenuBuilder.AddSeparator();
 
                 contextMenuBuilder.AddItem($"{FlightReLiveIcons.Delete}   Remove from library", () =>
                 {
                     LibraryManager.Instance.DeleteFlightItem(flight);
-                });
-
-                contextMenuBuilder.AddSeparator();
-
-                contextMenuBuilder.AddItem($"{FlightReLiveIcons.Property}   Properties", () =>
-                {
-                    flight.IsNew = false;
-                    DatabaseManager.SaveFlight(flight);
                 });
 
                 List<FuContextMenuItem> contextMenuItems = contextMenuBuilder.Build();

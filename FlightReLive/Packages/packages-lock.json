@@ -16,23 +16,7 @@
       "dependencies": {
         "com.unity.postprocessing": "3.2.2"
       },
-      "hash": "486c01c471a2b30692ba73f58e3107433371c36b"
-    },
-    "com.tnd.upscaler.fsr3": {
-      "version": "file:com.tnd.upscaler.fsr3",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.tnd.upscaling": "1.0.0"
-      }
-    },
-    "com.tnd.upscaling": {
-      "version": "file:com.tnd.upscaling",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.nuget.newtonsoft-json": "3.2.1"
-      }
+      "hash": "0c488b4c5cce302732b10d92eea19d9e3ac3685f"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",

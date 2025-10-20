@@ -142,6 +142,55 @@ namespace FlightReLive.Core.Database
 
             return flights;
         }
+
+        // <summary>
+        /// Returns all flight file paths available in the library.
+        /// </summary>
+        internal static List<string> GetAllFlightFiles()
+        {
+            List<string> files = new List<string>();
+
+            try
+            {
+                if (!Directory.Exists(_libraryPath))
+                {
+                    Directory.CreateDirectory(_libraryPath);
+                    return files;
+                }
+
+                files.AddRange(Directory.GetFiles(_libraryPath, "*" + FILE_EXTENSION));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[DatabaseManager] GetAllFlightFiles failed: {ex.Message}");
+            }
+
+            return files;
+        }
+
+        /// <summary>
+        /// Loads a single flight file from disk.
+        /// </summary>
+        internal static SerializedFlightData LoadFlight(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    Debug.LogWarning($"[DatabaseManager] LoadFlight: file not found: {filePath}");
+                    return null;
+                }
+
+                byte[] data = File.ReadAllBytes(filePath);
+                SerializedFlightData flight = MessagePackSerializer.Deserialize<SerializedFlightData>(data);
+                return flight;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[DatabaseManager] Failed to load flight {Path.GetFileName(filePath)}: {ex.Message}");
+                return null;
+            }
+        }
         #endregion
 
         #region DELETE METHODS

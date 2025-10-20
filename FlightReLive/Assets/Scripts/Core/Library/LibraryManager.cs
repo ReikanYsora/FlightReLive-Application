@@ -39,6 +39,9 @@ namespace FlightReLive.Core.Library
         #endregion
 
         #region EVENTS
+        internal event Action OnLibraryStartLoading;
+        internal event Action<float> OnLibraryLoading;
+        internal event Action OnLibraryEndLoading;
         internal event Action<SerializedFlightData> OnFlightFileSelected;
         #endregion
 
@@ -76,13 +79,20 @@ namespace FlightReLive.Core.Library
         {
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
+                OnLibraryStartLoading?.Invoke();
                 LoadedFlights = DatabaseManager.GetAllFlights();
+                int total = LoadedFlights.Count;
+                int processed = 0;
 
                 for (int i = 0; i < LoadedFlights.Count; i++)
                 {
                     LoadedFlights[i].DecodeTextures();
+                    processed++;
+                    float progress = (float)processed / Mathf.Max(1, total);
+                    OnLibraryLoading?.Invoke(progress);
                 }
 
+                OnLibraryEndLoading?.Invoke();
                 Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
             });
         }
@@ -111,6 +121,7 @@ namespace FlightReLive.Core.Library
                 return;
             }
 
+            //Extraction FFmpeg
             FlightDataContainer container = FFmpegHelper.ExtractOrLoadFlightData(fullVideoPath);
             FFmpegHelper.ExtractVideoMetadata(fullVideoPath, container);
 
@@ -139,11 +150,13 @@ namespace FlightReLive.Core.Library
                 tempFile.ThumbnailData = container.Thumbnail;
             }
 
+            //Save on database
             UnityMainThreadDispatcher.AddActionInMainThread(() =>
             {
                 DatabaseManager.SaveFlight(tempFile);
             });
         }
+
 
         /// <summary>
         /// Clears all flights from Realm.
@@ -182,6 +195,7 @@ namespace FlightReLive.Core.Library
             _importErrors = 0;
             _importCurrentFile = "";
             _importErrorList.Clear();
+            OnLibraryStartLoading?.Invoke();
 
             // Display progress modal
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
@@ -252,11 +266,15 @@ namespace FlightReLive.Core.Library
                 {
                     if (token.IsCancellationRequested)
                     {
+                        OnLibraryEndLoading?.Invoke();
                         break;
                     }
 
                     _importProcessed++;
                     _importCurrentFile = Path.GetFileName(path);
+
+                    float progress = (float)_importProcessed / Mathf.Max(1, _importTotal);
+                    OnLibraryLoading?.Invoke(progress);
 
                     try
                     {
@@ -281,6 +299,8 @@ namespace FlightReLive.Core.Library
             });
 
             _importCompleted = true;
+
+            OnLibraryEndLoading?.Invoke();
 
             await UnityMainThreadDispatcher.AwaitOnMainThread(() =>
             {

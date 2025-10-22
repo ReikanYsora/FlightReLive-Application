@@ -107,7 +107,7 @@ namespace FlightReLive.UI.Inspector
                     using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         string formattedPosition = $"{_currentDataPoint.Coordinate.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Coordinate.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
-                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.OpenStreetMap, () =>
+                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.GoogleMaps, () =>
                         {
                             OpenStreetMapHelper.OpenOpenStreetMapBrowser(_currentDataPoint.Coordinate);
                         }, "Display on OpenStreetMap");
@@ -223,7 +223,7 @@ namespace FlightReLive.UI.Inspector
                                 Draw(window, uniqueId, grid, layout, FlightReLiveIcons.MapPin,
                                     label,
                                     "Point of interest position",
-                                    FlightReLiveIcons.OpenStreetMap,
+                                    FlightReLiveIcons.GoogleMaps,
                                     () =>
                                     {
                                         OpenStreetMapHelper.OpenOpenStreetMapBrowser(gpsData);

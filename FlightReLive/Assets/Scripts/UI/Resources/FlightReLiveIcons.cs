@@ -11,7 +11,7 @@ namespace FlightReLive.UI
         protected static string _HeightMap = "\uE066";
         public static string HeightMap { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _HeightMap; }
         protected static string _GoogleMaps = "\uE067";
-        public static string OpenStreetMap { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _GoogleMaps; }
+        public static string GoogleMaps { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _GoogleMaps; }
         protected static string _VideoFile = "\uE068";
         public static string VideoFile { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _VideoFile; }
         protected static string _VideoPlayer = "\uE069";
@@ -128,5 +128,19 @@ namespace FlightReLive.UI
         public static string Tag { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Tag; }
         protected static string _MapDot = "\uE0A1";
         public static string MapDot { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _MapDot; }
+        protected static string _List = "\uE0A2";
+        public static string List { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _List; }
+        protected static string _Thumbnail = "\uE0A3";
+        public static string Thumbnail { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Thumbnail; }
+        protected static string _NoFilter = "\uE0A4";
+        public static string NoFilter { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _NoFilter; }
+        protected static string _All = "\uE0A5";
+        public static string All { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _All; }
+        protected static string _Circle = "\uE0A6";
+        public static string Circle { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Circle; }
+        protected static string _Yes = "\uE0A7";
+        public static string Yes { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _Yes; }
+        protected static string _No = "\uE0A8";
+        public static string No { [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _No; }
     }
 }

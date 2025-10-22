@@ -744,7 +744,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1595949482}
+  m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &445681719
 MonoBehaviour:
@@ -797,7 +797,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1595949482}
+  m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &468566124
 MonoBehaviour:
@@ -1530,7 +1530,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1595949482}
+  m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1086972808
 MonoBehaviour:
@@ -1872,7 +1872,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1595949482}
+  m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1555760324
 MonoBehaviour:
@@ -1960,7 +1960,7 @@ GameObject:
   - component: {fileID: 1595949482}
   - component: {fileID: 1595949483}
   m_Layer: 0
-  m_Name: LayoutManager
+  m_Name: MenuManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1978,12 +1978,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1555760323}
-  - {fileID: 1086972807}
-  - {fileID: 1774870477}
-  - {fileID: 468566123}
-  - {fileID: 445681718}
+  m_Children: []
   m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1595949483
@@ -2195,7 +2190,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1595949482}
+  m_Father: {fileID: 2932005272595287967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1774870478
 MonoBehaviour:
@@ -2231,6 +2226,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1896134859}
   - component: {fileID: 1896134860}
+  - component: {fileID: 1896134861}
   m_Layer: 0
   m_Name: Core
   m_TagString: Untagged
@@ -2279,6 +2275,18 @@ MonoBehaviour:
   _welcome: {fileID: 2800000, guid: 69e09da936753794e94bb0b7cde884c2, type: 3}
   _reliveCamera: {fileID: 796242730}
   _povCamera: {fileID: 137108794}
+--- !u!114 &1896134861
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1896134858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3739aa375ca0d43d8bdd272212fb5b15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.Core.Layouts.LayoutManager
 --- !u!1 &2098137316
 GameObject:
   m_ObjectHideFlags: 0
@@ -2587,6 +2595,11 @@ Transform:
   m_Children:
   - {fileID: 255147432}
   - {fileID: 1595949482}
+  - {fileID: 1555760323}
+  - {fileID: 1086972807}
+  - {fileID: 1774870477}
+  - {fileID: 468566123}
+  - {fileID: 445681718}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807

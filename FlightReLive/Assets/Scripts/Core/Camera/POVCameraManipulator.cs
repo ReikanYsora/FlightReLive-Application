@@ -129,6 +129,11 @@ namespace FlightReLive.Core.Cameras
                 return;
             }
 
+            if (CameraWindow.Mouse == null)
+            {
+                return;
+            }
+
             if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();

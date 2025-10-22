@@ -132,8 +132,17 @@ namespace FlightReLive.UI.CameraViews
                     //Centered buttongroup Camera mode
                     float cameraGroupX = (totalWidth - cameraGroupWidth) * 0.5f;
                     ImGui.SetCursorPosX(cameraGroupX);
-                    Fugui.MoveY(-4f);
 
+                    if (canShowToggleAndCamera)
+                    {
+                        Fugui.MoveY(-4f);
+                    }
+                    else
+                    {
+                        Fugui.MoveY(-2f);
+                    }
+
+                    layout.SetNextElementToolTip("Change camera mode.");
                     layout.ButtonsGroup<CameraMode>(
                         "CameraMode",
                         (value) => { ExternalCameraManipulator.Instance.Mode = (CameraMode)value; },
@@ -390,6 +399,7 @@ namespace FlightReLive.UI.CameraViews
                 Fugui.PopColor();
             }
 
+            ImGui.Dummy(Vector2.zero);
             layout.Dispose();
         }
 

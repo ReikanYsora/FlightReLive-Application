@@ -880,7 +880,8 @@ namespace FlightReLive.UI.Library
                         {
                             Fugui.PushFont(12, FontType.Regular);
 
-                            string duration = file.Duration.ToString(@"hh\:mm\:ss");
+                            TimeSpan ts = file.Duration;
+                            string duration = $"{(int)ts.TotalMinutes:00}:{ts.Seconds:00}";
                             Vector2 textSize = ImGui.CalcTextSize(duration);
                             Vector2 padding = new Vector2(4f, 2f) * scale;
                             Vector2 bgSize = textSize + padding * 2;

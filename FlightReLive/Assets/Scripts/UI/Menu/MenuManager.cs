@@ -1,5 +1,6 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.Cache;
+using FlightReLive.Core.Layouts;
 using FlightReLive.Core.Library;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Platform;
@@ -12,9 +13,9 @@ using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 
-namespace FlightReLive.UI.Layout
+namespace FlightReLive.UI.Menu
 {
-    public class LayoutManager : MonoBehaviour
+    public class MenuManager : MonoBehaviour
     {
         #region ATTRIBUTES
         [SerializeField] private Texture2D _tipeee;
@@ -85,6 +86,10 @@ namespace FlightReLive.UI.Layout
             }, "P");
 
             MacOsMainMenuManager.AddSeparator("Settings");
+            MacOsMainMenuManager.AddMenuEntry("Settings", "Restore default layout", () =>
+            {
+                LayoutManager.Instance.RestoreDefaultLayout();
+            });
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Clear local cache", () =>
             {
@@ -202,6 +207,10 @@ namespace FlightReLive.UI.Layout
                 SettingsManager.ShowPreferencesModal();
             }, flightReLiveSettings);
             Fugui.RegisterMainMenuSeparator(flightReLiveSettings);
+            Fugui.RegisterMainMenuItem("Restore default layout", () =>
+            {
+                LayoutManager.Instance.RestoreDefaultLayout();
+            }, flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Clear local cache", () =>
             {
                 if (!LoadingManager.Instance.IsLoading)

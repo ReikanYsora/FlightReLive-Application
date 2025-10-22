@@ -276,7 +276,6 @@ namespace FlightReLive.Core
                 layout.Spacing();
 
                 //Introduction
-
                 Fugui.PushFont(16, FontType.Regular);
                 string message = "Before you take off, we recommend adjusting a few key settings to ensure the smoothest and most immersive experience. It only takes a moment, and it makes all the difference.";
                 layout.CenterNextItemH(message);
@@ -288,17 +287,18 @@ namespace FlightReLive.Core
                 layout.Spacing();
                 layout.Separator();
                 layout.Spacing();
+
                 using (FuGrid uiGrid = new FuGrid("wizardUiGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.Default, 2, 2, paddingX))
                 {
                     uiGrid.SetNextElementToolTipWithLabel("Global UI scale. You can always change this setting later via the ‘Preferences’ menu.");
                     uiGrid.Combobox("Global UI Scale##UIScaleCombobox", (int)(Fugui.DefaultContext.Scale * 100f) + "%", () =>
                     {
-                        foreach (float scale in SettingsManager.AvailableUIScale)
+                        float uiScale = SettingsManager.CurrentSettings.GlobalScale;
+
+                        uiGrid.SetNextElementToolTipWithLabel("Global UI scale");
+                        if (uiGrid.Slider("UI Scale", ref uiScale, 1f, 2f, 0.1f, format: "%.1f"))
                         {
-                            if (ImGui.Selectable((scale == Fugui.DefaultContext.Scale ? FlightReLiveIcons.Check : " ") + "  " + scale * 100f + "%"))
-                            {
-                                SettingsManager.SaveGlobalScale(scale);
-                            }
+                            SettingsManager.SaveGlobalScale(uiScale);
                         }
                     });
                 }

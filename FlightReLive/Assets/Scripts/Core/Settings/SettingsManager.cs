@@ -1,7 +1,4 @@
-﻿using FlightReLive.Core.Cache;
-using FlightReLive.Core.Database;
-using FlightReLive.Core.Library;
-using FlightReLive.Core.Loading;
+﻿using FlightReLive.Core.Loading;
 using FlightReLive.UI;
 using Fu;
 using Fu.Framework;
@@ -46,7 +43,6 @@ namespace FlightReLive.Core.Settings
         internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
         internal static LibraryLayoutDisposition LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE = LibraryLayoutDisposition.Thumbnail;
 
-        private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
         {
             { "Europe/Paris", "Romance Standard Time" },
@@ -64,14 +60,6 @@ namespace FlightReLive.Core.Settings
         #endregion
 
         #region PROPERTIES
-        internal static float[] AvailableUIScale
-        {
-            get
-            {
-                return _availableUIScale;
-            }
-        }
-
         public static Settings CurrentSettings { get; private set; } = new Settings();
 
         #endregion
@@ -1640,6 +1628,24 @@ namespace FlightReLive.Core.Settings
             {
                 bool isLoading = LoadingManager.Instance.IsLoading;
 
+                layout.Collapsable("UI##collapsable", () =>
+                {
+                    Fugui.PushFont(14, FontType.Regular);
+
+                    using (FuGrid uiGrid = new FuGrid("uiGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    {
+                        float uiScale = CurrentSettings.GlobalScale;
+
+                        uiGrid.SetNextElementToolTipWithLabel("Global UI scale");
+                        if (uiGrid.Slider("UI Scale", ref uiScale, 1f, 2f, 0.1f, format: "%.1f"))
+                        {
+                            SaveGlobalScale(uiScale);
+                        }
+                    }
+
+                    Fugui.PopFont();
+                }, FuButtonStyle.Collapsable, defaultOpen: true);
+
                 layout.Collapsable("FPS settings##collapsable", () =>
                 {
                     using (FuGrid fpsSettings = new FuGrid("fpsSettingsGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
@@ -1816,28 +1822,6 @@ namespace FlightReLive.Core.Settings
                         }
                         apiGrid.NextColumn();
                         apiGrid.TextURL("Follow this link to create a free MapTiler API Account", "https://www.maptiler.com/", FuTextWrapping.Clip);
-                    }
-
-                    Fugui.PopFont();
-                }, FuButtonStyle.Collapsable, defaultOpen: true);
-
-                layout.Collapsable("UI##collapsable", () =>
-                {
-                    Fugui.PushFont(14, FontType.Regular);
-
-                    using (FuGrid uiGrid = new FuGrid("uiGrid", new FuGridDefinition(2, new int[] { 150, -28 }), FuGridFlag.Default, 2, 2, 2))
-                    {
-                        uiGrid.SetNextElementToolTipWithLabel("Global UI scale");
-                        uiGrid.Combobox("UI Scale##UIScaleCombobox", (int)(Fugui.DefaultContext.Scale * 100f) + "%", () =>
-                        {
-                            foreach (float scale in _availableUIScale)
-                            {
-                                if (ImGui.Selectable((scale == Fugui.DefaultContext.Scale ? FlightReLiveIcons.Check : " ") + "  " + scale * 100f + "%"))
-                                {
-                                    SaveGlobalScale(scale);
-                                }
-                            }
-                        });
                     }
 
                     Fugui.PopFont();

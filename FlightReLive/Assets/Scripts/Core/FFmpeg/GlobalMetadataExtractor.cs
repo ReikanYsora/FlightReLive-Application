@@ -91,7 +91,7 @@ namespace FlightReLive.Core.FFmpeg
                         int seconds = int.Parse(durationMatch.Groups[3].Value);
                         int milliseconds = int.Parse(durationMatch.Groups[4].Value) * 10;
 
-                        result.Duration = new TimeSpan(hours, minutes, seconds, 0, milliseconds);
+                        result.Duration = new TimeSpan(0, hours, minutes, seconds, milliseconds);
                     }
 
                     result.Thumbnail = ExtractThumbnail(ffmpegPath, videoPath);

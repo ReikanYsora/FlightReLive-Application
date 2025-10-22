@@ -44,6 +44,7 @@ namespace FlightReLive.Core.Settings
         internal static int CAPTURE_FRAMERATE_DEFAULT_VALUDE = 1;
         internal static bool CAPTURE_ENCODED_LOGO_DEFAULT_VALUE = true;
         internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
+        internal static LibraryLayoutDisposition LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE = LibraryLayoutDisposition.Thumbnail;
 
         private static float[] _availableUIScale = new float[] { 1f, 1.25f, 1.50f, 1.75f, 2.0f, 2.25f, 2.5f };
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
@@ -86,7 +87,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<DateFormatStyle> OnDateFormatStyleChanged;
         public static event Action<TimeFormatStyle> OnTimeFormatStyleChanged;
         public static event Action<UnitSystemType> OnUnitSystemTypeChanged;
-        public static event Action<float> OnLibraryZoomChanged;
+        public static event Action<LibraryLayoutDisposition> OnLibraryItemDispositionChanged;
         public static event Action<string> OnMapTilerApiKeyChanged;
         public static event Action<float> OnGlobalScaleChanged;
         public static event Action<float> OnPath3DWidthChanged;
@@ -205,11 +206,11 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Load the workspace zoom setting from PlayerPrefs, defaulting to 1.0f if not set.    
+        /// Load the library layout disposition from PlayerPrefs, defaulting to 1.0f if not set.    
         /// </summary>
-        internal static void LoadLibraryZoom()
+        internal static void LoadLibraryLayoutDisposition()
         {
-            CurrentSettings.LibraryZoom = PlayerPrefs.GetFloat(nameof(Settings.LibraryZoom), 1.0f);
+            CurrentSettings.LibraryLayoutDisposition = (LibraryLayoutDisposition)PlayerPrefs.GetInt(nameof(Settings.LibraryLayoutDisposition), (int)LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE);
         }
 
         /// <summary>
@@ -588,15 +589,15 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Save the library zoom setting to PlayerPrefs.
+        /// Save the library layout disposition setting to PlayerPrefs.
         /// </summary>
         /// <param name="value"></param>
-        internal static void SaveLibraryZoom(float value)
+        internal static void SaveLibraryLayoutDisposition(LibraryLayoutDisposition value)
         {
-            CurrentSettings.LibraryZoom = value;
-            PlayerPrefs.SetFloat(nameof(Settings.LibraryZoom), value);
+            CurrentSettings.LibraryLayoutDisposition = value;
+            PlayerPrefs.SetInt(nameof(Settings.LibraryLayoutDisposition), (int)value);
             PlayerPrefs.Save();
-            OnLibraryZoomChanged?.Invoke(value);
+            OnLibraryItemDispositionChanged?.Invoke(value);
         }
 
         /// <summary>
@@ -935,7 +936,7 @@ namespace FlightReLive.Core.Settings
             LoadTimeFormatStyle();
             LoadUnitSystemType();
             LoadGlobalScale();
-            LoadLibraryZoom();
+            LoadLibraryLayoutDisposition();
             LoadMapTilerApiKey();
             LoadPath3DThickness();
             LoadPath3DRemainingColor();
@@ -983,7 +984,7 @@ namespace FlightReLive.Core.Settings
             SaveTimeFormatStyle(TimeFormatStyle.TwentyFourHour);
             SaveUnitSystemType(UnitSystemType.Metric);
             SaveGlobalScale(1f);
-            SaveLibraryZoom(1f);
+            SaveLibraryLayoutDisposition(LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE);
             SaveMapTilerApiKey("");
             SavePath3DThickness(PATH_3D_THICKNESS_DEFAULT_VALUE);
             SavePath3DRemainingColor(PATH_3D_REMAINING_COLOR_DEFAULT_VALUE);

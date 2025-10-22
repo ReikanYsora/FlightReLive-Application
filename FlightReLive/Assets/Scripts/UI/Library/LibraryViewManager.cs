@@ -43,9 +43,10 @@ namespace FlightReLive.UI.Library
         private FlightDataOrigin _filteredOrigin = FlightDataOrigin.All;
         private ShareFilter _filteredShareState = ShareFilter.All;
         private List<string> _filterIcons = new List<string>() { FlightReLiveIcons.All, FlightReLiveIcons.Globe, FlightReLiveIcons.Database, FlightReLiveIcons.Share, FlightReLiveIcons.Circle };
-        private List<string> tooltips = new List<string> { "Show all flights.", "Show imported shared flights.", "Show local flights only.", "Show local flights that are shared.", "Show only new flights." };
+        private List<string> _filterTooltips = new List<string> { "Show all flights.", "Show imported shared flights.", "Show local flights only.", "Show local flights that are shared.", "Show only new flights." };
         private List<string> _dispositionIcons = new List<string>() { FlightReLiveIcons.List, FlightReLiveIcons.Thumbnail };
-        private ItemDisposition _currentDisposition = ItemDisposition.Inline;
+        private List<string> _dispositionTooltips = new List<string>() { "Inline item layout.", "Thumbnail item layout." };
+        private LibraryLayoutDisposition _currentDisposition;
         private readonly Dictionary<string, float> _hoverBlendFactors = new Dictionary<string, float>();
         #endregion
 
@@ -55,12 +56,6 @@ namespace FlightReLive.UI.Library
             All,
             Shared,
             NotShared
-        }
-
-        private enum ItemDisposition
-        {
-            Inline,
-            Thumbnail
         }
         #endregion
 
@@ -72,6 +67,9 @@ namespace FlightReLive.UI.Library
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
             LibraryManager.Instance.OnLibraryLoading += OnLibraryLoading;
+            SettingsManager.OnLibraryItemDispositionChanged += OnLibraryDispositionChanged;
+
+            _currentDisposition = SettingsManager.CurrentSettings.LibraryLayoutDisposition;
         }
 
         private void OnDestroy()
@@ -81,6 +79,7 @@ namespace FlightReLive.UI.Library
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
             LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
             LibraryManager.Instance.OnLibraryLoading -= OnLibraryLoading;
+            SettingsManager.OnLibraryItemDispositionChanged -= OnLibraryDispositionChanged;
         }
         #endregion
 
@@ -124,6 +123,11 @@ namespace FlightReLive.UI.Library
         {
             Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
         }
+
+        private void OnLibraryDispositionChanged(LibraryLayoutDisposition disposition)
+        {
+            _currentDisposition = SettingsManager.CurrentSettings.LibraryLayoutDisposition;
+        }
         #endregion
 
         #region UI
@@ -136,10 +140,10 @@ namespace FlightReLive.UI.Library
         {
             switch (_currentDisposition)
             {
-                case ItemDisposition.Inline:
+                case LibraryLayoutDisposition.Inline:
                     DrawInlineView(window, windowLayout);
                     break;
-                case ItemDisposition.Thumbnail:
+                case LibraryLayoutDisposition.Thumbnail:
                     DrawThumbnailView(window, windowLayout);
                     break;
             }
@@ -277,7 +281,7 @@ namespace FlightReLive.UI.Library
                                 float round = Fugui.Themes.WindowRounding * scale;
                                 float borderThickness = Fugui.Themes.WindowBorderSize * scale;
 
-                                Vector2 textSize = ImGui.CalcTextSize(tooltips[i]);
+                                Vector2 textSize = ImGui.CalcTextSize(_filterTooltips[i]);
                                 Vector2 tooltipSize = textSize + new Vector2(pad * 2f, pad * 2f);
                                 Vector2 mousePos = ImGui.GetMousePos();
                                 Vector2 tipPos = new Vector2(mousePos.x + 16f * scale, mousePos.y + 16f * scale);
@@ -295,13 +299,12 @@ namespace FlightReLive.UI.Library
                                 Vector2 textPos = new Vector2(textCenteredX + pad, tipPos.y + pad);
 
                                 Fugui.PushFont(13, FontType.Regular);
-                                drawList.AddText(textPos, textColor, tooltips[i]);
+                                drawList.AddText(textPos, textColor, _filterTooltips[i]);
                                 Fugui.PopFont();
 
                                 break;
                             }
                         }
-
                     }
 
                     //Input filter / search
@@ -362,12 +365,13 @@ namespace FlightReLive.UI.Library
                     int visibleCount = GetFilteredFlights().Count();
                     int hiddenCount = totalCount - visibleCount;
 
-                    string countText = $"{visibleCount} visible - {hiddenCount} hidden";
+                    string countText = $"{FlightReLiveIcons.Visible}  {visibleCount}  -  {FlightReLiveIcons.Hide}  {hiddenCount}";
                     Vector2 countTextSize = ImGui.CalcTextSize(countText);
                     float countTextWidth = countTextSize.x + (HORIZONTAL_PADDING * scale);
 
                     bool canShowGroup = availableWidth >= groupWidth;
                     bool canShowCounter = availableWidth >= groupWidth + countTextWidth;
+                    Vector2 groupStart = ImGui.GetCursorScreenPos();
 
                     //If toggle button group can be displayed
                     if (canShowGroup)
@@ -387,18 +391,19 @@ namespace FlightReLive.UI.Library
                                 switch (index)
                                 {
                                     case 0:
-                                        _currentDisposition = ItemDisposition.Inline;
+                                        _currentDisposition = LibraryLayoutDisposition.Inline;
                                         break;
 
                                     case 1:
-                                        _currentDisposition = ItemDisposition.Thumbnail;
+                                        _currentDisposition = LibraryLayoutDisposition.Thumbnail;
                                         break;
 
                                     default:
-                                        _currentDisposition = ItemDisposition.Inline;
+                                        _currentDisposition = LibraryLayoutDisposition.Inline;
                                         break;
                                 }
 
+                                SettingsManager.SaveLibraryLayoutDisposition(_currentDisposition);
                                 Fugui.RefreshWindowsInstances(FlightReLiveWindowsNames.Library);
                             },
                             () =>
@@ -406,10 +411,10 @@ namespace FlightReLive.UI.Library
                                 switch (_currentDisposition)
                                 {
                                     default:
-                                    case ItemDisposition.Inline:
+                                    case LibraryLayoutDisposition.Inline:
                                         return FlightReLiveIcons.List;
 
-                                    case ItemDisposition.Thumbnail:
+                                    case LibraryLayoutDisposition.Thumbnail:
                                         return FlightReLiveIcons.Thumbnail;
                                 }
                             },
@@ -418,6 +423,54 @@ namespace FlightReLive.UI.Library
                             flags: FuButtonsGroupFlags.AlignLeft | FuButtonsGroupFlags.AutoSizeButtons,
                             style: buttonStyle
                         );
+                    }
+
+                    //Tooltip for disposition button group 
+                    ImDrawListPtr drawList = ImGui.GetForegroundDrawList();
+                    float buttonWidth = groupWidth / _dispositionIcons.Count;
+                    Vector2 buttonSize = new Vector2(buttonWidth, frameHeight * 1.2f);
+
+                    for (int i = 0; i < _dispositionIcons.Count; i++)
+                    {
+                        Vector2 btnMin = groupStart + new Vector2(i * buttonWidth, 0f);
+                        Vector2 btnMax = btnMin + buttonSize;
+
+                        if (ImGui.IsMouseHoveringRect(btnMin, btnMax))
+                        {
+                            float pad = 4f * scale;
+                            float round = Fugui.Themes.WindowRounding * scale;
+                            float borderThickness = Fugui.Themes.WindowBorderSize * scale;
+
+                            Vector2 textSize = ImGui.CalcTextSize(_dispositionTooltips[i]);
+                            Vector2 tooltipSize = textSize + new Vector2(pad * 2f, pad * 2f);
+                            Vector2 mousePos = ImGui.GetMousePos();
+
+                            //Tooltip hover mouse cursor
+                            Vector2 tipPos = new Vector2(mousePos.x + 12f * scale, mousePos.y - tooltipSize.y - 12f * scale);
+
+                            //Manage screen bound limits
+                            Vector2 screen = ImGui.GetIO().DisplaySize;
+                            tipPos.x = Mathf.Clamp(tipPos.x, 0f, screen.x - tooltipSize.x - 2f);
+                            tipPos.y = Mathf.Clamp(tipPos.y, 2f, screen.y - tooltipSize.y - 2f);
+
+                            uint bgColor = ImGui.GetColorU32(Fugui.Themes.GetColor(FuColors.WindowBg));
+                            uint borderColor = ImGui.GetColorU32(Fugui.Themes.GetColor(FuColors.Border));
+                            uint textColor = ImGui.GetColorU32(Fugui.Themes.GetColor(FuColors.Text));
+
+                            //Background & border
+                            drawList.AddRectFilled(tipPos, tipPos + tooltipSize, bgColor, round);
+                            drawList.AddRect(tipPos, tipPos + tooltipSize, borderColor, round, ImDrawFlags.None, borderThickness);
+
+                            //Horizontal text aligned
+                            float textCenteredX = tipPos.x + (tooltipSize.x - textSize.x) * 0.5f;
+                            Vector2 textPos = new Vector2(textCenteredX + pad, tipPos.y + pad);
+
+                            Fugui.PushFont(13, FontType.Regular);
+                            drawList.AddText(textPos, textColor, _dispositionTooltips[i]);
+                            Fugui.PopFont();
+
+                            break;
+                        }
                     }
 
                     //Count filtered text

@@ -124,6 +124,11 @@ namespace FlightReLive.Core.Cameras
 
         private void HandleLook()
         {
+            if (CameraWindow == null)
+            {
+                return;
+            }
+
             if (CameraWindow.Mouse.IsPressed(FuMouseButton.Right))
             {
                 Vector2 delta = Mouse.current.delta.ReadValue();

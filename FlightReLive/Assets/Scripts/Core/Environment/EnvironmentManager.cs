@@ -1153,7 +1153,7 @@ namespace FlightReLive.Core.Environment
 
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "Shadows opacity",
-                    "Define the opacity of cloud shadows",
+                    "Define the opacity of cloud shadows.",
                     $"Reset default cloud shadows opacity to default value ({SettingsManager.CLOUD_SHADOW_OPACITY_DEFAULT_STATE}).",
                     SettingsManager.CurrentSettings.CloudShadowsOpacity,
                     0.0f,

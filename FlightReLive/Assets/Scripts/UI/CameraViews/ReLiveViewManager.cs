@@ -20,6 +20,7 @@ namespace FlightReLive.UI.CameraViews
         #region CONSTANTS
         protected const float HEADER_BAR_HEIGHT = 26f;
         protected const float FOOTER_BAR_HEIGHT = 26f;
+        private const float CAMERA_MODE_WIDTH = 150f;
         private const float TOGGLE_CAPTURE_WIDTH = 103f;
         private const float SETTINGS_POPUP_BUTTON_WIDTH = 42f;
         private const float SETTINGS_POPUP_WIDTH = 300f;
@@ -30,7 +31,6 @@ namespace FlightReLive.UI.CameraViews
 
         #region ATTRIBUTES
         private TimeBarOverlay _timeBarOverlay;
-        private CameraModeOverlay _cameraModeOverlay;
         private CompassOverlay _compassOverlay;
         #endregion
 
@@ -62,30 +62,22 @@ namespace FlightReLive.UI.CameraViews
         #endregion
 
         #region METHODS
-        protected void InitializeCameraView()
-        {
-            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
-            ExternalCameraManipulator.Instance.CameraModeOverlay = _cameraModeOverlay;
-            PathManager.Instance.Camera = CameraWindow;
-        }
-
         public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
         {
             windowDefinition.SetHeaderUI(DrawHeaderBar, HEADER_BAR_HEIGHT);
-            windowDefinition.SetFooterUI(DrawFooterBar, HEADER_BAR_HEIGHT);
+            windowDefinition.SetFooterUI(DrawFooterBar, FOOTER_BAR_HEIGHT);
             windowDefinition.SetUI(OnUI);
 
             _timeBarOverlay = new TimeBarOverlay();
             _timeBarOverlay.DisplayTimeBarOverlay(windowDefinition, CameraWindow);
-            _cameraModeOverlay = new CameraModeOverlay();
-            _cameraModeOverlay.DisplayCameraModeOverlay(windowDefinition);
             _compassOverlay = new CompassOverlay();
             _compassOverlay.DisplayCompassOverlay(windowDefinition, Camera);
         }
 
         public override void OnWindowCreated(FuWindow window)
         {
-            InitializeCameraView();
+            ExternalCameraManipulator.Instance.CameraWindow = CameraWindow;
+            PathManager.Instance.Camera = CameraWindow;
         }
 
         protected void DrawHeaderBar(FuWindow window, Vector2 size)
@@ -101,11 +93,19 @@ namespace FlightReLive.UI.CameraViews
                 Fugui.Push(ImGuiCol.MenuBarBg, Fugui.Themes.GetColor(FuColors.Border));
                 Fugui.MoveX(4f);
                 Fugui.MoveY(5f);
-                float totalWidth = layout.GetAvailableWidth();
-                float leftToggleWidth = TOGGLE_CAPTURE_WIDTH * scale;
-                bool showLeftToggle = totalWidth > leftToggleWidth;
 
-                if (showLeftToggle)
+                float totalWidth = layout.GetAvailableWidth();
+
+                float leftToggleWidth = TOGGLE_CAPTURE_WIDTH * scale;
+                float rightGroupWidth = 5 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
+                float cameraGroupWidth = CAMERA_MODE_WIDTH * scale;
+
+                bool canShowAll = rightGroupWidth < (totalWidth / 2f) - (cameraGroupWidth / 2f);
+                bool canShowToggleAndCamera = leftToggleWidth < (totalWidth / 2f) - (cameraGroupWidth / 2f);
+                bool canShowCameraOnly = totalWidth >= (cameraGroupWidth + 8f * scale);
+
+                //Toggle Capture
+                if (canShowToggleAndCamera)
                 {
                     if (!LoadingManager.Instance.IsLoaded)
                     {
@@ -121,45 +121,65 @@ namespace FlightReLive.UI.CameraViews
                     }
 
                     layout.SameLine();
-                    float rightGroupWidth = 5 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
-                    bool showRightButtons = totalWidth > rightGroupWidth + leftToggleWidth;
-                    float popUpWidth = SETTINGS_POPUP_WIDTH * scale;
-
-                    if (showRightButtons)
-                    {
-                        Fugui.PushFont(14, FontType.Regular);
-                        Fugui.MoveXUnscaled(layout.GetAvailableWidth() - rightGroupWidth);
-
-                        Fugui.MoveY(-4f);
-                        layout.SetNextElementToolTip("Capture settings");
-                        PopupButton(layout, FlightReLiveIcons.Camera, () => DrawCaptureSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-                        layout.SameLine();
-
-                        Fugui.MoveY(-4f);
-                        layout.SetNextElementToolTip("Sun / clouds settings");
-                        PopupButton(layout, FlightReLiveIcons.SunClouds, () => DrawSunCloudsSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-                        layout.SameLine();
-
-                        Fugui.MoveY(-4f);
-                        layout.SetNextElementToolTip("Post-processing settings");
-                        PopupButton(layout, FlightReLiveIcons.PostProcess, () => DrawPostProcessingSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-                        layout.SameLine();
-
-                        Fugui.MoveY(-4f);
-                        layout.SetNextElementToolTip("Open path settings");
-                        PopupButton(layout, FlightReLiveIcons.Path, () => DrawPathSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-                        layout.SameLine();
-
-                        Fugui.MoveY(-4f);
-                        layout.SetNextElementToolTip("Open scene settings");
-                        PopupButton(layout, FlightReLiveIcons.AltitudeRelative, () => DrawSceneSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-
-                        Fugui.PopFont();
-                    }
                 }
 
+                //Camera Mode Buttons
+                if (canShowCameraOnly)
+                {
+                    FuButtonsGroupStyle buttonStyle = FuButtonsGroupStyle.Default;
+                    Vector2 iconPadding = new Vector2(6f * scale, 4f * scale);
+
+                    //Centered buttongroup Camera mode
+                    float cameraGroupX = (totalWidth - cameraGroupWidth) * 0.5f;
+                    ImGui.SetCursorPosX(cameraGroupX);
+                    Fugui.MoveY(-4f);
+
+                    layout.ButtonsGroup<CameraMode>(
+                        "CameraMode",
+                        (value) => { ExternalCameraManipulator.Instance.Mode = (CameraMode)value; },
+                        () => ExternalCameraManipulator.Instance.Mode,
+                        width: cameraGroupWidth,
+                        padding: iconPadding,
+                        flags: FuButtonsGroupFlags.AlignLeft,
+                        style: buttonStyle
+                    );
+
+                    layout.SameLine();
+                }
+
+                //Options buttons
+                if (canShowAll)
+                {
+                    float popUpWidth = SETTINGS_POPUP_WIDTH * scale;
+                    Fugui.PushFont(14, FontType.Regular);
+                    Fugui.MoveXUnscaled(layout.GetAvailableWidth() - rightGroupWidth);
+
+                    layout.SetNextElementToolTip("Capture settings");
+                    PopupButton(layout, FlightReLiveIcons.Camera, () => DrawCaptureSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
+                    layout.SameLine();
+
+                    layout.SetNextElementToolTip("Sun / clouds settings");
+                    PopupButton(layout, FlightReLiveIcons.SunClouds, () => DrawSunCloudsSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
+                    layout.SameLine();
+
+                    layout.SetNextElementToolTip("Post-processing settings");
+                    PopupButton(layout, FlightReLiveIcons.PostProcess, () => DrawPostProcessingSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
+                    layout.SameLine();
+
+                    layout.SetNextElementToolTip("Open path settings");
+                    PopupButton(layout, FlightReLiveIcons.Path, () => DrawPathSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
+                    layout.SameLine();
+
+                    layout.SetNextElementToolTip("Open scene settings");
+                    PopupButton(layout, FlightReLiveIcons.AltitudeRelative, () => DrawSceneSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
+
+                    Fugui.PopFont();
+                }
+
+                ImGui.Dummy(Vector2.zero);
                 Fugui.PopColor();
             }
+
             layout.Dispose();
         }
 

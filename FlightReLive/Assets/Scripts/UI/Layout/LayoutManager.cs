@@ -1,9 +1,9 @@
 ﻿using FlightReLive.Core;
 using FlightReLive.Core.Cache;
 using FlightReLive.Core.Library;
+using FlightReLive.Core.Loading;
 using FlightReLive.Core.Platform;
 using FlightReLive.Core.Settings;
-using FlightReLive.Core.Share;
 using FlightReLive.UI.Share;
 using Fu;
 using Fu.Framework;
@@ -66,21 +66,16 @@ namespace FlightReLive.UI.Layout
                     async (paths) =>
                     {
                         if (paths.Length > 0)
+                        {
                             await LibraryManager.Instance.ImportFlights(paths);
+                        }
                     });
 
             }, "L");
 
             MacOsMainMenuManager.AddMenuEntry("Import", "Import from SharedHash", () =>
             {
-                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
-                {
-                    ShareViewManager.DisplaySharedHashModal();
-                }
-                else
-                {
-                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning, 5f);
-                }
+                ShareViewManager.DisplaySharedHashModal();
             }, "H");
 
             //Settings menu
@@ -93,17 +88,38 @@ namespace FlightReLive.UI.Layout
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Clear local cache", () =>
             {
-                CacheManager.ClearCache();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Clear local cache?", "This action will delete all downloaded tiles. This action cannot be undone. Continue?", CacheManager.ClearCache, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             });
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Clear flights library", () =>
             {
-                LibraryManager.Instance.ClearLibrary();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Clear flights library?", "You're about to clear your flights library. This action cannot be undone. Continue?", LibraryManager.Instance.ClearLibrary, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             });
 
             MacOsMainMenuManager.AddMenuEntry("Settings", "Reset preferences", () =>
             {
-                SettingsManager.LoadDefaultSettings();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Restore default preferences?", "This action will restore all settings to their default values. Are you sure you want to continue?", SettingsManager.LoadDefaultSettings, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             });
 
             //Windows menu
@@ -173,14 +189,7 @@ namespace FlightReLive.UI.Layout
 
             Fugui.RegisterMainMenuItem(FlightReLiveIcons.Share + "  Import from SharedHash", () =>
             {
-                if (!string.IsNullOrEmpty(SettingsManager.CurrentSettings.MapTilerAPIKey))
-                {
-                    ShareViewManager.DisplaySharedHashModal();
-                }
-                else
-                {
-                    Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning, 5f);
-                }
+                ShareViewManager.DisplaySharedHashModal();
             }, flightReLiveImport);
 
             //Settings menu
@@ -195,15 +204,36 @@ namespace FlightReLive.UI.Layout
             Fugui.RegisterMainMenuSeparator(flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Clear local cache", () =>
             {
-                CacheManager.ClearCache();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Clear local cache?", "This action will delete all downloaded tiles. This action cannot be undone. Continue?", CacheManager.ClearCache, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             }, flightReLiveSettings);
             Fugui.RegisterMainMenuItem("Clear flights library", () =>
             {
-                LibraryManager.Instance.ClearLibrary();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Clear flights library?", "You're about to clear your flights library. This action cannot be undone. Continue?", LibraryManager.Instance.ClearLibrary, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             }, flightReLiveSettings);
-            Fugui.RegisterMainMenuItem("Reset preferences", () =>
+            Fugui.RegisterMainMenuItem("Restore default preferences", () =>
             {
-                SettingsManager.LoadDefaultSettings();
+                if (!LoadingManager.Instance.IsLoading)
+                {
+                    FlightReLiveUIHelper.ShowYesNoMessageBox("Restore default preferences?", "This action will restore all settings to their default values. Are you sure you want to continue?", SettingsManager.LoadDefaultSettings, null);
+                }
+                else
+                {
+                    Fugui.Notify("Action canceled", "Action not allowed during loading. Please try again.", StateType.Warning, 5f);
+                }
             }, flightReLiveSettings);
 
             //"Windows" menu

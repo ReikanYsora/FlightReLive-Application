@@ -644,7 +644,7 @@ namespace FlightReLive.Core.Capture
                 SettingsManager.DisplaySettingsComboboxWithReset(
                     grid,
                     "Capture resolution",
-                    "Capture output native resolution",
+                    "Capture output native resolution.",
                     "Reset to default resolution",
                     SettingsManager.CurrentSettings.CaptureResolution,
                     SettingsManager.CAPTURE_RESOLUTION_DEFAULT_VALUE,
@@ -657,7 +657,7 @@ namespace FlightReLive.Core.Capture
                 SettingsManager.DisplaySettingsComboboxWithReset(
                     grid,
                     "Capture framerate",
-                    "Capture output native framerate",
+                    "Capture output native framerate.",
                     "Reset to default framerate",
                     SettingsManager.CurrentSettings.CaptureFramerate,
                     SettingsManager.CAPTURE_FRAMERATE_DEFAULT_VALUDE,
@@ -670,7 +670,7 @@ namespace FlightReLive.Core.Capture
                 SettingsManager.DisplaySettingsComboboxWithReset(
                     grid,
                     "Capture encoder",
-                    "Capture encoder",
+                    "Capture encoder.",
                     "Reset to default encoder",
                     SettingsManager.CurrentSettings.CaptureEncoder,
                     SettingsManager.CAPTURE_ENCODER_DEFAULT_VALUE,
@@ -683,7 +683,7 @@ namespace FlightReLive.Core.Capture
                 SettingsManager.DisplaySettingsFolderInputWithReset(
                     grid,
                     "Capture output path",
-                    "Capture output folder path",
+                    "Capture output folder path.",
                     "Reset to default capture output path",
                     SettingsManager.CurrentSettings.CaptureOutputPath,
                     SettingsManager.CAPTURE_OUTPUT_PATH_DEFAULT_VALUE,

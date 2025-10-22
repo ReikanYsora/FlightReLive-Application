@@ -349,6 +349,11 @@ namespace FlightReLive.Core.POI
         {
             using (FuGrid grid = new FuGrid("gridPOISettings", new FuGridDefinition(3, new float[] { 0.3f, 0.58f, 0.12f }), FuGridFlag.AutoToolTipsOnLabels, rowsPadding: 4f, outterPadding: 10))
             {
+                if (_poiList == null || _poiList.Count == 0)
+                {
+                    grid.DisableNextElements();
+                }
+
                 bool poiEnabled = SettingsManager.CurrentSettings.POIVisibility;
 
                 SettingsManager.DisplaySettingsToggleWithReset(grid,
@@ -361,7 +366,9 @@ namespace FlightReLive.Core.POI
                     () => SettingsManager.ResetPOIVisibility());
 
                 if (!poiEnabled)
+                {
                     grid.DisableNextElements();
+                }
 
                 SettingsManager.DisplaySettingsSliderWithReset(grid,
                     "POI scale",

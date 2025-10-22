@@ -58,7 +58,6 @@ namespace FlightReLive.UI.CameraViews
         public override void OnWindowDefinitionCreated(FuWindowDefinition windowDefinition)
         {
             windowDefinition.SetHeaderUI(DrawHeaderBar, HEADER_BAR_HEIGHT);
-            windowDefinition.SetFooterUI(DrawFooterBar, HEADER_BAR_HEIGHT);
             windowDefinition.SetUI(OnUI);
 
             _sensorOverlay = new CameraSensorOverlay(Camera);
@@ -85,22 +84,6 @@ namespace FlightReLive.UI.CameraViews
                 Fugui.Push(ImGuiCol.MenuBarBg, Fugui.Themes.GetColor(FuColors.Border));
                 Fugui.PopColor();
             }
-            layout.Dispose();
-        }
-        protected void DrawFooterBar(FuWindow window, Vector2 size)
-        {
-            float scale = Fugui.CurrentContext.Scale;
-            size.y = FOOTER_BAR_HEIGHT * scale;
-            FuLayout layout = new FuLayout();
-
-            FuStyle customStyle = new FuStyle(FuTextStyle.Default, FuFrameStyle.Default, new FuPanelStyle((Color)Fugui.Themes.GetColor(FuColors.MenuBarBg), (Color)Fugui.Themes.GetColor(FuColors.Border)), FuStyle.Unpadded.FramePadding, FuStyle.Unpadded.WindowPadding);
-
-            using (FuPanel panel = new FuPanel("panelFooter", customStyle, false, window.FooterHeight, window.WorkingAreaSize.x, FuPanelFlags.NoScroll))
-            {
-                Fugui.Push(ImGuiCol.MenuBarBg, Fugui.Themes.GetColor(FuColors.Border));
-                Fugui.PopColor();
-            }
-
             layout.Dispose();
         }
         #endregion

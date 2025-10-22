@@ -213,6 +213,7 @@ namespace FlightReLive.Core.Library
                     _smoothProgress = Mathf.Lerp(_smoothProgress, targetProgress, 10f * Time.deltaTime);
                     float progress = _smoothProgress;
 
+                    layout.Spacing();
                     layout.CenterNextItemH(400f);
                     layout.ProgressBar("##importProgress", progress, new FuElementSize(400f, 6f), ProgressBarTextPosition.None);
                     layout.Spacing();

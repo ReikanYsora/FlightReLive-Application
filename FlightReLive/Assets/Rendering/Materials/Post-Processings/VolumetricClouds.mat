@@ -113,14 +113,14 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _AltitudeDistortion: 0.0625
-    - _AmbientProbeDimmer: 0.7354058
+    - _AmbientProbeDimmer: 0.74133205
     - _AtmosphereThickness: 1
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudNearPlane: 2975.938
+    - _CloudNearPlane: 2980.4978
     - _Cull: 2
     - _Cutoff: 0.5
     - _DensityMultiplier: 0.32000002
@@ -169,13 +169,13 @@ Material:
     - _SrcBlendAlpha: 1
     - _StepSize: 0.4
     - _SunDisk: 2
-    - _SunLightDimmer: 0.64720774
+    - _SunLightDimmer: 0.6551094
     - _SunSize: 0.04
     - _SunSizeConvergence: 5
     - _Surface: 0
-    - _VerticalErosionWindDisplacement: -6.60973
+    - _VerticalErosionWindDisplacement: -3.8396876
     - _VerticalShapeNoiseOffset: 0
-    - _VerticalShapeWindDisplacement: -6609.733
+    - _VerticalShapeWindDisplacement: -3839.6882
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

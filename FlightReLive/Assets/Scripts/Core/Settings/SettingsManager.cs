@@ -1843,45 +1843,6 @@ namespace FlightReLive.Core.Settings
                     Fugui.PopFont();
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
 
-                layout.Collapsable("Clear caches and settings##collapsable", () =>
-                {
-                    Fugui.PushFont(14, FontType.Bold);
-
-                    using (FuGrid uiGrid = new FuGrid("actionSettingsGrid", new FuGridDefinition(3, new float[] { 0.3f, 0.3f, 0.3f }), FuGridFlag.Default))
-                    {
-                        if (isLoading)
-                        {
-                            uiGrid.DisableNextElements();
-                        }
-
-                        uiGrid.SetNextElementToolTipWithLabel("Delete all downloaded tiles stored on this computer.\nVideo files will not be deleted.");
-
-                        if (uiGrid.Button("Clear local cache", FuButtonStyle.Info))
-                        {
-                            CacheManager.ClearCache();
-                        }
-
-                        uiGrid.SetNextElementToolTipWithLabel("Delete all saved flights stored on this computer.\nVideo files will not be deleted.");
-
-                        if (uiGrid.Button("Clear flights library", FuButtonStyle.Info))
-                        {
-                            LibraryManager.Instance.ClearLibrary();
-                        }
-
-                        uiGrid.SetNextElementToolTipWithLabel("Restore the entire application configuration (including settings made from the application's global UI).\nVideo files will not be deleted.");
-
-                        if (uiGrid.Button("Restore preferences", FuButtonStyle.Danger))
-                        {
-                            LoadDefaultSettings();
-                            LoadAll();
-
-                            Fugui.Notify("Successful operation", "All user preferences have been reset.", StateType.Info, 3f);
-                        }
-                    }
-
-                    Fugui.PopFont();
-                }, FuButtonStyle.Collapsable, defaultOpen: true);
-
             }, FuModalSize.Medium, new FuModalButton("Close preferences", () => { _settingsOpened = false; }, FuButtonStyle.Default, FuKeysCode.Enter));
         }
 

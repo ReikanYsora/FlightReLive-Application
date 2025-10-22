@@ -122,23 +122,21 @@ namespace FlightReLive.Core.Loading
 
             try
             {
+                token.ThrowIfCancellationRequested();
+
                 string apiKey = SettingsManager.CurrentSettings.MapTilerAPIKey;
 
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
-                    NotifyError("Missing MapTiler API key.");
-                    return;
+                    throw new MapTilerInvalidAPIKeyException();
                 }
 
                 bool isValid = await MapTilerAPIHelper.IsMapTilerKeyValidAsync(apiKey, token);
 
                 if (!isValid)
                 {
-                    NotifyError("Invalid MapTiler API key.");
-                    return;
+                    throw new MapTilerInvalidAPIKeyException();
                 }
-
-                token.ThrowIfCancellationRequested();
 
                 List<int> priorities = flightData.MapDefinition.TileDefinitions
                     .Select(t => t.Priority)
@@ -216,6 +214,19 @@ namespace FlightReLive.Core.Loading
             {
                 Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning, 5f);
                 await UnloadFlightDataInModules();
+                Fugui.CloseModal();
+            }
+            catch (MapTilerInvalidAPIKeyException)
+            {
+                Fugui.Notify("MapTiler API Key is missing", "Please set a valid MapTiler API Key in the Preferences before using this feature.", StateType.Warning, 5f);
+                await UnloadFlightDataInModules();
+                Fugui.CloseModal();
+            }
+            catch (Exception ex)
+            {
+                Fugui.Notify("An error has occurred.", ex.GetBaseException().Message, StateType.Danger, 5f);
+                await UnloadFlightDataInModules();
+                Fugui.CloseModal();
             }
             finally
             {
@@ -362,16 +373,6 @@ namespace FlightReLive.Core.Loading
             }
 
             return flightData;
-        }
-
-        /// <summary>
-        /// Notifies the user of an error during loading and stops the loading process.
-        /// </summary>
-        /// <param name="message"></param>
-        private void NotifyError(string message)
-        {
-            Fugui.Notify("Resource loading error", message, StateType.Danger, 5f);
-            IsLoading = false;
         }
 
         /// <summary>
@@ -541,5 +542,10 @@ namespace FlightReLive.Core.Loading
             new FuModalButton("Cancel loading", async () => await CancelLoading(), FuButtonStyle.Danger, FuKeysCode.Escape));
         }
         #endregion
+    }
+
+    internal class MapTilerInvalidAPIKeyException : Exception
+    {
+
     }
 }

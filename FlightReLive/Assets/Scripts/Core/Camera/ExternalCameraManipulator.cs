@@ -85,8 +85,6 @@ namespace FlightReLive.Core.Cameras
         public FuCameraWindow CameraWindow { internal set; get; }
 
         public static ExternalCameraManipulator Instance { get; private set; }
-
-        internal CameraModeOverlay CameraModeOverlay { get; set; }
         #endregion
 
         #region UNITY METHODS
@@ -117,7 +115,6 @@ namespace FlightReLive.Core.Cameras
             SettingsManager.OnCameraZoomSpeedChanged += OnCameraZoomSpeedChanged;
             SettingsManager.OnPanSpeedChanged += OnPanSpeedChanged;
             LoadingManager.Instance.OnFlightEndLoading += OnFlightEndLoading;
-            LoadingManager.Instance.OnFlightUnloaded += OnFlightUnloaded;
 
             _zoomSensitivity = SettingsManager.CurrentSettings.CameraZoomSpeed;
             _rotationSensitivity = SettingsManager.CurrentSettings.CameraRotationSpeed;
@@ -174,7 +171,6 @@ namespace FlightReLive.Core.Cameras
             SettingsManager.OnCameraZoomSpeedChanged -= OnCameraZoomSpeedChanged;
             SettingsManager.OnPanSpeedChanged -= OnPanSpeedChanged;
             LoadingManager.Instance.OnFlightEndLoading -= OnFlightEndLoading;
-            LoadingManager.Instance.OnFlightUnloaded -= OnFlightUnloaded;
         }
         #endregion
 
@@ -482,19 +478,6 @@ namespace FlightReLive.Core.Cameras
         private void OnFlightEndLoading(SerializedFlightData flight)
         {
             RecenterCamera();
-
-            if (CameraModeOverlay != null)
-            {
-                CameraModeOverlay.IsVisible = true;
-            }
-        }
-
-        private void OnFlightUnloaded()
-        {
-            if (CameraModeOverlay != null)
-            {
-                CameraModeOverlay.IsVisible = false;
-            }
         }
         #endregion
     }

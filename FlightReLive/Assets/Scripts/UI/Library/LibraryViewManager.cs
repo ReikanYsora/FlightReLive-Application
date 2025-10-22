@@ -42,8 +42,8 @@ namespace FlightReLive.UI.Library
         private bool _filterOnlyNew = false;
         private FlightDataOrigin _filteredOrigin = FlightDataOrigin.All;
         private ShareFilter _filteredShareState = ShareFilter.All;
-        private List<string> _filterIcons = new List<string>() { FlightReLiveIcons.All, FlightReLiveIcons.Globe, FlightReLiveIcons.Database, FlightReLiveIcons.Share, FlightReLiveIcons.Circle };
-        private List<string> _filterTooltips = new List<string> { "Show all flights.", "Show imported shared flights.", "Show local flights only.", "Show local flights that are shared.", "Show only new flights." };
+        private List<string> _filterIcons = new List<string>() { FlightReLiveIcons.All, FlightReLiveIcons.Database, FlightReLiveIcons.Globe, FlightReLiveIcons.Share, FlightReLiveIcons.Circle };
+        private List<string> _filterTooltips = new List<string> { "Show all flights.", "Show local flights only.", "Show imported shared flights.", "Show local flights that are shared.", "Show only new flights." };
         private List<string> _dispositionIcons = new List<string>() { FlightReLiveIcons.List, FlightReLiveIcons.Thumbnail };
         private List<string> _dispositionTooltips = new List<string>() { "Inline item layout.", "Thumbnail item layout." };
         private LibraryLayoutDisposition _currentDisposition;
@@ -196,36 +196,31 @@ namespace FlightReLive.UI.Library
                             {
                                 switch (index)
                                 {
-                                    case 0: // All
+                                    case 0: //All
                                         _filteredOrigin = FlightDataOrigin.All;
                                         _filteredShareState = ShareFilter.All;
                                         _filterOnlyNew = false;
                                         break;
-
-                                    case 1: // Globe
+                                    case 1: //Database
+                                        _filteredOrigin = FlightDataOrigin.Local;
+                                        _filteredShareState = ShareFilter.All;
+                                        _filterOnlyNew = false;
+                                        break;
+                                    case 2: //Globe
                                         _filteredOrigin = FlightDataOrigin.SharedHash;
                                         _filteredShareState = ShareFilter.All;
                                         _filterOnlyNew = false;
                                         break;
-
-                                    case 2: // Database
-                                        _filteredOrigin = FlightDataOrigin.Local;
-                                        _filteredShareState = ShareFilter.All;
-                                        _filterOnlyNew = false;
-                                        break;
-
-                                    case 3: // Share
+                                    case 3: //Share
                                         _filteredOrigin = FlightDataOrigin.Local;
                                         _filteredShareState = ShareFilter.Shared;
                                         _filterOnlyNew = false;
                                         break;
-
-                                    case 4: // Circle (new only)
+                                    case 4: //New
                                         _filteredOrigin = FlightDataOrigin.All;
                                         _filteredShareState = ShareFilter.All;
                                         _filterOnlyNew = true;
                                         break;
-
                                     default:
                                         _filteredOrigin = FlightDataOrigin.All;
                                         _filteredShareState = ShareFilter.All;
@@ -482,7 +477,7 @@ namespace FlightReLive.UI.Library
                         float textX = size.x - countTextWidth - paddingRight;
 
                         ImGui.SetCursorPos(new Vector2(textX, textY));
-                        layout.Text(countText, FuTextStyle.Default, Fugui.Themes.GetColor(FuColors.Text));
+                        layout.Text(countText, FuTextStyle.Deactivated, Fugui.Themes.GetColor(FuColors.TextDisabled));
 
                         Fugui.PopFont();
                     }
@@ -507,7 +502,7 @@ namespace FlightReLive.UI.Library
                     (_filteredShareState == ShareFilter.All ||
                     (_filteredShareState == ShareFilter.Shared && !string.IsNullOrEmpty(f.ShareHash)) ||
                     (_filteredShareState == ShareFilter.NotShared && string.IsNullOrEmpty(f.ShareHash))) &&
-                    // "New only" filter (Circle icon)
+                    // New flight filter
                     (!_filterOnlyNew || f.IsNew)
                 )
                 .OrderBy(f => f.Name);

@@ -20,6 +20,7 @@ namespace FlightReLive.Core
         [Header("Cameras & upscalers settings")]
         [SerializeField] private Camera _reliveCamera;
         [SerializeField] private Camera _povCamera;
+        private bool _dontAskForThisVersion;
 
 #if UNITY_STANDALONE_WIN
         [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -133,13 +134,14 @@ namespace FlightReLive.Core
         private bool CheckIfDisplayWelcomePanelNeedToBeDisplayed()
         {
             bool displayWelcome = false;
+            _dontAskForThisVersion = SettingsManager.CurrentSettings.DontAskWelcomeVersion;
 
             if (Application.version != SettingsManager.CurrentSettings.CurrentVersion)
             {
                 displayWelcome = true;
                 SettingsManager.SaveDontAskWelcomeVersion(false);
             }
-            else if (!SettingsManager.CurrentSettings.DontAskWelcomeVersion)
+            else if (!_dontAskForThisVersion)
             {
                 displayWelcome = true;
             }
@@ -456,10 +458,10 @@ namespace FlightReLive.Core
                 layout.Spacing();
                 ImGui.Indent(10);
                 Fugui.PushFont(14, FontType.Italic);
-                bool dontAskForThisVersion = SettingsManager.CurrentSettings.DontAskWelcomeVersion;
-                if (layout.CheckBox("##askForDisplay", ref dontAskForThisVersion))
+                if (layout.CheckBox("##askForDisplay", ref _dontAskForThisVersion))
                 {
                     SettingsManager.SaveDontAskWelcomeVersion(true);
+                    _dontAskForThisVersion = true;
                 }
                 layout.SameLine();
                 layout.Text(" Don't ask me again for this version");

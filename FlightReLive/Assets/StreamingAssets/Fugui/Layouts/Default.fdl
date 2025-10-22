@@ -32,7 +32,7 @@
                             "Proportion": 0.5,
                             "Orientation": 0,
                             "Children": [],
-                            "WindowsDefinition": [11, 15, 16],
+                            "WindowsDefinition": [11, 15],
                             "AutoHideTopBar": false,
                             "LayoutType": 0
                         },

@@ -1,4 +1,5 @@
 using MessagePack;
+using MessagePack.Resolvers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,14 +56,9 @@ namespace FlightReLive.Core.Database
 
             try
             {
-                if (string.IsNullOrEmpty(item.UniqueKey))
-                {
-                    item.ComputeUniqueKey();
-                }
-
                 string filePath = GetFlightFilePath(item.UniqueKey);
 
-                // Encode texture if needed
+                //Encode texture if needed
                 item.EncodeTextures();
 
                 lock (_fileLock)
@@ -141,6 +137,12 @@ namespace FlightReLive.Core.Database
             }
 
             return flights;
+        }
+
+        //Check if flight file already exists
+        internal static bool Exists(SerializedFlightData flightFile)
+        {
+            return File.Exists(GetFlightFilePath(flightFile.UniqueKey));
         }
 
         // <summary>

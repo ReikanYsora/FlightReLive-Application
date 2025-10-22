@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace FlightReLive.Core.Share
 {
     [Serializable]
-    internal class FlightFileDownloadResponse
+    internal class FlightFileDownload
     {
         public string Name { get; set; }
 
@@ -18,32 +18,22 @@ namespace FlightReLive.Core.Share
 
         public DateTime CreationDateUtc { get; set; }
 
-        public byte[] MapData { get; set; }
-
         public byte[] ThumbnailData { get; set; }
 
         public float? TakeOffLatitude { get; set; }
 
         public float? TakeOffLongitude { get; set; }
 
-        public float? FlightGPSX { get; set; }
+        public float TakeOffAltitude { get; set; }
 
-        public float? FlightGPSY { get; set; }
+        public float? FlightLatitude { get; set; }
 
-        public bool HasExtractionError { get; set; }
+        public float? FlightLongitude { get; set; }
 
         public bool HasTakeOffPosition { get; set; }
 
-        public bool IsValid { get; set; }
-
-        public string ErrorMessagesJson { get; set; }
-
-        public List<FlightDataPointDownload> DataPoints { get; set; }
-
         public string ShareHash { get; set; }
 
-        public string ShareHashDisplay { get; set; }
-
-        public DateTime ExpirationDateUtc { get; set; }
+        public List<FlightDataPointDownload> DataPoints { get; set; } = new List<FlightDataPointDownload>();
     }
 }

@@ -208,13 +208,13 @@ namespace FlightReLive.Core.Loading
                 PathManager.Instance.Load(flightData);
                 TimeBarManager.Instance.Load(flightData);
                 Fugui.CloseModal();
-                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info, 3f);
+                Fugui.Notify("Flight loaded", $"{flightData.Name} successfully loaded.", StateType.Info, 5f);
                 OnFlightEndLoading?.Invoke(flightFile);
                 IsLoaded = true;
             }
             catch (OperationCanceledException)
             {
-                Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning, 3f);
+                Fugui.Notify("Loading cancelled", "The flight loading has been cancelled.", StateType.Warning, 5f);
                 await UnloadFlightDataInModules();
             }
             finally
@@ -259,6 +259,7 @@ namespace FlightReLive.Core.Loading
 
             FlightData flightData = new FlightData
             {
+                UniqueKey = file.UniqueKey,
                 Name = file.Name,
                 Width = file.Width,
                 Height = file.Height,
@@ -267,6 +268,7 @@ namespace FlightReLive.Core.Loading
                 Length = file.Duration,
                 Points = dataPoints,
                 HasTakeOffPosition = file.HasTakeOffPosition,
+                SharedHash = file.ShareHash
             };
 
             if (file.HasTakeOffPosition)
@@ -368,7 +370,7 @@ namespace FlightReLive.Core.Loading
         /// <param name="message"></param>
         private void NotifyError(string message)
         {
-            Fugui.Notify("Resource loading error", message, StateType.Danger, 3f);
+            Fugui.Notify("Resource loading error", message, StateType.Danger, 5f);
             IsLoading = false;
         }
 

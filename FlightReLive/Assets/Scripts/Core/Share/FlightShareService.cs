@@ -12,7 +12,7 @@ namespace FlightReLive.Core.Share
     internal static class FlightShareService
     {
         #region CONSTANTS
-        private const string BASE_API_URL = "https://flightrelive-api-cqb8dsgtb6c6ebaq.canadacentral-01.azurewebsites.net/api/flight";
+        private const string BASE_API_URL = "https://api.flight-relive.org/api/flight";
         #endregion
 
         #region ATTRIBUTES
@@ -88,7 +88,7 @@ namespace FlightReLive.Core.Share
                     return null;
                 }
 
-                FlightFileDownloadResponse dto = JsonConvert.DeserializeObject<FlightFileDownloadResponse>(body, _jsonSettings);
+                FlightFileDownload dto = JsonConvert.DeserializeObject<FlightFileDownload>(body, _jsonSettings);
                 if (dto == null)
                 {
                     Debug.LogError("[FlightShareService] Deserialization returned null DTO.");
@@ -114,22 +114,22 @@ namespace FlightReLive.Core.Share
             {
                 dataPoints.Add(new FlightDataPointUpload
                 {
-                    Time = ToUtcSafe(point.Time),
+                    TimeUtc = ToUtcSafe(point.Time),
                     TimeSpanTicks = point.TimeSpan.Ticks,
+                    Latitude = point.Coordinate.Latitude,
+                    Longitude = point.Coordinate.Longitude,
+                    Distance = point.Distance,
+                    RelativeAltitude = point.RelativeAltitude,
+                    AbsoluteAltitude = point.AbsoluteAltitude,
+                    HorizontalSpeed = point.HorizontalSpeed,
+                    VerticalSpeed = point.VerticalSpeed,
                     Aperture = point.Aperture,
                     ShutterSpeed = point.ShutterSpeed,
                     ISO = point.ISO,
                     Exposure = point.Exposure,
                     DigitalZoom = point.DigitalZoom,
                     FocalLength = point.FocalLength,
-                    ColorMode = point.ColorMode,
-                    Longitude = point.Coordinate.Longitude,
-                    Latitude = point.Coordinate.Latitude,
-                    Distance = point.Distance,
-                    RelativeAltitude = point.RelativeAltitude,
-                    AbsoluteAltitude = point.AbsoluteAltitude,
-                    HorizontalSpeed = point.HorizontalSpeed,
-                    VerticalSpeed = point.VerticalSpeed
+                    ColorMode = point.ColorMode
                 });
             }
 
@@ -142,59 +142,60 @@ namespace FlightReLive.Core.Share
                 DurationTicks = file.Duration.Ticks,
                 CreationDate = ToUtcSafe(file.CreationDate),
                 ThumbnailData = file.ThumbnailData,
-                TakeOffLatitude = file.EstimateTakeOffPosition.Latitude,
-                TakeOffLongitude = file.EstimateTakeOffPosition.Longitude,
-                FlightGPSX = file.FlightGPSCoordinates.Latitude,
-                FlightGPSY = file.FlightGPSCoordinates.Longitude,
+                TakeOffLatitude = file.EstimateTakeOffPosition?.Latitude,
+                TakeOffLongitude = file.EstimateTakeOffPosition?.Longitude,
+                TakeOffAltitude = file.TakeOffAltitude,
+                FlightLatitude = file.FlightGPSCoordinates?.Latitude,
+                FlightLongitude = file.FlightGPSCoordinates?.Longitude,
                 HasTakeOffPosition = file.HasTakeOffPosition,
                 DataPoints = dataPoints
             };
         }
 
-        private static SerializedFlightData FromDownloadResponse(FlightFileDownloadResponse dto)
+        private static SerializedFlightData FromDownloadResponse(FlightFileDownload dto)
         {
             SerializedFlightData file = new SerializedFlightData
             {
+                Origin = FlightDataOrigin.SharedHash,
                 Name = dto.Name,
                 Width = dto.Width,
                 Height = dto.Height,
                 Frequency = dto.Frequency,
                 Duration = TimeSpan.FromTicks(dto.DurationTicks),
-                CreationDate = ToUtcSafe(dto.CreationDateUtc),
+                CreationDate = dto.CreationDateUtc.ToUniversalTime(),
                 ThumbnailData = dto.ThumbnailData,
-                EstimateTakeOffPosition = (dto.TakeOffLatitude.HasValue && dto.TakeOffLongitude.HasValue) ? new SerializedGPSCoordinate(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value) : null,
-                FlightGPSCoordinates = (dto.FlightGPSX.HasValue && dto.FlightGPSY.HasValue) ? new SerializedGPSCoordinate(dto.FlightGPSX.Value, dto.FlightGPSY.Value) : null,
-                HasTakeOffPosition = dto.HasTakeOffPosition
+                EstimateTakeOffPosition = (dto.TakeOffLatitude.HasValue && dto.TakeOffLongitude.HasValue)
+                    ? new SerializedGPSCoordinate(dto.TakeOffLatitude.Value, dto.TakeOffLongitude.Value)
+                    : null,
+                TakeOffAltitude = dto.TakeOffAltitude,
+                FlightGPSCoordinates = (dto.FlightLatitude.HasValue && dto.FlightLongitude.HasValue)
+                    ? new SerializedGPSCoordinate(dto.FlightLatitude.Value, dto.FlightLongitude.Value)
+                    : null,
+                HasTakeOffPosition = dto.HasTakeOffPosition,
+                ShareHash = dto.ShareHash
             };
+            file.ComputeUniqueKey();
 
-            foreach (FlightDataPointDownload tempPoint in dto.DataPoints)
+            foreach (var p in dto.DataPoints)
             {
-                throw new NotImplementedException();
-            }
-
-            if (dto.DataPoints != null)
-            {
-                foreach (var p in dto.DataPoints)
+                file.DataPoints.Add(new SerializedFlightDataPoint
                 {
-                    file.DataPoints.Add(new SerializedFlightDataPoint
-                    {
-                        Time = ToUtcSafe(p.TimeUtc),
-                        TimeSpan = TimeSpan.FromTicks(p.TimeSpanTicks),
-                        Aperture = p.Aperture ?? 0f,
-                        ShutterSpeed = p.ShutterSpeed ?? 0f,
-                        ISO = p.ISO ?? 0,
-                        Exposure = p.Exposure ?? 0f,
-                        DigitalZoom = p.DigitalZoom ?? 0f,
-                        FocalLength = p.FocalLength ?? 0f,
-                        ColorMode = p.ColorMode,
-                        Coordinate = new SerializedGPSCoordinate(p.Latitude, p.Longitude),
-                        Distance = p.Distance,
-                        RelativeAltitude = p.RelativeAltitude,
-                        AbsoluteAltitude = p.AbsoluteAltitude,
-                        HorizontalSpeed = p.HorizontalSpeed,
-                        VerticalSpeed = p.VerticalSpeed
-                    });
-                }
+                    Time = p.TimeUtc,
+                    TimeSpan = TimeSpan.FromTicks(p.TimeSpanTicks),
+                    Coordinate = new SerializedGPSCoordinate(p.Latitude, p.Longitude),
+                    Distance = p.Distance,
+                    RelativeAltitude = p.RelativeAltitude,
+                    AbsoluteAltitude = p.AbsoluteAltitude,
+                    HorizontalSpeed = p.HorizontalSpeed,
+                    VerticalSpeed = p.VerticalSpeed,
+                    Aperture = p.Aperture,
+                    ShutterSpeed = p.ShutterSpeed,
+                    ISO = p.ISO,
+                    Exposure = p.Exposure,
+                    DigitalZoom = p.DigitalZoom,
+                    FocalLength = p.FocalLength,
+                    ColorMode = p.ColorMode
+                });
             }
 
             return file;

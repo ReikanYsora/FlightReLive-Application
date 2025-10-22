@@ -70,11 +70,11 @@ namespace FlightReLive.Core.Cache
 
                 Initialize();
 
-                Fugui.Notify("Successful operation", "The local cache has been cleared successfully (workspace preserved).", StateType.Info, 3f);
+                Fugui.Notify("Successful operation", "The local cache has been cleared successfully (workspace preserved).", StateType.Info, 5f);
             }
             catch (Exception ex)
             {
-                Fugui.Notify("Operation failed", $"Unable to clear local cache.\n{ex.GetBaseException().Message}.", StateType.Danger, 3f);
+                Fugui.Notify("Operation failed", $"Unable to clear local cache.\n{ex.GetBaseException().Message}.", StateType.Danger, 5f);
             }
         }
 

@@ -6,6 +6,7 @@ namespace FlightReLive.Core.Database
     {
         #region PROPERTIES
         public string Id { get; set; }
+
         public DateTime Time { get; set; }
 
         public TimeSpan TimeSpan { get; set; }

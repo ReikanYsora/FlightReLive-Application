@@ -24,7 +24,7 @@ namespace FlightReLive.Core.Database
         #endregion
 
         #region PROPERTIES
-        public string Id { set; get; }
+        public string UniqueKey { get; internal set; }
 
         internal string Name { set; get; }
 
@@ -63,6 +63,7 @@ namespace FlightReLive.Core.Database
                 return GLOBAL_SCALE;
             }
         }
+        public string SharedHash { get; internal set; }
         #endregion
 
         #region METHODS

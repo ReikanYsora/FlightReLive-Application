@@ -7,7 +7,6 @@ using Fu;
 using Fu.Framework;
 using ImGuiNET;
 using System;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace FlightReLive.Core

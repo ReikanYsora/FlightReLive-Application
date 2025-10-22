@@ -667,7 +667,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.UI.MapView.MapViewManager
   _windowName:
     _id: 16
-    _name: "\uE067  Map View"
+    _name: "\uE098  Map View"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
@@ -813,7 +813,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _windowName:
     _id: 12
-    _name: "\uE09F  Library"
+    _name: "\uE09C  Library"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
@@ -866,7 +866,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _windowName:
     _id: 11
-    _name: "\uE076  ReLive"
+    _name: "\uE075  ReLive"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
@@ -1599,7 +1599,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.UI.Inspector.InspectorViewManager
   _windowName:
     _id: 13
-    _name: "\uE07F  Inspector"
+    _name: "\uE07D  Inspector"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
@@ -1941,7 +1941,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _windowName:
     _id: 14
-    _name: "\uE06B  Flight Charts"
+    _name: "\uE06A  Flight Charts"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32
@@ -2265,7 +2265,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FlightReLive.UI.POVView.POVViewManager
   _windowName:
     _id: 15
-    _name: "\uE087  POV View"
+    _name: "\uE084  POV View"
     _autoInstantiateWindowOnlayoutSet: 1
     _idleFPS: -1
   _windowFlags: 32

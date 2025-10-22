@@ -290,7 +290,7 @@ namespace FlightReLive.Core.Capture
 
             if (!File.Exists(ffmpegPath))
             {
-                Fugui.Notify("Critial capture error", "Unable to start capture recording.", StateType.Danger);
+                Fugui.Notify("Critial capture error", "Unable to start capture recording.", StateType.Danger, 5f);
                 return;
             }
 
@@ -375,7 +375,7 @@ namespace FlightReLive.Core.Capture
             IsCapturing = true;
             _captureStartTime = DateTime.Now;
 
-            Fugui.Notify("Capture started", $"Capture started ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info);
+            Fugui.Notify("Capture started", $"Capture started ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info, 5f);
         }
 
         /// <summary>
@@ -601,7 +601,7 @@ namespace FlightReLive.Core.Capture
             _frameAvailable?.Dispose();
             _frameAvailable = new AutoResetEvent(false);
 
-            Fugui.Notify("Capture stopped", $"Capture stopped ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info);
+            Fugui.Notify("Capture stopped", $"Capture stopped ({_width}x{_height}).\nOutput path : {_outputPath}.", StateType.Info, 5f);
         }
 
         internal void ToggleCapture()

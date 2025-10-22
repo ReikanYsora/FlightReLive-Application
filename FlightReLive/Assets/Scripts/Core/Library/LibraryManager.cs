@@ -127,6 +127,7 @@ namespace FlightReLive.Core.Library
 
             SerializedFlightData tempFile = new SerializedFlightData
             {
+                Origin = FlightDataOrigin.Local,
                 Name = container.Name,
                 Width = container.Width,
                 Height = container.Height,
@@ -139,6 +140,11 @@ namespace FlightReLive.Core.Library
             };
 
             tempFile.ComputeUniqueKey();
+
+            if (DatabaseManager.Exists(tempFile))
+            {
+                return;
+            }
 
             foreach (SerializedFlightDataPoint item in container.DataPoints)
             {
@@ -166,11 +172,11 @@ namespace FlightReLive.Core.Library
             try
             {
                 DatabaseManager.ClearAllFlights();
-                Fugui.Notify("Successful operation", "The flight library has been cleared successfully.", StateType.Info, 3f);
+                Fugui.Notify("Successful operation", "The flight library has been cleared successfully.", StateType.Info, 5f);
             }
             catch (Exception ex)
             {
-                Fugui.Notify("Operation failed", $"Unable to clear flight library.\n{ex.GetBaseException().Message}.", StateType.Danger, 3f);
+                Fugui.Notify("Operation failed", $"Unable to clear flight library.\n{ex.GetBaseException().Message}.", StateType.Danger, 5f);
             }
         }
 
@@ -314,6 +320,11 @@ namespace FlightReLive.Core.Library
 
                 return Task.CompletedTask;
             });
+        }
+
+        internal void AddOnlineFight(SerializedFlightData flightFile)
+        {
+            DatabaseManager.SaveFlight(flightFile);
         }
 
         /// <summary>

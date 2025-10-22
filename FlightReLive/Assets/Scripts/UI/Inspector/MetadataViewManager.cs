@@ -85,6 +85,21 @@ namespace FlightReLive.UI.Inspector
                     Fugui.PopFont();
                 }, FuButtonStyle.Collapsable, defaultOpen: true);
 
+                if (!string.IsNullOrEmpty(currentFlightData.SharedHash))
+                {
+                    layout.Collapsable(FlightReLiveIcons.Share + "  Share##collapsable", () =>
+                    {
+                        Fugui.PushFont(14, FontType.Regular);
+
+                        using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                        {
+                            Draw(window, "14", grid, layout, FlightReLiveIcons.Share, currentFlightData.SharedHash, "SharedHash");
+                        }
+
+                        Fugui.PopFont();
+                    }, FuButtonStyle.Collapsable, defaultOpen: true);
+                }
+
                 layout.Collapsable(FlightReLiveIcons.Drone + "  Drone##collapsable", () =>
                 {
                     Fugui.PushFont(14, FontType.Regular);
@@ -92,7 +107,7 @@ namespace FlightReLive.UI.Inspector
                     using (FuGrid grid = new FuGrid("positionDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         string formattedPosition = $"{_currentDataPoint.Coordinate.Latitude.ToString("F4", CultureInfo.InvariantCulture)}, {_currentDataPoint.Coordinate.Longitude.ToString("F5", CultureInfo.InvariantCulture)}";
-                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.Maps, () =>
+                        Draw(window, "1", grid, layout, FlightReLiveIcons.GPSMarker, formattedPosition, "Current drone position", FlightReLiveIcons.OpenStreetMap, () =>
                         {
                             OpenStreetMapHelper.OpenOpenStreetMapBrowser(_currentDataPoint.Coordinate);
                         }, "Display on OpenStreetMap");
@@ -167,7 +182,7 @@ namespace FlightReLive.UI.Inspector
                 {
                     Fugui.PushFont(14, FontType.Regular);
 
-                    using (FuGrid grid = new FuGrid("poiDataGrid", new FuGridDefinition(3, new int[] { 30, -28 }), FuGridFlag.Default, 2, 2, 2))
+                    using (FuGrid grid = new FuGrid("poiDataGrid", new FuGridDefinition(3, new int[] { 24, -28 }), FuGridFlag.Default, 2, 2, 2))
                     {
                         // On récupère la liste des POI autour de la caméra
                         List<POIEntity> nearbyPOIs = POIManager.Instance.GetPOIsWithinDistance(100f);
@@ -205,10 +220,10 @@ namespace FlightReLive.UI.Inspector
                                 //Unique ID for ImGui
                                 string uniqueId = $"POI_{index++}";
 
-                                Draw(window, uniqueId, grid, layout, FlightReLiveIcons.GPSMarker,
+                                Draw(window, uniqueId, grid, layout, FlightReLiveIcons.MapPin,
                                     label,
                                     "Point of interest position",
-                                    FlightReLiveIcons.Maps,
+                                    FlightReLiveIcons.OpenStreetMap,
                                     () =>
                                     {
                                         OpenStreetMapHelper.OpenOpenStreetMapBrowser(gpsData);
@@ -249,7 +264,7 @@ namespace FlightReLive.UI.Inspector
         internal static void Draw(FuWindow window, string actionId, FuGrid grid, FuLayout layout, string icon, string value, string tooltip, string actionText = null, Action actionButton = null, string actionTooltip = null)
         {
             grid.SetNextElementToolTipWithLabel(tooltip);
-            Fugui.PushFont(12, FontType.Regular);
+            Fugui.PushFont(14, FontType.Regular);
             grid.Text(icon);
             Fugui.PopFont();
             grid.NextColumn();
@@ -292,7 +307,7 @@ namespace FlightReLive.UI.Inspector
                 contextMenuBuilder.AddItem(FlightReLiveIcons.Duplicate + " Copy", () =>
                 {
                     ImGui.SetClipboardText(value ?? string.Empty);
-                    Fugui.Notify("Value copied to clipboard");
+                    Fugui.Notify("Value copied to clipboard", "Current field value copied to clipboard.", StateType.Info, 5f);
                 });
 
                 List<FuContextMenuItem> contextMenuItems = contextMenuBuilder.Build();

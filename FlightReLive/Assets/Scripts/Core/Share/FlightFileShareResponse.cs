@@ -6,9 +6,5 @@ namespace FlightReLive.Core.Share
     internal class FlightFileShareResponse
     {
         public string ShareHash { get; set; }
-
-        public string ShareHashDisplay { get; set; }
-
-        public DateTime ExpirationDateUtc { get; set; }
     }
 }

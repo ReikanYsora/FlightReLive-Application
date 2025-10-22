@@ -9,7 +9,7 @@ namespace FlightReLive.Core.Version
     public static class VersionService
     {
         #region CONSTANTS
-        private const string BASE_API_URL = "https://flightrelive-api-cqb8dsgtb6c6ebaq.canadacentral-01.azurewebsites.net/api/version/latest";
+        private const string BASE_API_URL = "https://api.flight-relive.org/api/version/latest";
         #endregion
 
         #region ATTRIBUTES

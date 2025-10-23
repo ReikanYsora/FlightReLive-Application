@@ -323,7 +323,7 @@ namespace FlightReLive.UI.Library
 
                         float inputY = (childH - frameHeight) * 0.5f;
                         ImGui.SetCursorPos(new Vector2(startX + iconSize.x + spacing, startY + inputY));
-                        layout.TextInput("##librarySearchInput", "", ref _filterWord, 128, width: searchWidth);
+                        layout.TextInput("##librarySearchInput", "", ref _filterWord, 128, width: FILTER_WIDTH);
 
                         ImGui.EndChild();
                     }

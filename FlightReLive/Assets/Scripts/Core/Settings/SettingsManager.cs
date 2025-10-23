@@ -37,13 +37,7 @@ namespace FlightReLive.Core.Settings
         internal static bool CLOUD_SHADOW_ENABLED_DEFAULT_STATE = true;
         internal static float CLOUD_SHADOW_OPACITY_DEFAULT_STATE = 0.5f;
         internal static WindType WIND_TYPE_DEFAULT_VALUE = WindType.Slow;
-        internal static int CAPTURE_RESOLUTION_DEFAULT_VALUE = 1;
-        internal static int CAPTURE_ENCODER_DEFAULT_VALUE = 0;
-        internal static int CAPTURE_FRAMERATE_DEFAULT_VALUDE = 1;
-        internal static bool CAPTURE_ENCODED_LOGO_DEFAULT_VALUE = true;
-        internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
         internal static LibraryLayoutDisposition LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE = LibraryLayoutDisposition.Thumbnail;
-        internal static string MAC_FOLDER_BOOKMARK_KEY = "MacFolderBookmark";
 
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
         {
@@ -98,11 +92,6 @@ namespace FlightReLive.Core.Settings
         public static event Action<bool> OnCloudShadowsEnabledChanged;
         public static event Action<float> OnCloudShadowsOpacityChanged;
         public static event Action<WindType> OnWindTypeChanged;
-        public static event Action<int> OnCaptureResolutionChanged;
-        public static event Action<int> OnCaptureEncoderChanged;
-        public static event Action<int> OnCaptureFramerateChanged;
-        public static event Action<bool> OnCaptureEncodedLogoChanged;
-        public static event Action<string> OnCaptureOutputPathChanged;
         #endregion
 
         #region METHODS
@@ -404,47 +393,6 @@ namespace FlightReLive.Core.Settings
         internal static void LoadWindType()
         {
             CurrentSettings.WindType = (WindType)PlayerPrefs.GetInt(nameof(Settings.WindType), (int)WIND_TYPE_DEFAULT_VALUE);
-        }
-
-        /// <summary>
-        /// Load the capture resolution setting from PlayerPrefs, defaulting to CAPTURE_RESOLUTION_DEFAULT_VALUE if not set.
-        /// </summary>
-        internal static void LoadCaptureResolution()
-        {
-            CurrentSettings.CaptureResolution = PlayerPrefs.GetInt(nameof(Settings.CaptureResolution), CAPTURE_RESOLUTION_DEFAULT_VALUE);
-        }
-
-        /// <summary>
-        /// Load the capture encoder setting from PlayerPrefs, defaulting to CAPTURE_ENCODER_DEFAULT_VALUE if not set.
-        /// </summary>
-        internal static void LoadCaptureEncoder()
-        {
-            CurrentSettings.CaptureEncoder = PlayerPrefs.GetInt(nameof(Settings.CaptureEncoder), CAPTURE_ENCODER_DEFAULT_VALUE);
-        }
-
-        /// <summary>
-        /// Load the capture framerate setting from PlayerPrefs, defaulting to CAPTURE_FRAMERATE_DEFAULT_VALUDE if not set.
-        /// </summary>
-        internal static void LoadCaptureFramerate()
-        {
-            CurrentSettings.CaptureFramerate = PlayerPrefs.GetInt(nameof(Settings.CaptureFramerate), CAPTURE_FRAMERATE_DEFAULT_VALUDE);
-        }
-
-        /// <summary>
-        /// Load the capture output path setting from PlayerPrefs, defaulting to CAPTURE_OUTPUT_PATH_DEFAULT_VALUE if not set.
-        /// </summary>
-        internal static void LoadCaptureOutputPath()
-        {
-            CurrentSettings.CaptureOutputPath = PlayerPrefs.GetString(nameof(Settings.CaptureOutputPath), CAPTURE_OUTPUT_PATH_DEFAULT_VALUE);
-        }
-
-        /// <summary>
-        /// Load the capture encoded logo state setting from PlayerPrefs, defaulting to CAPTURE_ENCODED_LOGO_DEFAULT_VALUE if not set.
-        /// </summary>
-        internal static void LoadCaptureEncodedLogo()
-        {
-            int intBool = CAPTURE_ENCODED_LOGO_DEFAULT_VALUE ? 1 : 0;
-            CurrentSettings.CaptureEncodedLogo = PlayerPrefs.GetInt(nameof(Settings.CaptureEncodedLogo), intBool) == 1;
         }
 
         /// <summary>
@@ -844,66 +792,6 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
-        /// Save the capture resolution setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveCaptureResolution(int value)
-        {
-            CurrentSettings.CaptureResolution = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureResolution), value);
-            PlayerPrefs.Save();
-            OnCaptureResolutionChanged?.Invoke(value);
-        }
-
-        /// <summary>
-        /// Save the capture encoder setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveCaptureEncoder(int value)
-        {
-            CurrentSettings.CaptureEncoder = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureEncoder), value);
-            PlayerPrefs.Save();
-            OnCaptureEncoderChanged?.Invoke(value);
-        }
-
-        /// <summary>
-        /// Save the capture framerate setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveCaptureFramerate(int value)
-        {
-            CurrentSettings.CaptureFramerate = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureFramerate), value);
-            PlayerPrefs.Save();
-            OnCaptureFramerateChanged?.Invoke(value);
-        }
-
-        /// <summary>
-        /// Save the capture output path setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveCaptureOutputPath(string value)
-        {
-            CurrentSettings.CaptureOutputPath = value;
-            PlayerPrefs.SetString(nameof(Settings.CaptureOutputPath), value);
-            PlayerPrefs.Save();
-            OnCaptureOutputPathChanged?.Invoke(value);
-        }
-
-        /// <summary>
-        /// Save the capture encoded logo state setting to PlayerPrefs.
-        /// </summary>
-        /// <param name="value"></param>
-        internal static void SaveCaptureEncodedLogo(bool value)
-        {
-            CurrentSettings.CaptureEncodedLogo = value;
-            PlayerPrefs.SetInt(nameof(Settings.CaptureEncodedLogo), value ? 1 : 0);
-            PlayerPrefs.Save();
-            OnCaptureEncodedLogoChanged?.Invoke(value);
-        }
-
-        /// <summary>
         /// Load all settings from PlayerPrefs, initializing defaults if not already set.
         /// </summary>
         internal static void LoadAll()
@@ -946,11 +834,6 @@ namespace FlightReLive.Core.Settings
             LoadCloudShadowsEnabled();
             LoadCloudShadowsOpacity();
             LoadWindType();
-            LoadCaptureResolution();
-            LoadCaptureEncoder();
-            LoadCaptureFramerate();
-            LoadCaptureOutputPath();
-            LoadCaptureEncodedLogo();
         }
 
         /// <summary>
@@ -993,11 +876,6 @@ namespace FlightReLive.Core.Settings
             SaveCloudShadowsEnabled(CLOUD_SHADOW_ENABLED_DEFAULT_STATE);
             SaveCloudShadowsOpacity(CLOUD_SHADOW_OPACITY_DEFAULT_STATE);
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);
-            SaveCaptureResolution(1);
-            SaveCaptureEncoder(0);
-            SaveCaptureFramerate(1);
-            SaveCaptureOutputPath(Path.Combine(Application.persistentDataPath, "Captures"));
-            SaveCaptureEncodedLogo(true);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
             PlayerPrefs.Save();
@@ -2008,101 +1886,6 @@ namespace FlightReLive.Core.Settings
         {
             SaveWindType(WIND_TYPE_DEFAULT_VALUE);
             LoadWindType();
-        }
-
-        /// <summary>
-        /// Reset the capture resolution to its default value.
-        /// </summary>
-        internal static void ResetCaptureResolution()
-        {
-            SaveCaptureResolution(CAPTURE_RESOLUTION_DEFAULT_VALUE);
-            LoadCaptureResolution();
-        }
-
-        /// <summary>
-        /// Reset the capture encoder to its default value.
-        /// </summary>
-        internal static void ResetCaptureEncoder()
-        {
-            SaveCaptureEncoder(CAPTURE_ENCODER_DEFAULT_VALUE);
-            LoadCaptureEncoder();
-        }
-
-        /// <summary>
-        /// Reset the capture framerate to its default value.
-        /// </summary>
-        internal static void ResetCaptureFramerate()
-        {
-            SaveCaptureFramerate(CAPTURE_FRAMERATE_DEFAULT_VALUDE);
-            LoadCaptureFramerate();
-        }
-
-        /// <summary>
-        /// Reset the capture encoded logo state path to its default value.
-        /// </summary>
-        internal static void ResetCaptureEncodedLogo()
-        {
-            SaveCaptureEncodedLogo(CAPTURE_ENCODED_LOGO_DEFAULT_VALUE);
-            LoadCaptureEncodedLogo();
-        }
-        #endregion
-
-        #region MACOS
-        /// <summary>
-        /// Save base 64 MacOs bookmark for capture output folder autorization
-        /// </summary>
-        internal static void SaveMacFolderBookmark(string bookmark)
-        {
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            if (!string.IsNullOrEmpty(bookmark))
-            {
-                PlayerPrefs.SetString(MAC_FOLDER_BOOKMARK_KEY, bookmark);
-                PlayerPrefs.Save();
-            }
-            else
-            {
-                PlayerPrefs.DeleteKey(MAC_FOLDER_BOOKMARK_KEY);
-            }
-#endif
-        }
-
-        /// <summary>
-        /// Load MacOs saved bookmark for output capture folder autorizations
-        /// </summary>
-        internal static string LoadMacFolderBookmark()
-        {
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            return PlayerPrefs.GetString(MAC_FOLDER_BOOKMARK_KEY, string.Empty);
-#else
-            return string.Empty;
-#endif
-        }
-
-        /// <summary>
-        /// Restore access to precedent autorized folder
-        /// </summary>
-        internal static void RestoreMacFolderAccess()
-        {
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            string bookmark = LoadMacFolderBookmark();
-
-            if (string.IsNullOrEmpty(bookmark))
-            {
-                return;
-            }
-
-            bool success = MacOsFolderAccess.BeginAccess(bookmark);
-#endif
-        }
-
-        /// <summary>
-        /// Release bookmark access
-        /// </summary>
-        internal static void ReleaseMacFolderAccess()
-        {
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-            MacOsFolderAccess.EndAccess();
-#endif
         }
         #endregion
     }

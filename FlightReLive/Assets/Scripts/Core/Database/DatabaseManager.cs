@@ -36,10 +36,6 @@ namespace FlightReLive.Core.Database
             {
                 Directory.CreateDirectory(_libraryPath);
             }
-            else
-            {
-                Debug.Log($"[DatabaseManager] Using existing library folder: {_libraryPath}");
-            }
         }
         #endregion
 

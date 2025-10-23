@@ -82,7 +82,6 @@ namespace FlightReLive.Core.Layouts
             {
                 tempLayout.Name = USER_LAYOUT_NAME;
                 Fugui.Layouts.SaveLayoutFile(userLayoutPath, tempLayout, false);
-                Debug.Log($"[LayoutManager] User layout saved at: {userLayoutPath}");
             }
         }
 

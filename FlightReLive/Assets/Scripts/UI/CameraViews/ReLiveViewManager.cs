@@ -1,6 +1,5 @@
 ﻿using System;
 using FlightReLive.Core.Cameras;
-using FlightReLive.Core.Capture;
 using FlightReLive.Core.Environment;
 using FlightReLive.Core.Loading;
 using FlightReLive.Core.Paths;
@@ -97,31 +96,12 @@ namespace FlightReLive.UI.CameraViews
                 float totalWidth = layout.GetAvailableWidth();
 
                 float leftToggleWidth = TOGGLE_CAPTURE_WIDTH * scale;
-                float rightGroupWidth = 5 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
+                float rightGroupWidth = 4 * (SETTINGS_POPUP_BUTTON_WIDTH + Fugui.Themes.CurrentTheme.ItemSpacing.x) * scale;
                 float cameraGroupWidth = CAMERA_MODE_WIDTH * scale;
 
                 bool canShowAll = rightGroupWidth < (totalWidth / 2f) - (cameraGroupWidth / 2f);
-                bool canShowToggleAndCamera = leftToggleWidth < (totalWidth / 2f) - (cameraGroupWidth / 2f);
                 bool canShowCameraOnly = totalWidth >= (cameraGroupWidth + 8f * scale);
 
-                //Toggle Capture
-                if (canShowToggleAndCamera)
-                {
-                    if (!LoadingManager.Instance.IsLoaded)
-                    {
-                        layout.DisableNextElement();
-                    }
-
-                    bool captureState = CaptureManager.Instance.IsCapturing;
-                    layout.SetNextElementToolTip(captureState ? "Stop the current video capture" : "Start a new video capture");
-
-                    if (layout.Toggle("recToggle", ref captureState, "Start capture", "Stop capture", FuToggleFlags.AlignLeft))
-                    {
-                        CaptureManager.Instance.ToggleCapture();
-                    }
-
-                    layout.SameLine();
-                }
 
                 //Camera Mode Buttons
                 if (canShowCameraOnly)
@@ -132,15 +112,7 @@ namespace FlightReLive.UI.CameraViews
                     //Centered buttongroup Camera mode
                     float cameraGroupX = (totalWidth - cameraGroupWidth) * 0.5f;
                     ImGui.SetCursorPosX(cameraGroupX);
-
-                    if (canShowToggleAndCamera)
-                    {
-                        Fugui.MoveY(-4f);
-                    }
-                    else
-                    {
-                        Fugui.MoveY(-2f);
-                    }
+                    Fugui.MoveY(-2f);
 
                     layout.SetNextElementToolTip("Change camera mode.");
                     layout.ButtonsGroup<CameraMode>(
@@ -162,10 +134,6 @@ namespace FlightReLive.UI.CameraViews
                     float popUpWidth = SETTINGS_POPUP_WIDTH * scale;
                     Fugui.PushFont(14, FontType.Regular);
                     Fugui.MoveXUnscaled(layout.GetAvailableWidth() - rightGroupWidth);
-
-                    layout.SetNextElementToolTip("Capture settings");
-                    PopupButton(layout, FlightReLiveIcons.Camera, () => DrawCaptureSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
-                    layout.SameLine();
 
                     layout.SetNextElementToolTip("Sun / clouds settings");
                     PopupButton(layout, FlightReLiveIcons.SunClouds, () => DrawSunCloudsSettings(layout), new Vector2(popUpWidth, 0f), size, unscaledHeight, scale);
@@ -401,14 +369,6 @@ namespace FlightReLive.UI.CameraViews
 
             ImGui.Dummy(Vector2.zero);
             layout.Dispose();
-        }
-
-
-        private void DrawCaptureSettings(FuLayout layout)
-        {
-            ImGui.Dummy(Vector2.zero);
-            CaptureManager.Instance.DrawCaptureModeSettings(layout);
-            ImGui.Dummy(Vector2.zero);
         }
 
         private void DrawSunCloudsSettings(FuLayout layout)

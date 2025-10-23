@@ -1137,6 +1137,18 @@ namespace FlightReLive.Core.Environment
 
                 bool shadowsEnabled = SettingsManager.CurrentSettings.CloudShadowsEnabled;
 
+                WindType savedWindType = SettingsManager.CurrentSettings.WindType;
+                SettingsManager.DisplaySettingsComboboxWithReset<WindType>(grid,
+                    "Wind speed",
+                    "Define the wind speed for clouds animation.",
+                    "Reset current wind speed type to default value.",
+                    savedWindType,
+                    SettingsManager.WIND_TYPE_DEFAULT_VALUE,
+                    (x) => x.ToString(),
+                    Enum.GetValues(typeof(WindType)).Cast<WindType>(),
+                    (x) => SettingsManager.SaveWindType(x),
+                    () => SettingsManager.ResetWindType());
+
                 SettingsManager.DisplaySettingsToggleWithReset(grid,
                     "Clouds shadows",
                     "Display or hide clouds shadows.",
@@ -1163,18 +1175,6 @@ namespace FlightReLive.Core.Environment
                     "%.2f",
                      (x) => SettingsManager.SaveCloudShadowsOpacity(x),
                      () => SettingsManager.ResetCloudShadowsOpacity());
-
-                WindType savedWindType = SettingsManager.CurrentSettings.WindType;
-                SettingsManager.DisplaySettingsComboboxWithReset<WindType>(grid,
-                    "Wind speed",
-                    "Define the wind speed for clouds animation.",
-                    "Reset current wind speed type to default value.",
-                    savedWindType,
-                    SettingsManager.WIND_TYPE_DEFAULT_VALUE,
-                    (x) => x.ToString(),
-                    Enum.GetValues(typeof(WindType)).Cast<WindType>(),
-                    (x) => SettingsManager.SaveWindType(x),
-                    () => SettingsManager.ResetWindType());
             }
         }
 

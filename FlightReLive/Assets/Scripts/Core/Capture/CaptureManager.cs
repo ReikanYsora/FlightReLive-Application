@@ -492,15 +492,14 @@ namespace FlightReLive.Core.Capture
         private void PrepareOutputPath()
         {
             string defaultPath = Path.Combine(Application.persistentDataPath, "Captures");
-            string folderPath = Path.Combine(defaultPath, SettingsManager.CurrentSettings.CaptureOutputPath);
 
-            if (!Directory.Exists(folderPath))
+            if (!Directory.Exists(defaultPath))
             {
-                Directory.CreateDirectory(folderPath);
+                Directory.CreateDirectory(defaultPath);
             }
 
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            _outputPath = Path.Combine(folderPath, $"{_filePrefix}{timestamp}.mp4");
+            _outputPath = Path.Combine(defaultPath, $"{_filePrefix}{timestamp}.mp4");
 
         }
         private void CaptureFrame()
@@ -678,17 +677,6 @@ namespace FlightReLive.Core.Capture
                     _encoders.Keys,
                     (newId) => SettingsManager.SaveCaptureEncoder(newId),
                     () => SettingsManager.ResetCaptureEncoder()
-                );
-
-                SettingsManager.DisplaySettingsFolderInputWithReset(
-                    grid,
-                    "Capture output",
-                    $"Capture output folder path (Defined: {SettingsManager.CurrentSettings.CaptureOutputPath}).",
-                    "Reset to default capture output path",
-                    SettingsManager.CurrentSettings.CaptureOutputPath,
-                    SettingsManager.CAPTURE_OUTPUT_PATH_DEFAULT_VALUE,
-                    (newPath) => SettingsManager.SaveCaptureOutputPath(newPath),
-                    null
                 );
 
                 bool encodedLogo = SettingsManager.CurrentSettings.CaptureEncodedLogo;

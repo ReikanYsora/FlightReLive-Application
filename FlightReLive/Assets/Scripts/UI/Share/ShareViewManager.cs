@@ -160,7 +160,7 @@ namespace FlightReLive.UI.Share
                     layout.Text(helpSharedHashText2);
                     Fugui.PopFont();
                     layout.Spacing();
-                    Fugui.MoveX((layout.GetAvailableWidth() - SHARED_HASH_WIDTH - PADDING - 24f) / 2f);
+                    Fugui.MoveX((layout.GetAvailableWidth() / uiScale - SHARED_HASH_WIDTH - PADDING - 24f) / 2f);
                     Fugui.PushFont(14, FontType.Italic);
                     layout.FramedText(_shareHash, new FuElementSize(SHARED_HASH_WIDTH, 24f));
                     Fugui.PopFont();

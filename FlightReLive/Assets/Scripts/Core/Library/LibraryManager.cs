@@ -1,15 +1,15 @@
-﻿using FlightReLive.Core.FFmpeg;
-using FlightReLive.Core.Database;
+﻿using FlightReLive.Core.Database;
+using FlightReLive.Core.FFmpeg;
+using Fu;
+using Fu.Framework;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
-using System.Threading;
-using UnityEngine;
-using Fu;
-using Fu.Framework;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEngine;
 
 namespace FlightReLive.Core.Library
 {
@@ -20,6 +20,10 @@ namespace FlightReLive.Core.Library
     /// </summary>
     public class LibraryManager : MonoBehaviour
     {
+        #region CONSTANTS
+        private const float PROGRESS_BAR_WIDTH = 400f;
+        #endregion
+
         #region ATTRIBUTES
         private readonly ConcurrentDictionary<string, byte> _inFlightOps = new ConcurrentDictionary<string, byte>();
         private CancellationTokenSource _importCancellationTokenSource;
@@ -190,6 +194,7 @@ namespace FlightReLive.Core.Library
                 return;
             }
 
+            float uiScale = Fugui.DefaultContext.Scale;
             _importCancellationTokenSource?.Cancel();
             _importCancellationTokenSource = new CancellationTokenSource();
             _importCompleted = false;
@@ -214,8 +219,8 @@ namespace FlightReLive.Core.Library
                     float progress = _smoothProgress;
 
                     layout.Spacing();
-                    layout.CenterNextItemH(400f);
-                    layout.ProgressBar("##importProgress", progress, new FuElementSize(400f, 6f), ProgressBarTextPosition.None);
+                    Fugui.MoveX((layout.GetAvailableWidth() / uiScale - PROGRESS_BAR_WIDTH) / 2f);
+                    layout.ProgressBar("##importProgress", progress, new FuElementSize(PROGRESS_BAR_WIDTH, 6f), ProgressBarTextPosition.None);
                     layout.Spacing();
 
                     layout.Collapsable("Import details", () =>

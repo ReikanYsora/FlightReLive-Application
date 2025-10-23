@@ -7,7 +7,7 @@ namespace FlightReLive.Core.Layouts
     internal class LayoutManager : MonoBehaviour
     {
         #region CONSTANTS
-        private const string LAYOUT_PATH = "Fugui/Layouts";
+        private const string LAYOUT_FOLDER = "Fugui/Layouts";
         private const string DEFAULT_LAYOUT_NAME = "Default";
         private const string USER_LAYOUT_NAME = "User";
         #endregion
@@ -30,7 +30,6 @@ namespace FlightReLive.Core.Layouts
 
         private void Start()
         {
-            //Load user layout
             LoadUserLayout();
         }
 
@@ -66,46 +65,75 @@ namespace FlightReLive.Core.Layouts
 
         #region METHODS
         /// <summary>
-        /// Save user layout before exit
+        /// Save current layout
         /// </summary>
         private void SaveCurrentLayout()
         {
-            string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);
+            string userLayoutPath = Path.Combine(Application.persistentDataPath, LAYOUT_FOLDER);
+
+            if (!Directory.Exists(userLayoutPath))
+            {
+                Directory.CreateDirectory(userLayoutPath);
+            }
 
             FuDockingLayoutDefinition tempLayout = Fugui.Layouts.GenerateCurrentLayout();
+
             if (tempLayout != null)
             {
                 tempLayout.Name = USER_LAYOUT_NAME;
-                Fugui.Layouts.SaveLayoutFile(layoutPath, tempLayout, false);
+                Fugui.Layouts.SaveLayoutFile(userLayoutPath, tempLayout, false);
+                Debug.Log($"[LayoutManager] User layout saved at: {userLayoutPath}");
             }
         }
 
         /// <summary>
-        /// Load user layout
+        /// Load user or default layout
         /// </summary>
         private void LoadUserLayout()
         {
+            //Load defaults layout first
+            string defaultLayoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_FOLDER);
+            Fugui.Layouts.LoadLayouts(defaultLayoutPath);
+
+            //Load user layout
+            string userLayoutPath = Path.Combine(Application.persistentDataPath, LAYOUT_FOLDER);
+            if (Directory.Exists(userLayoutPath))
+            {
+                Fugui.Layouts.LoadLayouts(userLayoutPath);
+            }
+
+            //Load user layout if found first
             if (Fugui.Layouts.Layouts.ContainsKey(USER_LAYOUT_NAME))
             {
                 Fugui.Layouts.SetLayout(USER_LAYOUT_NAME);
             }
-            else
+            else if (Fugui.Layouts.Layouts.ContainsKey(DEFAULT_LAYOUT_NAME))
             {
                 Fugui.Layouts.SetLayout(DEFAULT_LAYOUT_NAME);
             }
         }
 
+
         /// <summary>
-        /// Resotre default layout
+        /// REstore default app layout
         /// </summary>
         internal void RestoreDefaultLayout()
         {
-            string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);
-            Fugui.Layouts.LoadLayouts(layoutPath);
+            string defaultLayoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_FOLDER);
+            Fugui.Layouts.LoadLayouts(defaultLayoutPath);
 
             if (Fugui.Layouts.Layouts.ContainsKey(DEFAULT_LAYOUT_NAME))
             {
                 Fugui.Layouts.SetLayout(DEFAULT_LAYOUT_NAME);
+            }
+
+            //Delete user layout
+            string userLayoutPath = Path.Combine(Application.persistentDataPath, LAYOUT_FOLDER);
+            string userFile = Path.Combine(userLayoutPath, USER_LAYOUT_NAME + ".fdl");
+
+            if (File.Exists(userFile))
+            {
+                File.Delete(userFile);
             }
         }
         #endregion

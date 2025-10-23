@@ -1,4 +1,5 @@
 ﻿using FlightReLive.Core.Loading;
+using FlightReLive.Core.Platform;
 using FlightReLive.UI;
 using Fu;
 using Fu.Framework;
@@ -42,6 +43,7 @@ namespace FlightReLive.Core.Settings
         internal static bool CAPTURE_ENCODED_LOGO_DEFAULT_VALUE = true;
         internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
         internal static LibraryLayoutDisposition LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE = LibraryLayoutDisposition.Thumbnail;
+        internal static string MAC_FOLDER_BOOKMARK_KEY = "MacFolderBookmark";
 
         private static readonly Dictionary<string, string> TimeZoneIdMap = new Dictionary<string, string>
         {
@@ -1568,6 +1570,20 @@ namespace FlightReLive.Core.Settings
 
             string currentValue = value ?? string.Empty;
 
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            grid.Text(text);
+            grid.SameLine();
+            if (grid.ClickableText(currentValue, FuTextStyle.Default, FuTextWrapping.Clip))
+            {
+                var result = MacOsFolderAccess.PickFolderWithBookmark("Select a folder where Flight ReLive can save captures");
+
+                if (!string.IsNullOrEmpty(result.Item1))
+                {
+                    onChange?.Invoke(result.Item1);
+                    SaveMacFolderBookmark(result.Item2);
+                }
+            }
+#else            
             grid.InputFolder(text, (selectedPath) =>
             {
                 if (!string.Equals(selectedPath, currentValue, StringComparison.Ordinal))
@@ -1575,7 +1591,9 @@ namespace FlightReLive.Core.Settings
                     onChange?.Invoke(selectedPath);
                 }
             }, currentValue, filters ?? Array.Empty<ExtensionFilter>());
+#endif
 
+            //Reset button
             if (onReset == null)
             {
                 grid.NextColumn();
@@ -2026,6 +2044,65 @@ namespace FlightReLive.Core.Settings
         {
             SaveCaptureEncodedLogo(CAPTURE_ENCODED_LOGO_DEFAULT_VALUE);
             LoadCaptureEncodedLogo();
+        }
+        #endregion
+
+        #region MACOS
+        /// <summary>
+        /// Save base 64 MacOs bookmark for capture output folder autorization
+        /// </summary>
+        internal static void SaveMacFolderBookmark(string bookmark)
+        {
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            if (!string.IsNullOrEmpty(bookmark))
+            {
+                PlayerPrefs.SetString(MAC_FOLDER_BOOKMARK_KEY, bookmark);
+                PlayerPrefs.Save();
+            }
+            else
+            {
+                PlayerPrefs.DeleteKey(MAC_FOLDER_BOOKMARK_KEY);
+            }
+#endif
+        }
+
+        /// <summary>
+        /// Load MacOs saved bookmark for output capture folder autorizations
+        /// </summary>
+        internal static string LoadMacFolderBookmark()
+        {
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            return PlayerPrefs.GetString(MAC_FOLDER_BOOKMARK_KEY, string.Empty);
+#else
+            return string.Empty;
+#endif
+        }
+
+        /// <summary>
+        /// Restore access to precedent autorized folder
+        /// </summary>
+        internal static void RestoreMacFolderAccess()
+        {
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            string bookmark = LoadMacFolderBookmark();
+
+            if (string.IsNullOrEmpty(bookmark))
+            {
+                return;
+            }
+
+            bool success = MacOsFolderAccess.BeginAccess(bookmark);
+#endif
+        }
+
+        /// <summary>
+        /// Release bookmark access
+        /// </summary>
+        internal static void ReleaseMacFolderAccess()
+        {
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            MacOsFolderAccess.EndAccess();
+#endif
         }
         #endregion
     }

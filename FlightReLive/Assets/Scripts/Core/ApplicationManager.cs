@@ -68,6 +68,11 @@ namespace FlightReLive.Core
             //Save current version
             SettingsManager.SaveCurrentVersion(Application.version);
 
+            //Initialize bookmarks (MacOs only)
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            SettingsManager.RestoreMacFolderAccess();
+#endif
+
             //Initialize cache
             CacheManager.Initialize();
 
@@ -123,6 +128,14 @@ namespace FlightReLive.Core
             //Unregister events
             SettingsManager.OnGlobalScaleChanged -= OnGlobalScaleChanged;
             SettingsManager.OnApplicationTargetFPSChanged -= OnApplicationTargetFPSChanged;
+        }
+
+        private void OnApplicationQuit()
+        {
+            //Release bookmark (MacOs only)
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            SettingsManager.ReleaseMacFolderAccess();
+#endif
         }
         #endregion
 

@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Threading;
 using Fu;
 using UnityEngine;
 
@@ -12,7 +10,6 @@ namespace FlightReLive.Core.Layouts
         private const string LAYOUT_PATH = "Fugui/Layouts";
         private const string DEFAULT_LAYOUT_NAME = "Default";
         private const string USER_LAYOUT_NAME = "User";
-        private const int SAVE_TIMEOUT_MS = 5000; // 5s max
         #endregion
 
         #region PROPERTIES
@@ -44,25 +41,23 @@ namespace FlightReLive.Core.Layouts
 
         #region METHODS
         /// <summary>
-        /// Sauvegarde du layout utilisateur avant de quitter
+        /// Save user layout before exit
         /// </summary>
         private void SaveCurrentLayout()
         {
             string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);
 
             FuDockingLayoutDefinition tempLayout = Fugui.Layouts.GenerateCurrentLayout();
-            if (tempLayout == null)
-            {
-                Debug.LogWarning("[LayoutSaver] GenerateCurrentLayout returned null layout.");
-            }
-            else
+            if (tempLayout != null)
             {
                 tempLayout.Name = USER_LAYOUT_NAME;
                 Fugui.Layouts.SaveLayoutFile(layoutPath, tempLayout);
-                Debug.Log("[LayoutSaver] Layout file written.");
             }
         }
 
+        /// <summary>
+        /// Load user layout
+        /// </summary>
         private void LoadLayout()
         {
             string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);
@@ -78,6 +73,9 @@ namespace FlightReLive.Core.Layouts
             }
         }
 
+        /// <summary>
+        /// Resotre default layout
+        /// </summary>
         internal void RestoreDefaultLayout()
         {
             string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);

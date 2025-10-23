@@ -25,7 +25,7 @@ namespace FlightReLive.Core.Share
         #endregion
 
         #region METHODS
-        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(SerializedFlightData flightFile)
+        internal static async Task<FlightFileShareResponse> ShareFlightFileExAsync(SerializedFlightData flightFile, bool isPublic = false)
         {
             if (flightFile == null)
             {
@@ -41,7 +41,7 @@ namespace FlightReLive.Core.Share
                 string json = JsonConvert.SerializeObject(upload, _jsonSettings);
 
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
-                string url = $"{BASE_API_URL}/share?daysValid={365}";
+                string url = $"{BASE_API_URL}/share?daysValid={365}&isPublic={(isPublic ? "true" : "false")}";
 
                 using HttpResponseMessage response = await _httpClient.PostAsync(url, content);
                 string body = await response.Content.ReadAsStringAsync();

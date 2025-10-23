@@ -682,8 +682,8 @@ namespace FlightReLive.Core.Capture
 
                 SettingsManager.DisplaySettingsFolderInputWithReset(
                     grid,
-                    "Capture output path",
-                    "Capture output folder path.",
+                    "Capture output",
+                    $"Capture output folder path (Defined: {SettingsManager.CurrentSettings.CaptureOutputPath}).",
                     "Reset to default capture output path",
                     SettingsManager.CurrentSettings.CaptureOutputPath,
                     SettingsManager.CAPTURE_OUTPUT_PATH_DEFAULT_VALUE,

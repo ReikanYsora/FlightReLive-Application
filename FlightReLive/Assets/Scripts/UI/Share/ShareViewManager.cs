@@ -25,6 +25,7 @@ namespace FlightReLive.UI.Share
         private static string _downloadError = "";
         private static string _sharedHash = "";
         private static bool _focusGiven = false;
+        private static bool _isPublicShare = false;
         #endregion
 
         #region METHODS
@@ -109,6 +110,13 @@ namespace FlightReLive.UI.Share
 
                 if (!_isSharing && string.IsNullOrEmpty(_shareHash))
                 {
+                    layout.Spacing();
+                    Fugui.PushFont(14, FontType.Regular);
+                    Fugui.MoveX((ImGui.GetContentRegionAvail().x / 2f / uiScale) + (Fugui.Themes.ItemSpacing.x / 2f * uiScale));
+                    layout.SetNextElementToolTip("If the flight is defined as public, it will be visible on the website and all users will be able to view it.");
+                    layout.CheckBox("Make this flight public", ref _isPublicShare);
+                    Fugui.PopFont();
+
                     using (FuGrid onlineGrid = new FuGrid("shareGrid", new FuGridDefinition(2, new float[] { 0.5f, 0.5f }), FuGridFlag.Default, 2, 2, 10))
                     {
                         if (_isSharing)
@@ -123,7 +131,7 @@ namespace FlightReLive.UI.Share
 
                         if (onlineGrid.Button(FlightReLiveIcons.Share + "  Share", new FuElementSize(new Vector2(width, 20f)), FuButtonStyle.Info))
                         {
-                            StartShareAsync(fileToShare);
+                            StartShareAsync(fileToShare, _isPublicShare);
                         }
                     }
                 }
@@ -185,7 +193,7 @@ namespace FlightReLive.UI.Share
             _focusGiven = false;
         }
 
-        private static async void StartShareAsync(SerializedFlightData fileToShare)
+        private static async void StartShareAsync(SerializedFlightData fileToShare, bool isPublic)
         {
             if (_isSharing || fileToShare == null)
             {
@@ -197,7 +205,7 @@ namespace FlightReLive.UI.Share
 
             try
             {
-                FlightFileShareResponse response = await FlightShareService.ShareFlightFileExAsync(fileToShare).ConfigureAwait(false);
+                FlightFileShareResponse response = await FlightShareService.ShareFlightFileExAsync(fileToShare, isPublic).ConfigureAwait(false);
 
                 if (response == null)
                 {

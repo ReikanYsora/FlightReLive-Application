@@ -304,16 +304,13 @@ namespace FlightReLive.Core
                 using (FuGrid uiGrid = new FuGrid("wizardUiGrid", new FuGridDefinition(2, new float[] { 0.4f, 0.6f }), FuGridFlag.Default, 2, 2, paddingX))
                 {
                     uiGrid.SetNextElementToolTipWithLabel("Global UI scale. You can always change this setting later via the ‘Preferences’ menu.");
-                    uiGrid.Combobox("Global UI Scale##UIScaleCombobox", (int)(Fugui.DefaultContext.Scale * 100f) + "%", () =>
-                    {
-                        float uiScale = SettingsManager.CurrentSettings.GlobalScale;
+                    float uiScale = SettingsManager.CurrentSettings.GlobalScale;
 
-                        uiGrid.SetNextElementToolTipWithLabel("Global UI scale");
-                        if (uiGrid.Slider("UI Scale", ref uiScale, 1f, 2f, 0.1f, format: "%.1f"))
-                        {
-                            SettingsManager.SaveGlobalScale(uiScale);
-                        }
-                    });
+                    uiGrid.SetNextElementToolTipWithLabel("Global UI scale");
+                    if (uiGrid.Slider("UI Scale", ref uiScale, 1f, 2f, 0.1f, format: "%.1f"))
+                    {
+                        SettingsManager.SaveGlobalScale(uiScale);
+                    }
                 }
 
                 layout.Spacing();

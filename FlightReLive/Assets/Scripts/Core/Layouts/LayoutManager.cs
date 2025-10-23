@@ -30,7 +30,32 @@ namespace FlightReLive.Core.Layouts
 
         private void Start()
         {
-            LoadLayout();
+            //Load user layout
+            LoadUserLayout();
+        }
+
+        private void OnEnable()
+        {
+            Application.wantsToQuit += OnWantsToQuit;
+        }
+
+        private void OnDisable()
+        {
+            Application.wantsToQuit -= OnWantsToQuit;
+        }
+
+        private bool OnWantsToQuit()
+        {
+            SaveCurrentLayout();
+            return true;
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                SaveCurrentLayout();
+            }
         }
 
         private void OnApplicationQuit()
@@ -51,18 +76,15 @@ namespace FlightReLive.Core.Layouts
             if (tempLayout != null)
             {
                 tempLayout.Name = USER_LAYOUT_NAME;
-                Fugui.Layouts.SaveLayoutFile(layoutPath, tempLayout);
+                Fugui.Layouts.SaveLayoutFile(layoutPath, tempLayout, false);
             }
         }
 
         /// <summary>
         /// Load user layout
         /// </summary>
-        private void LoadLayout()
+        private void LoadUserLayout()
         {
-            string layoutPath = Path.Combine(Application.streamingAssetsPath, LAYOUT_PATH);
-            Fugui.Layouts.LoadLayouts(layoutPath);
-
             if (Fugui.Layouts.Layouts.ContainsKey(USER_LAYOUT_NAME))
             {
                 Fugui.Layouts.SetLayout(USER_LAYOUT_NAME);

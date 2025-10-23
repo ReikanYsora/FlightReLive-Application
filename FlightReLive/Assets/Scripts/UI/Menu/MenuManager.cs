@@ -25,7 +25,6 @@ namespace FlightReLive.UI.Menu
         #region UNITY METHODS
         private void Start()
         {
-            Fugui.Layouts.SetLayout("Default");
             RegisterMainMenuItems();
         }
 

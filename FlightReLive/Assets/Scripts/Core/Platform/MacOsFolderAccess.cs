@@ -6,13 +6,13 @@ namespace FlightReLive.Core.Platform
     public static class MacOsFolderAccess
     {
 #if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        [DllImport("Unity_MacOsFolderAccess")]
+        [DllImport("Unity-MacOsFolderAccess")]
         private static extern IntPtr ShowFolderPickerAndBookmark(string message);
 
-        [DllImport("Unity_MacOsFolderAccess")]
+        [DllImport("Unity-MacOsFolderAccess")]
         private static extern bool StartAccessWithBookmark(string bookmark);
 
-        [DllImport("Unity_MacOsFolderAccess")]
+        [DllImport("Unity-MacOsFolderAccess")]
         private static extern void StopAccess();
 #endif
 

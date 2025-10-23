@@ -41,6 +41,7 @@ namespace FlightReLive.Core.Settings
         internal static int CAPTURE_ENCODER_DEFAULT_VALUE = 0;
         internal static int CAPTURE_FRAMERATE_DEFAULT_VALUDE = 1;
         internal static bool CAPTURE_ENCODED_LOGO_DEFAULT_VALUE = true;
+        internal static string CAPTURE_OUTPUT_PATH_DEFAULT_VALUE = Path.Combine(Application.persistentDataPath, "Captures");
         internal static LibraryLayoutDisposition LIBRARY_ITEM_DISPOSITION_DEFAULT_VALUE = LibraryLayoutDisposition.Thumbnail;
         internal static string MAC_FOLDER_BOOKMARK_KEY = "MacFolderBookmark";
 
@@ -101,6 +102,7 @@ namespace FlightReLive.Core.Settings
         public static event Action<int> OnCaptureEncoderChanged;
         public static event Action<int> OnCaptureFramerateChanged;
         public static event Action<bool> OnCaptureEncodedLogoChanged;
+        public static event Action<string> OnCaptureOutputPathChanged;
         #endregion
 
         #region METHODS
@@ -426,6 +428,14 @@ namespace FlightReLive.Core.Settings
         internal static void LoadCaptureFramerate()
         {
             CurrentSettings.CaptureFramerate = PlayerPrefs.GetInt(nameof(Settings.CaptureFramerate), CAPTURE_FRAMERATE_DEFAULT_VALUDE);
+        }
+
+        /// <summary>
+        /// Load the capture output path setting from PlayerPrefs, defaulting to CAPTURE_OUTPUT_PATH_DEFAULT_VALUE if not set.
+        /// </summary>
+        internal static void LoadCaptureOutputPath()
+        {
+            CurrentSettings.CaptureOutputPath = PlayerPrefs.GetString(nameof(Settings.CaptureOutputPath), CAPTURE_OUTPUT_PATH_DEFAULT_VALUE);
         }
 
         /// <summary>
@@ -870,6 +880,18 @@ namespace FlightReLive.Core.Settings
         }
 
         /// <summary>
+        /// Save the capture output path setting to PlayerPrefs.
+        /// </summary>
+        /// <param name="value"></param>
+        internal static void SaveCaptureOutputPath(string value)
+        {
+            CurrentSettings.CaptureOutputPath = value;
+            PlayerPrefs.SetString(nameof(Settings.CaptureOutputPath), value);
+            PlayerPrefs.Save();
+            OnCaptureOutputPathChanged?.Invoke(value);
+        }
+
+        /// <summary>
         /// Save the capture encoded logo state setting to PlayerPrefs.
         /// </summary>
         /// <param name="value"></param>
@@ -927,6 +949,7 @@ namespace FlightReLive.Core.Settings
             LoadCaptureResolution();
             LoadCaptureEncoder();
             LoadCaptureFramerate();
+            LoadCaptureOutputPath();
             LoadCaptureEncodedLogo();
         }
 
@@ -973,6 +996,7 @@ namespace FlightReLive.Core.Settings
             SaveCaptureResolution(1);
             SaveCaptureEncoder(0);
             SaveCaptureFramerate(1);
+            SaveCaptureOutputPath(Path.Combine(Application.persistentDataPath, "Captures"));
             SaveCaptureEncodedLogo(true);
 
             PlayerPrefs.SetInt("SettingsInitialized", 1);
@@ -1513,6 +1537,85 @@ namespace FlightReLive.Core.Settings
             {
                 onReset?.Invoke();
             }
+            Fugui.PopFont();
+        }
+
+        /// <summary>
+        /// Display a folder input with a reset button in the settings UI.
+        /// </summary>
+        /// <param name="grid">The Fugui grid layout.</param>
+        /// <param name="text">The label of the input field.</param>
+        /// <param name="tooltipText">Tooltip for the folder input.</param>
+        /// <param name="tooltipReset">Tooltip for the reset button.</param>
+        /// <param name="value">Current folder path.</param>
+        /// <param name="defaultValue">Default folder path.</param>
+        /// <param name="onChange">Callback when a new folder is selected.</param>
+        /// <param name="onReset">Callback when reset is clicked.</param>
+        /// <param name="filters">Optional file filters for the folder picker (can be empty).</param>
+        internal static void DisplaySettingsFolderInputWithReset(
+            FuGrid grid,
+            string text,
+            string tooltipText,
+            string tooltipReset,
+            string value,
+            string defaultValue,
+            Action<string> onChange,
+            Action onReset,
+            ExtensionFilter[] filters = null)
+        {
+            if (!string.IsNullOrEmpty(tooltipText))
+            {
+                grid.SetNextElementToolTip(tooltipText);
+            }
+
+            string currentValue = value ?? string.Empty;
+
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            grid.Text(text);
+            grid.SameLine();
+            if (grid.ClickableText(currentValue, FuTextStyle.Default, FuTextWrapping.Clip))
+            {
+                var result = MacOsFolderAccess.PickFolderWithBookmark("Select a folder where Flight ReLive can save captures");
+
+                if (!string.IsNullOrEmpty(result.Item1))
+                {
+                    onChange?.Invoke(result.Item1);
+                    SaveMacFolderBookmark(result.Item2);
+                }
+            }
+#else            
+            grid.InputFolder(text, (selectedPath) =>
+            {
+                if (!string.Equals(selectedPath, currentValue, StringComparison.Ordinal))
+                {
+                    onChange?.Invoke(selectedPath);
+                }
+            }, currentValue, filters ?? Array.Empty<ExtensionFilter>());
+#endif
+
+            //Reset button
+            if (onReset == null)
+            {
+                grid.NextColumn();
+                return;
+            }
+
+            if (string.Equals(value, defaultValue, StringComparison.Ordinal))
+            {
+                grid.DisableNextElement();
+            }
+
+            Fugui.PushFont(14);
+            if (!string.IsNullOrEmpty(tooltipReset))
+            {
+                grid.SetNextElementToolTip(tooltipReset);
+            }
+
+            if (grid.ClickableText(FlightReLiveIcons.Undo, FuTextStyle.Danger))
+            {
+                onReset?.Invoke();
+            }
+
             Fugui.PopFont();
         }
 

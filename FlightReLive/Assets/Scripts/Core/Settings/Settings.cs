@@ -43,6 +43,7 @@ namespace FlightReLive.Core.Settings
         public int CaptureEncoder;
         public int CaptureFramerate;
         public bool CaptureEncodedLogo;
+        public string CaptureOutputPath;
         #endregion
     }
 }

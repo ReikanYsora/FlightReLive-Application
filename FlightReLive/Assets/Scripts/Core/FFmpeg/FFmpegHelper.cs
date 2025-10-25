@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -25,19 +26,27 @@ namespace FlightReLive.Core.FFmpeg
         /// <returns></returns>
         internal static string GetFFmpegPath()
         {
-#if UNITY_EDITOR_OSX
-            // macOs editor : use StreamingAssets/ffmpeg
-            return Path.Combine(Application.streamingAssetsPath, "ffmpeg", "ffmpeg");
-#elif UNITY_STANDALONE_OSX
-            // macOs build : use StreamingAssets/ffmpeg
-            return Path.Combine(Application.streamingAssetsPath, "ffmpeg", "ffmpeg");
+#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+            //macOS (Editor or Standalone)
+            string basePath = Path.Combine(Application.streamingAssetsPath, "ffmpeg");
+
+            //Detect actual runtime architecture
+            Architecture arch = RuntimeInformation.ProcessArchitecture;
+
+            switch (arch)
+            {
+                case Architecture.Arm64:
+                    return Path.Combine(basePath, "AppleSilicon", "ffmpeg");
+                case Architecture.X64:
+                    return Path.Combine(basePath, "Intel", "ffmpeg");
+                default:
+                    UnityEngine.Debug.LogError($"Unsupported macOS architecture: {arch}");
+                    return string.Empty;
+            }
+
 #elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-            // Windows editor or build : use StreamingAssets/ffmpeg
+            // Windows (Editor or Standalone)
             return Path.Combine(Application.streamingAssetsPath, "ffmpeg", "ffmpeg.exe");
-#else
-            // Unsupported platform
-            UnityEngine.Debug.LogError("FFmpeg is only supported on Windows and macOS platforms.");
-            return string.Enpty;
 #endif
         }
 

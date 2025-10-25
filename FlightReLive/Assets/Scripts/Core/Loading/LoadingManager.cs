@@ -453,19 +453,28 @@ namespace FlightReLive.Core.Loading
 
             Fugui.ShowModal($"Loading resources for {_fileName}", (layout) =>
             {
+                float width = 320f;
+                float height = 240f;
+
+                if (_thumbnail != null)
+                {
+                    width = _thumbnail.width;
+                    height = _thumbnail.height;
+                }
+
                 float paddingX = 10f;
                 float combinedProgress = (_tilesTotal > 0) ? (_tilesProcessed + _tileProgress) / _tilesTotal : 0f;
                 layout.Spacing();
 
                 // Compute available width (logical, unscaled)
                 float availableX = layout.GetAvailableWidth() / scale - (paddingX * 2f);
-                float contentWidth = _thumbnail.width;
+                float contentWidth = width;
                 float offsetX = Mathf.Floor((availableX - contentWidth) * 0.5f);
                 Fugui.MoveX(offsetX);
 
                 // Compute orange area (scaled drawing zone)
-                float targetWidth = Mathf.Floor(_thumbnail.width * scale);
-                float targetHeight = Mathf.Floor(_thumbnail.height * scale * 0.85f);
+                float targetWidth = Mathf.Floor(width * scale);
+                float targetHeight = Mathf.Floor(height * scale * 0.85f);
                 float cornerRadius = 6f * scale;
                 ImDrawListPtr drawList = ImGui.GetWindowDrawList();
                 uint frameColor = ImGui.ColorConvertFloat4ToU32(Fugui.Themes.GetColor(FuColors.PlotLinesHovered));
@@ -485,12 +494,16 @@ namespace FlightReLive.Core.Loading
                 // Clip to rounded corners before drawing image
                 ImGui.PushClipRect(zonePos, zonePos + zoneSize, true);
                 ImGui.SetCursorScreenPos(thumbPos);
-                layout.Image("thumbnailLoading", _thumbnail, new FuElementSize(thumbSize.x / scale, thumbSize.y / scale), true, false);
+
+                if (_thumbnail != null)
+                {
+                    layout.Image("thumbnailLoading", _thumbnail, new FuElementSize(thumbSize.x / scale, thumbSize.y / scale), true, false);
+                }
                 ImGui.PopClipRect();
 
                 // Progress bar aligned below
                 layout.Spacing();
-                Vector2 progressBarSize = new Vector2(_thumbnail.width, 6f);
+                Vector2 progressBarSize = new Vector2(width, 6f);
                 Fugui.MoveX(offsetX);
                 layout.ProgressBar("Progress", combinedProgress, new FuElementSize(progressBarSize), ProgressBarTextPosition.None);
                 layout.Spacing();

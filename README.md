@@ -9,7 +9,7 @@
 **Flight Relive** is an open-source project designed to bring your drone flight videos to life in an immersive way.  
 The application processes your recorded flights and provides a new perspective to relive them.
 
-This project is fully **open source**, released under the **AGPL-3.0 license**, and built using **Unity 6000.2.01f**.
+This project is fully **open source**, released under the **AGPL-3.0 license**, and built using **Unity 6000.2.6f2**.
 
 <p align="center">
   <img src="Details/details.gif" alt="Flight Relive Demo" width="1200"/>

@@ -48,7 +48,7 @@ Your input is invaluable to help the project grow and evolve!
 | DJI Mavic 3 Classic | 🟡 NOT TESTED |
 | DJI Mavic 3 Pro     | 🟡 NOT TESTED |
 | DJI Mavic 4 Pro     | 🟡 NOT TESTED |
-| DJI Avata 2         | 🟡 NOT TESTED |
+| DJI Avata 2         | 🟢 OK         |
 
 </div>
 
